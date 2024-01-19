@@ -1,0 +1,326 @@
+* {
+    image-rendering: optimizeSpeed;
+    image-rendering: -moz-crisp-edges;
+    /*noinspection CssInvalidPropertyValue*/
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: -o-crisp-edges;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+    color: white;
+    font-family: monospace, serif;
+    user-select: none;
+}
+
+body {
+    margin: 0;
+    overflow: hidden;
+}
+
+canvas {
+    background: #64d5ff;
+}
+
+img {
+    pointer-events: none;
+}
+
+.esc-menu {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    transition: opacity 0.1s;
+}
+
+.container {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+}
+
+.btn {
+    text-align: center;
+    padding: 10px;
+    margin: 10px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    cursor: pointer;
+    transition: scale .1s;
+}
+
+.btn:hover {
+    scale: 1.05;
+}
+
+.gone {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.info {
+    position: fixed;
+    left: 0;
+    top: 0;
+    color: white;
+    font-family: monospace, serif;
+    font-size: 20px;
+}
+
+.hotbar {
+    position: fixed;
+    left: 50%;
+    bottom: 0;
+    translate: -50%;
+    display: flex;
+    pointer-events: none;
+    width: 40%;
+    aspect-ratio: 9 / 1;
+}
+
+.item {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.item:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.item > img {
+    width: 60%;
+    aspect-ratio: 1 / 1;
+    pointer-events: none;
+}
+
+.item > .count {
+    position: absolute;
+    right: 10%;
+    bottom: 3%;
+    pointer-events: none;
+}
+
+.item > .damage {
+    position: absolute;
+    left: 50%;
+    translate: -50%;
+    bottom: 20%;
+    height: 3%;
+    background: #00ff00;
+    pointer-events: none;
+}
+
+.hotbar-item {
+    position: relative;
+    background-image: url("../assets/gui/hotbar.png");
+    background-size: 100% 100%;
+    width: calc(100% / 9);
+    height: 100%;
+}
+
+.hotbar-item-selected {
+    background-image: url("../assets/gui/selected_hotbar.png");
+}
+
+.hotbar-item > img {
+    width: 50%;
+}
+
+.hotbar-item > .count {
+    right: 15%;
+    bottom: 10%;
+}
+
+.pause {
+    position: fixed;
+    right: 5px;
+    top: 5px;
+    padding-bottom: 3px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 25px;
+    rotate: 90deg;
+    cursor: pointer;
+}
+
+.inventory-ui {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.inventory-ui > .container {
+    height: 65%;
+}
+
+#player-inventory-ui > .container {
+    background: url("../assets/gui/player_inventory.png") no-repeat;
+    background-size: 100% 100%;
+    aspect-ratio: 176 / 166;
+}
+
+#crafting-table-ui > .container {
+    background: url("../assets/gui/crafting_table.png") no-repeat;
+    background-size: 100% 100%;
+    aspect-ratio: 176 / 166;
+}
+
+.armor-inventory {
+    position: absolute;
+    left: 4%;
+    top: 4%;
+    width: 10%;
+    height: 43%;
+}
+
+.armor-inventory > .item {
+    width: 100%;
+    height: 25%;
+}
+
+.player-inventory {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 4%;
+    top: 50%;
+    width: 92%;
+    height: 32%;
+}
+
+.player-inventory > .item {
+    width: calc(100% / 9);
+    height: calc(100% / 3);
+}
+
+.hotbar-inventory {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 4%;
+    top: 85%;
+    width: 92%;
+    height: 11%;
+}
+
+.hotbar-inventory > .item {
+    width: calc(100% / 9);
+    height: 100%;
+}
+
+.craft-inventory-in {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 49.5%;
+    top: 15%;
+    width: 20.5%;
+    height: 21%;
+}
+
+.craft-inventory-in > .item {
+    width: 50%;
+    height: 50%;
+}
+
+.craft-inventory-out {
+    position: absolute;
+    left: 81.2%;
+    top: 21%;
+    width: 10%;
+    height: 10%;
+}
+
+.craft-inventory-out > .item {
+    width: 100%;
+    height: 100%;
+}
+
+.cursor-inventory {
+    pointer-events: none;
+    position: fixed;
+    left: 50%;
+    top: 40%;
+    width: 64px;
+    height: 64px;
+}
+
+.cursor-inventory > .item {
+    width: 100%;
+    height: 100%;
+}
+
+.chat {
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 25%;
+    height: 50%;
+    overflow: hidden;
+}
+
+.chat > input {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 25px;
+    border: none;
+    outline: none;
+    background: rgba(0, 0, 0, 0.5);
+    font-size: 20px;
+    font-family: monospace, serif;
+}
+
+.chat > .messages {
+    position: absolute;
+    bottom: 25px;
+    text-shadow: 0 0 5px black;
+}
+
+.chat > .messages > .msg {
+    font-family: monospace, serif;
+}
+
+.crafting-inventory-in {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 17%;
+    top: 10%;
+    width: 30%;
+    height: 32%;
+}
+
+.crafting-inventory-in > .item {
+    width: calc(100% / 3);
+    height: calc(100% / 3);
+}
+
+.crafting-inventory-out {
+    position: absolute;
+    left: 70%;
+    top: 21%;
+    width: 10%;
+    height: 10%;
+}
+
+.crafting-inventory-out > .item {
+    width: 100%;
+    height: 100%;
+}

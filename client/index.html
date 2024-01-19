@@ -1,0 +1,44 @@
+<head>
+    <title>Block Game</title>
+    <link rel="stylesheet" href="./style/Index.css">
+</head>
+<body>
+<div class="title">Block Game<br>
+    <span style="font-size: 30px">This game is not affiliated with Mojang. Buy the actual 3D version too.</span>
+</div>
+<div class="container">
+    <div class="btn" id="servers-btn">Servers</div>
+    <div class="btn" id="options-btn">Options</div>
+</div>
+<div class="bg gone" id="bg"></div>
+<div id="servers-menu" class="menu gone">
+    <div class="close" onclick="closeUI()">x</div>
+    <div class="servers-div">
+        <div class="fl-left flex">
+            <div class="search"><input spellcheck="false" placeholder="Search..." id="search"></div>
+            <div class="btn" id="add-server-menu-btn">Add server</div>
+        </div>
+        <div class="fl-right">
+            <div class="username"><input spellcheck="false" placeholder="Username..." id="username" value="Steve"
+                                         maxlength="16"></div>
+        </div>
+    </div>
+    <div class="servers"></div>
+</div>
+<div id="server-add-menu" class="menu gone">
+    <div class="close" onclick="closeUI()">x</div>
+    <div class="error"></div>
+    <input spellcheck="false" placeholder="Server name..." maxlength="32" id="create-name">
+    <input spellcheck="false" placeholder="Server IP..." id="create-ip">
+    <input spellcheck="false" placeholder="Server port..." id="create-port">
+    <div class="btn" id="add-server-btn">Add server</div>
+</div>
+<div id="options-menu" class="menu gone">
+    <div class="close" onclick="closeUI()">x</div>
+</div>
+<div id="message-menu" class="menu gone"></div>
+</body>
+<script>
+    addEventListener("keydown", e => e.key === "F5" && location.reload());
+</script>
+<script type="module" src="./main/Index.js"></script>

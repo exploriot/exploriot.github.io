@@ -1,0 +1,97 @@
+<head>
+    <title>Block Game</title>
+    <link rel="stylesheet" href="./style/Game.css">
+</head>
+<body>
+<canvas></canvas>
+<div class="info"></div>
+<div
+        class="hotbar"
+        data-inv="player"
+        data-inv-down="true"
+        data-inv-index="0,8"
+></div>
+<div class="pause">=</div>
+<div class="chat">
+    <input>
+    <div class="messages">
+    </div>
+</div>
+<div class="inventory-ui gone" id="player-inventory-ui">
+    <div class="container">
+        <div
+                class="armor-inventory"
+                data-inv="armor"
+                data-inv-dep="player-inventory"
+                data-inv-index="0,3"
+        ></div>
+        <div
+                class="player-inventory"
+                data-inv="player"
+                data-inv-dep="player-inventory"
+                data-inv-index="9,35"
+        ></div>
+        <div
+                class="hotbar-inventory"
+                data-inv="player"
+                data-inv-dep="player-inventory"
+                data-inv-index="0,8"
+        ></div>
+        <div
+                class="craft-inventory-in"
+                data-inv="craft"
+                data-inv-dep="player-inventory"
+                data-inv-index="0,3"
+        ></div>
+        <div
+                class="craft-inventory-out"
+                data-inv="craft"
+                data-inv-dep="player-inventory"
+                data-inv-index="4,4"
+        ></div>
+    </div>
+</div>
+<div class="inventory-ui gone" id="crafting-table-ui">
+    <div class="container">
+        <div
+                class="player-inventory"
+                data-inv="player"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="9,35"
+        ></div>
+        <div
+                class="hotbar-inventory"
+                data-inv="player"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="0,8"
+        ></div>
+        <div
+                class="crafting-inventory-in"
+                data-inv="external"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="0,8"
+        ></div>
+        <div
+                class="crafting-inventory-out"
+                data-inv="external"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="9,9"
+        ></div>
+    </div>
+</div>
+<div
+        class="cursor-inventory"
+        data-inv="cursor"
+        data-inv-index="0,0"
+>
+</div>
+<div class="esc-menu gone">
+    <div class="container">
+        <div class="btn" id="back-btn">Back</div>
+        <div class="btn" id="disconnect-btn">Disconnect</div>
+    </div>
+</div>
+</body>
+<script type="module">
+    import "./main/Game.js";
+</script>
