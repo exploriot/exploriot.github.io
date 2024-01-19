@@ -12,7 +12,7 @@ import {PingPacket} from "./PingPacket.js";
 import {ContainerIds, Inventory, InventoryIds} from "../common/item/Inventory.js";
 import {Item} from "../common/item/Item.js";
 import {SetHandIndexPacket} from "./SetHandIndexPacket.js";
-import "../node_modules/socket.io/client-dist/socket.io.min.js";
+import "./socket.io.min.js";
 import {InventoryTransactionPacket} from "./InventoryTransactionPacket.js";
 import {C_ItemEntity} from "../entity/ItemEntity.js";
 import {AuthPacket} from "./AuthPacket.js";

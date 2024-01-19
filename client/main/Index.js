@@ -118,7 +118,7 @@ function renderServers() {
                 messageMenu.innerHTML = `<div class="text">Invalid server.</div><div class="close" onclick="closeUI()">x</div>`;
                 return;
             }
-            location.href = `../game.html?ip=${server.ip}&port=${server.port}&protocol=${protocol}`;
+            location.href = `./game.html?ip=${server.ip}&port=${server.port}&protocol=${protocol}`;
         });
         serversD.appendChild(div);
     }
