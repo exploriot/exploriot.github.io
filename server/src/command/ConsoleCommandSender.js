@@ -8,3 +8,5 @@ export const ConsoleCommandSender = new class extends CommandSender {
         Terminal.send(message);
     };
 };
+
+global._ConsoleCommandSender = ConsoleCommandSender;

@@ -16,13 +16,16 @@ export const ContainerIds = {
 };
 
 export class Inventory {
+    cleanDirty = false;
+    dirtyIndexes = new Set;
+
     /**
      * @param {number} size
-     * @param {Set} dirty
+     * @param {number} type
      */
-    constructor(size, dirty = new Set) {
+    constructor(size, type) {
         this.size = size;
-        this.dirty = dirty;
+        this.type = type;
         /*** @type {(Item | null)[]} */
         this.contents = new Array(size).fill(null);
     };
@@ -64,14 +67,14 @@ export class Inventory {
             const putting = Math.min(maxStack, item.count);
             item.count -= putting;
             this.contents[index] = item.clone(putting);
-            this.dirty.add(index);
+            this.dirtyIndexes.add(index);
             return;
         }
         if (it.equals(item, false, true) && it.count < maxStack) {
             const putting = Math.min(maxStack - it.count, item.count);
             item.count -= putting;
             it.count += putting;
-            this.dirty.add(index);
+            this.dirtyIndexes.add(index);
             return;
         }
     };
@@ -86,12 +89,12 @@ export class Inventory {
         if (it.count <= item.count) {
             this.contents[index] = null;
             item.count -= it.count;
-            this.dirty.add(index);
+            this.dirtyIndexes.add(index);
             return;
         }
         it.count -= item.count;
         item.count = 0;
-        this.dirty.add(index);
+        this.dirtyIndexes.add(index);
         return;
     };
 
@@ -105,25 +108,31 @@ export class Inventory {
         if (!it || !desc.equalsItem(it)) return count;
         if (it.count <= count) {
             this.contents[index] = null;
-            this.dirty.add(index);
+            this.dirtyIndexes.add(index);
             return count - it.count;
         }
         it.count -= count;
-        this.dirty.add(index);
+        this.dirtyIndexes.add(index);
         return 0;
     };
 
     removeIndex(index) {
         this.contents[index] = null;
-        this.dirty.add(index);
+        this.dirtyIndexes.add(index);
     };
 
     setIndex(index, item) {
         this.contents[index] = item;
-        this.dirty.add(index);
+        this.dirtyIndexes.add(index);
+    };
+
+    updateIndex(index) {
+        this.dirtyIndexes.add(index);
     };
 
     clear() {
+        this.cleanDirty = true;
+        this.dirtyIndexes.clear();
         this.contents = new Array(this.size).fill(null);
     };
 

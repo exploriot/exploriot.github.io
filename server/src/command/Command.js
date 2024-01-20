@@ -3,11 +3,15 @@ export class Command {
     static ERR_PERMISSION = 2;
     static ERR_INVALID = 3;
 
-    constructor(name, description, usage, aliases = []) {
+    constructor(name, description, usage, aliases = [], permission = false) {
         this.name = name;
         this.description = description;
         this.usage = usage;
         this.aliases = aliases;
+        this.permission = permission;
+    };
+
+    init() {
     };
 
     /**

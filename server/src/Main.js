@@ -1,7 +1,9 @@
 import http from "http";
 import * as IO from "socket.io";
 import express from "express";
+import {Terminal} from "./terminal/Terminal.js";
 import {S_Player} from "./entity/Player.js";
+import "./Server.js";
 import "../../client/common/metadata/Blocks.js";
 import "../../client/common/metadata/Items.js";
 import {appendFileSync, existsSync, mkdirSync, readFileSync} from "fs";
@@ -9,10 +11,10 @@ import {Item} from "../../client/common/item/Item.js";
 import {PacketIds} from "../../client/common/metadata/PacketIds.js";
 import {_T} from "../../client/common/Utils.js";
 import {DisconnectPacket} from "./packet/DisconnectPacket.js";
-import {startCommandReader, Terminal} from "./terminal/Terminal.js";
-import {S_Server} from "./Server.js";
 
-const T = Date.now();
+global._ = {};
+
+export const SERVER_BEGIN_TIME = Date.now();
 const app = express();
 app.use((req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -50,12 +52,12 @@ const io = new IO.Server(server, {
 
 process.on("SIGINT", () => {
     Terminal.send("§4A key interruption was caught.");
-    S_Server.stop();
+    Server.stop();
 });
 
 let lastUpdate = Date.now() - 1;
 
-S_Server.init();
+Server.init();
 
 /*world.generator = new CustomGenerator(world,
     `${Ids.BEDROCK};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.DIRT};${Ids.DIRT};${Ids.DIRT};${Ids.GRASS_BLOCK}`
@@ -79,8 +81,8 @@ io.on("connection", ws => {
     ws.on("disconnect", () => {
         if (!player) return;
         player.save();
-        S_Server.broadcastMessage(`§e${player.username} left the server.`);
-        S_Server.getPlayers().delete(player);
+        Server.broadcastMessage(`§e${player.username} left the server.`);
+        Server.getPlayers().delete(player);
         player.remove();
         player.broadcastDespawn();
     });
@@ -92,10 +94,10 @@ io.on("connection", ws => {
                 if (pk.type !== PacketIds.CLIENT_AUTH) return kick("Expected an auth packet.");
                 _T(pk.username, "string");
                 if (!/^[a-zA-Z\d]{1,16}$/.test(pk.username)) return kick("Invalid username.");
-                if (Array.from(S_Server.getPlayers()).some(i => i.username === pk.username)) return kick("You are already in the server.");
+                if (Array.from(Server.getPlayers()).some(i => i.username === pk.username)) return kick("You are already in the server.");
                 hasAuth = true;
-                ws.player = player = new S_Player(ws, S_Server.getDefaultWorld(), pk.username);
-                S_Server.getPlayers().add(player);
+                ws.player = player = new S_Player(ws, Server.getDefaultWorld(), pk.username);
+                Server.getPlayers().add(player);
                 if (existsSync("./players/" + pk.username + ".json")) {
                     const data = JSON.parse(readFileSync("./players/" + pk.username + ".json", "utf-8"));
                     player.x = data.x;
@@ -118,9 +120,9 @@ io.on("connection", ws => {
                 player.session.sendAttributes();
                 player.session.sendPosition();
                 player.session.requestPing();
-                player.session.sendInventory();
+                player.session.sendInventories();
                 player.session.sendHandItemIndex();
-                S_Server.broadcastMessage(`§e${player.username} joined the server.`);
+                Server.broadcastMessage(`§e${player.username} joined the server.`);
                 return;
             }
             player.session.handlePacket(pk);
@@ -135,10 +137,10 @@ io.on("connection", ws => {
 function update() {
     const dt = (Date.now() - lastUpdate) / 1000;
     lastUpdate = Date.now();
-    for (const world of S_Server.getWorlds()) {
+    for (const world of Server.getWorlds()) {
         world.update(dt);
     }
-    for (const player of S_Server.getPlayers()) {
+    for (const player of Server.getPlayers()) {
         player.session.cleanPackets();
     }
     setTimeout(update);
@@ -148,5 +150,4 @@ update();
 
 server.listen(1881);
 
-Terminal.send("Server has been loaded in " + (Date.now() - T) / 1000 + "s. Type 'help' to see the command list.");
-startCommandReader();
+Server.onLoad();

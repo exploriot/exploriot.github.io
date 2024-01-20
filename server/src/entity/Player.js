@@ -20,6 +20,10 @@ export class S_Player extends S_BodyEntity {
     externalInventory = null;
     externalInventoryType = null;
     handIndex = 0;
+    playerInventory = new Inventory(36, InventoryIds.PLAYER);
+    cursorInventory = new Inventory(1, InventoryIds.CURSOR);
+    craftInventory = new Inventory(5, InventoryIds.CRAFT);
+    armorInventory = new Inventory(4, InventoryIds.ARMOR);
 
     /**
      * @param ws
@@ -31,10 +35,30 @@ export class S_Player extends S_BodyEntity {
         this.ws = ws;
         this.username = username;
         this.session = new NetworkSession(this, ws);
-        this.playerInventory = new Inventory(36, this.session.dirtyIndexes[InventoryIds.PLAYER]);
-        this.cursorInventory = new Inventory(1, this.session.dirtyIndexes[InventoryIds.CURSOR]);
-        this.craftInventory = new Inventory(5, this.session.dirtyIndexes[InventoryIds.CRAFT]);
-        this.armorInventory = new Inventory(4, this.session.dirtyIndexes[InventoryIds.ARMOR]);
+    };
+
+    getInventories() {
+        const list = [
+            this.playerInventory,
+            this.cursorInventory,
+            this.craftInventory,
+            this.armorInventory
+        ];
+        if (this.externalInventory) list.push(this.externalInventory);
+        return list;
+    };
+
+    clearAllInventories() {
+        for (const inv of this.getInventories()) inv.clear();
+    };
+
+    dropAllInventories() {
+        for (const inv of this.getInventories()) {
+            for (const item of inv.contents) {
+                this.world.dropItem(this.x, this.y, item);
+            }
+            inv.clear();
+        }
     };
 
     getHandItem() {

@@ -222,7 +222,7 @@ function C_handleOpenContainerPacket(pk) {
         case ContainerIds.CRAFTING_TABLE:
             closeInventoryUI();
             openCraftingTableUI();
-            CServer.externalInventory = new Inventory(10);
+            CServer.externalInventory = new Inventory(10, InventoryIds.EXTERNAL);
             break;
     }
     CServer.externalInventoryType = pk.id;

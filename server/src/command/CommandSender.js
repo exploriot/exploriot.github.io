@@ -10,22 +10,22 @@ export class CommandSender {
     };
 
     processMessage(message) {
+        const isOp = Server.isOp(this);
         if (!message.startsWith("/")) {
             message = clearColors(message);
-            const isOp = S_Server.isOp(this);
-            S_Server.broadcastMessage((isOp ? "§c" : "") + this.username + " §f> " + message);
+            Server.broadcastMessage((isOp ? "§c" : "") + this.username + " §f> " + message);
             return;
         }
-        Terminal.send(this.username + " > " + message);
+        if (this !== _ConsoleCommandSender) Terminal.send(this.username + " > " + message);
         const name = message.split(" ")[0].slice(1).toLowerCase();
         const str = message.slice(name.length + 1 + 1); // slash and the space
         const matches = str.split(/("[^"]+")/g);
-        const args = matches.map(i => i[0] === '"' && i.at(-1) === '"' ? i.slice(1, -1) : i.split(" ")).flat(1);
+        const args = str ? matches.map(i => i[0] === '"' && i.at(-1) === '"' ? i.slice(1, -1) : i.split(" ")).flat(1) : [];
         const command = CommandLabels[name];
         if (!command) {
             return this.sendMessage("Unknown command: " + name);
         }
-        const result = command.execute(this, args);
+        const result = command.permission && !isOp ? Command.ERR_PERMISSION : command.execute(this, args);
         switch (result) {
             case Command.ERR_USAGE:
                 this.sendMessage("Usage: " + command.usage);
