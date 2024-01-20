@@ -332,6 +332,35 @@ const Pos = {
         if (t.type !== "word" && t.type !== "string") return "Invalid command.";
         const cmd = CommandLabels[t.value];
         return cmd ? [ind + 1, cmd] : "Command not found: " + t.value + ".";
+    },
+    string(ind, tokens, self, sender, text) {
+        const t = tokens[ind];
+        const next = text.substring(t.index).findIndex(" ");
+        let str = "";
+        for (; ind < tokens.length; ind++) {
+            const t2 = tokens[ind];
+            if (next !== -1 && t2.index > next) {
+                ind--;
+                break;
+            }
+            str += t2.value;
+        }
+        return str;
+    },
+    float(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "number") return "Invalid float.";
+        return t.value;
+    },
+    int(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "number" || Math.floor(t.value) !== t.value) return "Invalid integer.";
+        return t.value;
+    },
+    uint(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "number" || Math.floor(t.value) !== t.value || t.value < 0) return "Invalid positive integer.";
+        return t.value;
     }
 };
 
@@ -361,7 +390,7 @@ export function testArguments(self, sender, text, all) {
                     fail = true;
                     break;
                 }
-                const r = Pos[p](tokInd, tokens, self, sender);
+                const r = Pos[p](tokInd, tokens, self, sender, text);
                 if (Array.isArray(r)) {
                     tokInd = r[0];
                     got.push(r[1]);
