@@ -82,7 +82,7 @@ addEventListener("keydown", e => {
 document.getElementById("back-btn").addEventListener("click", closeEscMenu);
 
 document.getElementById("disconnect-btn").addEventListener("click", () => {
-    location.href = "/";
+    location.href = "./";
 });
 
 addEventListener("wheel", e => {

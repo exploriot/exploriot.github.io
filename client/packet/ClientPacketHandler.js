@@ -37,7 +37,7 @@ socket.on("connect", () => {
 });
 
 socket.on("disconnect", () => {
-    location.href = "/";
+    location.href = "./";
 });
 
 socket.on("packet", C_handlePacket);
