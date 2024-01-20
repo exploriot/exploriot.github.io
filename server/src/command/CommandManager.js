@@ -8,6 +8,7 @@ import {GamemodeCommand} from "./list/GamemodeCommand.js";
 import {ClearCommand} from "./list/ClearCommand.js";
 import {KickCommand} from "./list/KickCommand.js";
 import {ListCommand} from "./list/ListCommand.js";
+import {SayCommand} from "./list/SayCommand.js";
 
 export const CommandLabels = {};
 export const Commands = new Set;
@@ -39,5 +40,6 @@ registerCommands(
     new GamemodeCommand,
     new ClearCommand,
     new KickCommand,
-    new ListCommand
+    new ListCommand,
+    new SayCommand
 );

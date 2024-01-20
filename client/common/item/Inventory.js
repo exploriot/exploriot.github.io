@@ -137,6 +137,6 @@ export class Inventory {
     };
 
     serialize() {
-        return this.contents.map(i => i ? i.serialize() : null);
+        return this.contents.map(i => i ? i.serialize() : 0);
     };
 }
