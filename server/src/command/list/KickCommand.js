@@ -1,17 +1,19 @@
-import {Command} from "../Command.js";
-import {S_Server} from "../../Server.js";
+import {AdvancedCommand} from "../AdvancedCommand.js";
 
-export class KickCommand extends Command {
+export class KickCommand extends AdvancedCommand {
     constructor() {
-        super("kick", "Kicks a player.", "/kick <player>", []);
+        super(
+            "kick",
+            "Kicks a player.",
+            [],
+            true
+        );
     };
 
-    execute(sender, args) {
-        if (!S_Server.isOp(sender)) return Command.ERR_PERMISSION;
-        if (args.length !== 1) return Command.ERR_USAGE;
-        const player = S_Server.getPlayerByPrefix(args[0]);
-        if (!player) return sender.sendMessage("Player not found.");
-        player.kick("Kicked by operator.");
-        sender.sendMessage(`Player ${player.username} was kicked.`);
+    executor = {
+        "<player: selector_p>": (sender, [players]) => {
+            for (const player of players) player.kick("Kicked by operator.");
+            sender.sendMessage(`Player${players.length > 1 ? "s" : ""} ${players.map(i => i.username).join(" and ")} was kicked.`);
+        }
     };
 }

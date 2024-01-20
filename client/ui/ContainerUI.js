@@ -134,7 +134,7 @@ export function renderInventories() {
             o.last = item ? item.serialize() : null;
             o.img.src = item ? "./" + getItemTexture(item.id, item.meta) : "./assets/1px.png";
             o.count.innerText = item && item.count !== 1 ? item.count : "";
-            const durability = Metadata.durabilities[item.id];
+            const durability = item ? Metadata.durabilities[item.id] : 0;
             o.damage.style.width = durability ? ((1 - (item.nbt.damage ?? 0) / durability) * 60) + "%" : "0";
         }
     }

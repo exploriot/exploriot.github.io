@@ -8,7 +8,6 @@ import {S_ItemEntity} from "../entity/ItemEntity.js";
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {EntityIds} from "../../../client/common/metadata/Entities.js";
 import {Generators} from "./GeneratorManager.js";
-import {S_Server} from "../Server.js";
 import {FlowerIds, getBlockDrops} from "../../../client/common/metadata/Blocks.js";
 
 const BlockUpdater = {
@@ -25,7 +24,6 @@ const BlockUpdater = {
         let soaked = 0;
         const maxSoak = 16;
         const soakRadius = 3;
-        const l = [];
         for (let x = X - soakRadius; x <= Y + soakRadius; x++) {
             if (soaked >= maxSoak) break;
             for (let y = Y - soakRadius; y <= Y + soakRadius; y++) {
@@ -33,15 +31,11 @@ const BlockUpdater = {
                 const b = world.getBlock(x, y);
                 if (b[0] === Ids.WATER) {
                     world.setBlock(x, y, Ids.AIR);
-                    l.push({x, y});
                     soaked++;
                 }
             }
         }
         if (soaked) world.setBlock(X, Y, Ids.WET_SPONGE);
-        for (const {x, y} of l) {
-            world.onBlockUpdate(x, y);
-        }
     },
     [Ids.WATER](world, X, Y, self) {
         // source     ->  0
@@ -102,6 +96,7 @@ export class S_World extends World {
         tntExplodes: true
     };
     _info = {};
+    dirtyUpdateBlocks = new Set;
 
     /**
      * @param {number} id
@@ -180,8 +175,12 @@ export class S_World extends World {
 
     setBlock(worldX, worldY, id, meta = 0, updateAround = true, broadcast = true, except = null) {
         this.dirtyChunks.add(worldX >> 4);
-        if (updateAround) this.onBlockUpdate(worldX, worldY);
-        if (broadcast) this.broadcastBlockUpdate(worldX, worldY, id, meta, except);
+        if (updateAround) {
+            this.dirtyUpdateBlocks.add(worldX + " " + worldY);
+        }
+        if (broadcast) {
+            this.broadcastBlockUpdate(worldX, worldY, id, meta, except);
+        }
         return super.setBlock(worldX, worldY, id, meta);
     };
 
@@ -215,8 +214,8 @@ export class S_World extends World {
      */
     getChunkViewers(chunkX) {
         const viewers = [];
-        const chunkDistance = S_Server.getChunkDistance();
-        for (const player of S_Server.getPlayers()) {
+        const chunkDistance = Server.getChunkDistance();
+        for (const player of Server.getPlayers()) {
             if (Math.floor(Math.abs((player.x >> 4) - chunkX)) < chunkDistance) {
                 viewers.push(player);
             }
@@ -266,5 +265,10 @@ export class S_World extends World {
                 entity.update(dt);
             }
         }
+        for (const b of this.dirtyUpdateBlocks) {
+            const t = b.split(" ");
+            this.onBlockUpdate(Number(t[0]), Number(t[1]));
+        }
+        this.dirtyUpdateBlocks.clear();
     };
 }

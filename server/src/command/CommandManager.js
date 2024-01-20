@@ -7,12 +7,14 @@ import {StopCommand} from "./list/StopCommand.js";
 import {GamemodeCommand} from "./list/GamemodeCommand.js";
 import {ClearCommand} from "./list/ClearCommand.js";
 import {KickCommand} from "./list/KickCommand.js";
+import {ListCommand} from "./list/ListCommand.js";
 
 export const CommandLabels = {};
 export const Commands = new Set;
 
 export function registerCommand(command) {
     if (Commands.has(command) || command.name in CommandLabels) throw new Error("Command already exists: " + command.name);
+    command.init();
     Commands.add(command);
     CommandLabels[command.name] = command;
     for (const alias of command.aliases) {
@@ -36,5 +38,6 @@ registerCommands(
     new StopCommand,
     new GamemodeCommand,
     new ClearCommand,
-    new KickCommand
+    new KickCommand,
+    new ListCommand
 );

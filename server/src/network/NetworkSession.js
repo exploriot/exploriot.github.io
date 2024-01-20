@@ -25,7 +25,6 @@ import {SetAttributesPacket} from "../packet/SetAttributesPacket.js";
 import {EntityRemovePacket} from "../packet/EntityRemovePacket.js";
 import {SetHandIndexPacket} from "../packet/SetHandIndexPacket.js";
 import {S_TNTEntity} from "../entity/TNTEntity.js";
-import {S_Server} from "../Server.js";
 
 const PacketMap = {
     [PacketIds.CLIENT_MOVEMENT]: "handleMovementPacket",
@@ -51,7 +50,6 @@ export class NetworkSession {
     pingStart = null;
     ping = 0;
     queuedPackets = [];
-    dirtyIndexes = new Array(InventoryIds.__LEN).fill(null).map(() => new Set);
     /*** @type {Set<S_Entity>} */
     viewingEntities = new Set;
 
@@ -68,9 +66,12 @@ export class NetworkSession {
         if (this.queuedPackets.length) this.sendPackets(this.queuedPackets, true);
         this.queuedPackets.length = 0;
         this.sendChunks();
-        if (this.dirtyIndexes[InventoryIds.PLAYER].has(this.player.handIndex)) this.player.broadcastHandItem();
-        for (let i = 0; i < this.dirtyIndexes.length; i++) {
-            this.sendIndexPackets(i, this.dirtyIndexes[i]);
+        if (this.player.playerInventory.dirtyIndexes.has(this.player.handIndex)) this.player.broadcastHandItem();
+        for (const inv of this.player.getInventories()) {
+            if (inv.cleanDirty) {
+                this.sendInventory()
+            } else this.sendIndexPackets(inv.type, inv.dirtyIndexes);
+            inv.dirtyIndexes.clear();
         }
     };
 
@@ -117,18 +118,24 @@ export class NetworkSession {
 
     sendChunks() {
         const cx = this.player.x >> 4;
-        const chunkDistance = S_Server.getChunkDistance();
+        const chunkDistance = Server.getChunkDistance();
         for (let x = cx - chunkDistance; x < cx + chunkDistance; x++) {
             this.sendChunk(x);
         }
     };
 
     sendWelcomePacket() {
-        this.sendPacket(WelcomePacket(S_Server.getChunkDistance(), this.player.id));
+        this.sendPacket(WelcomePacket(Server.getChunkDistance(), this.player.id));
     };
 
     sendPosition() {
         this.sendPacket(SetPositionPacket(this.player.x, this.player.y))
+    };
+
+    sendInventories() {
+        for (const inv of this.player.getInventories()) {
+            this.sendPacket(InventoryUpdatePacket(inv.type, inv.serialize()));
+        }
     };
 
     sendInventory() {
@@ -260,7 +267,7 @@ export class NetworkSession {
         if (this.player.attributes.gamemode !== 1) {
             handItem.count--;
             if (handItem.count <= 0) this.player.playerInventory.removeIndex(this.player.handIndex);
-            this.dirtyIndexes[InventoryIds.PLAYER].add(this.player.handIndex);
+            else this.player.playerInventory.updateIndex(this.player.handIndex);
         }
 
         this.player.world.setBlock(x, y, handItem.id, handItem.meta);
@@ -284,7 +291,7 @@ export class NetworkSession {
         this.player.breakingEndAt = Date.now() + hardness * 1000;
 
         const bPk = BlockBreakingUpdatePacket(this.player.id, this.player.breaking);
-        for (const p of S_Server.getPlayers()) {
+        for (const p of Server.getPlayers()) {
             if (p === this.player) continue;
             p.session.sendPacket(bPk);
         }
@@ -308,7 +315,6 @@ export class NetworkSession {
         ]);
         if (crafting) inv.setIndex(4, crafting.result.evaluate());
         else inv.removeIndex(4);
-        this.dirtyIndexes[InventoryIds.CRAFT].add(4);
     };
 
     handleCraftingTable() {
@@ -321,7 +327,6 @@ export class NetworkSession {
         ]);
         if (crafting) inv.setIndex(9, crafting.result.evaluate());
         else inv.removeIndex(9);
-        this.dirtyIndexes[InventoryIds.EXTERNAL].add(9);
     };
 
     computeCombineTransaction(inv1, inv2, index1, index2, item1, item2) {
@@ -334,6 +339,8 @@ export class NetworkSession {
         item1.count -= putting;
         item2.count += putting;
         if (item1.count <= 0) inv1.removeIndex(index1);
+        else inv1.updateIndex(index1);
+        inv2.updateIndex(index2);
         return true;
     };
 
@@ -364,6 +371,7 @@ export class NetworkSession {
         if (
             (id1 === id2 && index1 === index2)
             || (id1 === InventoryIds.CRAFT && index1 === 4)
+            || ((id1 === InventoryIds.EXTERNAL || id2 === InventoryIds.EXTERNAL) && !this.player.externalInventory)
             || (id1 === InventoryIds.EXTERNAL && this.player.externalInventoryType === ContainerIds.CRAFTING_TABLE && index1 === 9)
         ) return;
         const inv1 = this.player.getInventory(id1);
@@ -385,18 +393,16 @@ export class NetworkSession {
             ]);
             if (!crafting) return;
             const success = this.computeCombineTransaction(inv2, inv1, index2, index1, item2, item1);
-            this.dirtyIndexes[InventoryIds.CRAFT].add(4);
             if (!success) {
                 this.player.playerInventory.add(item2);
                 if (item2.count > 0) {
                     this.player.world.dropItem(this.player.x, this.player.y, item2.clone());
-                    item2.count = 0;
+                    this.player.craftInventory.removeIndex(4);
                 }
             }
             for (const desc of crafting.recipe.flat(1)) {
                 inv2.removeDesc(desc);
             }
-            this.dirtyIndexes[id1].add(index1);
             this.handleCraftInventory();
             return;
         }
@@ -411,19 +417,17 @@ export class NetworkSession {
             ]);
             if (!crafting) return;
             const success = this.computeCombineTransaction(inv2, inv1, index2, index1, item2, item1);
-            this.dirtyIndexes[InventoryIds.EXTERNAL].add(9);
             if (!success) {
                 this.player.playerInventory.add(item2);
                 if (item2.count > 0) {
                     this.player.world.dropItem(this.player.x, this.player.y, item2.clone());
-                    item2.count = 0;
+                    this.player.externalInventory.removeIndex(9);
                 }
             }
             for (const f of crafting.recipe.flat(1)) {
                 if (!f) continue;
                 inv2.removeDesc(f);
             }
-            this.dirtyIndexes[id1].add(index1);
             this.handleCraftingTable();
             return;
         }
@@ -438,10 +442,10 @@ export class NetworkSession {
 
         if (transactionType === TransactionTypes.SPLIT) {
             if (item2) return;
-            const it = item1.clone();
-            it.count = Math.floor(it.count / 2);
+            const it = item1.clone(Math.floor(item1.count / 2));
             item1.count -= it.count;
             if (item1.count <= 0) inv1.removeIndex(index1);
+            else inv1.updateIndex(index1);
             inv2.setIndex(index2, it);
         }
 
@@ -450,12 +454,15 @@ export class NetworkSession {
             const maxStack = getItemMaxStack(item1.id);
             if (item2 && item2.count >= maxStack) return;
             if (!item2) {
-                const it = item1.clone();
-                it.count = 1;
+                const it = item1.clone(1);
                 inv2.setIndex(index2, it);
-            } else item2.count++;
+            } else {
+                item2.count++;
+                inv2.updateIndex(index2);
+            }
             item1.count--;
             if (item1.count <= 0) inv1.removeIndex(index1);
+            else inv1.updateIndex(index1);
         }
 
         if (id1 === InventoryIds.CRAFT || id2 === InventoryIds.CRAFT) {
@@ -465,9 +472,6 @@ export class NetworkSession {
         if (this.player.externalInventoryType === ContainerIds.CRAFTING_TABLE && (id1 === InventoryIds.EXTERNAL || id2 === InventoryIds.EXTERNAL)) {
             this.handleCraftingTable();
         }
-
-        this.dirtyIndexes[id1].add(index1);
-        this.dirtyIndexes[id2].add(index2);
     };
 
     handleHandItemPacket(packet) {
@@ -497,12 +501,10 @@ export class NetworkSession {
 
         item.count -= count;
         if (item.count <= 0) inv.removeIndex(index);
+        else inv.updateIndex(index);
 
-        const drop = item.clone();
-        drop.count = count;
+        const drop = item.clone(count);
         this.player.world.dropItem(this.player.x, this.player.y + this.player.baseBB.y2, drop, 1000, (this.player.bodyRotation ? 1 : -1) * 15, 0);
-
-        this.dirtyIndexes[id].add(index);
     };
 
     handleSendMessagePacket(pk) {
@@ -526,9 +528,8 @@ export class NetworkSession {
 
         if (block[0] === Ids.CRAFTING_TABLE) {
             if (this.player.externalInventory) return;
-            this.dirtyIndexes[InventoryIds.EXTERNAL].clear();
             this.player.externalInventoryType = ContainerIds.CRAFTING_TABLE;
-            this.player.externalInventory = new Inventory(10, this.dirtyIndexes[InventoryIds.EXTERNAL]);
+            this.player.externalInventory = new Inventory(10, InventoryIds.EXTERNAL);
             this.sendPacket(OpenContainerPacket(ContainerIds.CRAFTING_TABLE));
         }
         if (block[0] === Ids.TNT) {
@@ -549,7 +550,6 @@ export class NetworkSession {
             }
             this.player.externalInventory.clear();
         }
-        this.dirtyIndexes[InventoryIds.EXTERNAL].clear();
         this.player.externalInventory = this.player.externalInventoryType = null;
     };
 

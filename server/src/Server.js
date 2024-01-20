@@ -1,7 +1,8 @@
 import {existsSync, readFileSync, writeFileSync} from "fs";
 import {S_World} from "./world/World.js";
-import {Terminal} from "./terminal/Terminal.js";
+import {startCommandReader, Terminal} from "./terminal/Terminal.js";
 import {ConsoleCommandSender} from "./command/ConsoleCommandSender.js";
+import {SERVER_BEGIN_TIME} from "./Main.js";
 
 export const S_Server = {
     /*** @type {Set<S_Player>} */
@@ -24,39 +25,39 @@ export const S_Server = {
             overworld.loadChunk(x);
         }
     },
-
     getDefaultWorld() {
         return this.defaultWorld;
     },
-
     getWorlds() {
         return this.worlds;
     },
-
     getChunkDistance() {
         return this.chunkDistance;
     },
-
     getPlayers() {
         return this.players;
     },
-
     saveOps() {
         writeFileSync("./ops.txt", Array.from(this.ops).join("\n"));
     },
-
     isOp(sender) {
         if (sender === ConsoleCommandSender) return true;
-        return this.ops.has(sender.username);
+        return this.ops.has(typeof sender === "string" ? sender : sender.username);
     },
-
+    addOp(player, save = true) {
+        this.ops.add(typeof player === "string" ? player : player.username);
+        if (save) this.saveOps();
+    },
+    removeOp(player, save = true) {
+        this.ops.delete(typeof player === "string" ? player : player.username);
+        if (save) this.saveOps();
+    },
     broadcastMessage(message) {
         for (const player of this.getPlayers()) {
             player.sendMessage(message);
         }
         Terminal.send(message);
     },
-
     /**
      * @param {string} name
      * @return {S_Player | null}
@@ -67,7 +68,6 @@ export const S_Server = {
         }
         return null;
     },
-
     getPlayerByPrefix(prefix) {
         prefix = prefix.toLowerCase();
         for (const player of this.getPlayers()) {
@@ -75,7 +75,10 @@ export const S_Server = {
         }
         return null;
     },
-
+    onLoad() {
+        Terminal.send("Server has been loaded in " + (Date.now() - SERVER_BEGIN_TIME) / 1000 + "s. Type 'help' to see the command list.");
+        startCommandReader();
+    },
     stop() {
         Terminal.send("§4Stopping the server...");
         for (const world of this.getWorlds()) world.save();
@@ -86,5 +89,11 @@ export const S_Server = {
         }
         Terminal.send("§7Saved and kicked players.");
         process.exit(0);
+    },
+    crash(error) {
+        Terminal.error(error);
+        this.stop();
     }
 };
+
+global.Server = S_Server;

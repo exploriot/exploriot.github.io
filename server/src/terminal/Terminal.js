@@ -1,7 +1,6 @@
 import {stdin} from "node:process";
 import {createInterface} from "node:readline/promises";
 import {colorizeTextTerminal} from "../../../client/common/Utils.js";
-import {ConsoleCommandSender} from "../command/ConsoleCommandSender.js";
 
 const rl = createInterface(stdin);
 
@@ -23,7 +22,7 @@ async function loopCommandReader() {
     if (!readerRunning) return;
     rl.resume();
     const cmd = await rl.question("");
-    ConsoleCommandSender.processMessage("/" + cmd);
+    _ConsoleCommandSender.processMessage("/" + cmd);
     rl.pause();
     setTimeout(loopCommandReader);
 }
@@ -33,6 +32,6 @@ export const Terminal = {
         console.log(colorizeTextTerminal(text));
     },
     error(error) {
-        this.send("§6An error occurred.\n§4" + error.stack);
+        this.send("§6An error occurred.\n§4" + (error instanceof Error ? error.stack : error));
     }
 };

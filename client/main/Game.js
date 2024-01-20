@@ -1,7 +1,7 @@
 // noinspection JSUnresolvedReference,JSUnusedGlobalSymbols
 import "../packet/ClientPacketHandler.js";
 import {C_World} from "../world/World.js";
-import {Inventory} from "../common/item/Inventory.js";
+import {Inventory, InventoryIds} from "../common/item/Inventory.js";
 import {animate} from "../ui/Animator.js";
 import {C_Player} from "../entity/Player.js";
 import "../common/metadata/Crafts.js";
@@ -27,10 +27,10 @@ export const CServer = {
     canUpdateMovement: false,
     isWelcome: false,
     lastHandIndex: 0,
-    playerInventory: new Inventory(36),
-    cursorInventory: new Inventory(1),
-    craftInventory: new Inventory(5),
-    armorInventory: new Inventory(4),
+    playerInventory: new Inventory(36, InventoryIds.PLAYER),
+    cursorInventory: new Inventory(1, InventoryIds.CURSOR),
+    craftInventory: new Inventory(5, InventoryIds.CRAFT),
+    armorInventory: new Inventory(4, InventoryIds.ARMOR),
     externalInventory: null,
     externalInventoryType: null,
     handIndex: 0,
