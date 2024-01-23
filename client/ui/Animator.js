@@ -4,7 +4,7 @@ import {Ids} from "../common/metadata/Ids.js";
 import {Around} from "../common/Utils.js";
 import {Metadata} from "../common/metadata/Metadata.js";
 import {getBlockHardness, getBlockTexture} from "../common/metadata/Blocks.js";
-import {getTexture} from "../texture/Texture.js";
+import {Texture} from "../loader/Texture.js";
 import {isAnyUIOn} from "./MainUI.js";
 import {renderCursorItemPosition, renderHotbarPosition, renderInventories} from "./ContainerUI.js";
 import "./ContainerUI.js";
@@ -13,8 +13,10 @@ import {C_OPTIONS, CServer, ctx} from "../main/Game.js";
 let lastRender = Date.now() - 1;
 let _fps = [];
 
+export let AnimatorFrame = 0;
+
 export function animate() {
-    requestAnimationFrame(animate);
+    AnimatorFrame = requestAnimationFrame(animate);
     const dt = (Date.now() - lastRender) / 1000;
     lastRender = Date.now();
     const size = getBaseBlockSize();
@@ -52,7 +54,7 @@ export function animate() {
                 ctx.fillRect(pos.x - 0.5, pos.y - 0.5, size + 1, size + 1);
             } else {
                 const texture = getBlockTexture(id[0], id[1]);
-                ctx.drawImage(getTexture(texture), pos.x - 0.5, pos.y - 0.5, size + 1, size + 1);
+                ctx.drawImage(Texture.get(texture).image, pos.x - 0.5, pos.y - 0.5, size + 1, size + 1);
             }
         }
     }
@@ -64,7 +66,7 @@ export function animate() {
     const handItem = CServer.getHandItem();
     const handItemId = handItem ? handItem.id : 0;
     for (let x = renderChunkMinX; x <= renderChunkMaxX; x++) {
-        const entities = CServer.world.entityChunks[x];
+        const entities = CServer.world.chunkEntities[x];
         if (entities) for (const entity of entities) {
             if (
                 Math.abs(entity.x - CServer.player.x) < C_OPTIONS.renderDistance + 4 &&
@@ -89,7 +91,7 @@ export function animate() {
             }
             const pos = getCanvasPosition(entity.breaking.x - 0.5, entity.breaking.y + 0.5, size);
             const stage = Math.floor(entity.breakingTime / hardness * 10);
-            ctx.drawImage(getTexture("./assets/destroy/" + stage + ".png"), pos.x, pos.y, size, size);
+            ctx.drawImage(Texture.get("./assets/destroy/" + stage + ".png").image, pos.x, pos.y, size, size);
         }
     }
 
@@ -118,5 +120,6 @@ export function animate() {
 
     document.querySelector(".info").innerHTML = C_OPTIONS.isDebugMode ? `X: ${CServer.player.x}<br>
 Y: ${CServer.player.y}<br>
-FPS: ${_fps.length}` : "";
+FPS: ${_fps.length}<br>
+Chunk entities: ${CServer.world.chunkEntities[CServer.player.x >> 4].length}` : "";
 }

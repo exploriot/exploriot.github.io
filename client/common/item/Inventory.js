@@ -1,4 +1,3 @@
-import {getItemMaxStack} from "../metadata/Items.js";
 import {Item} from "./Item.js";
 
 export const InventoryIds = {
@@ -12,26 +11,34 @@ export const InventoryIds = {
 
 export const ContainerIds = {
     CRAFTING_TABLE: 0,
-    __LEN: 1
+    FURNACE: 1,
+    CHEST: 2,
+    DOUBLE_CHEST: 3,
+    __LEN: 4
 };
 
 export class Inventory {
     cleanDirty = false;
     dirtyIndexes = new Set;
+    /*** @type {ContainerTile | null} */
+    _tile = null;
 
     /**
      * @param {number} size
      * @param {number} type
+     * @param {any} extra
      */
-    constructor(size, type) {
+    constructor(size, type, extra = null) {
         this.size = size;
         this.type = type;
         /*** @type {(Item | null)[]} */
         this.contents = new Array(size).fill(null);
+        this.extra = extra;
     };
 
     /*** @param {Item} item */
     add(item) {
+        if (!item) return;
         for (let i = 0; i < this.size; i++) {
             if (item.count === 0) return;
             this.addAt(i, item);
@@ -40,7 +47,26 @@ export class Inventory {
 
     /*** @param {Item} item */
     remove(item) {
+        if (!item) return;
         for (let i = 0; i < this.size; i++) {
+            if (item.count === 0) return;
+            this.removeAt(i, item);
+        }
+    };
+
+    /*** @param {Item} item */
+    addFromBack(item) {
+        if (!item) return;
+        for (let i = this.size - 1; i >= 0; i--) {
+            if (item.count === 0) return;
+            this.addAt(i, item);
+        }
+    };
+
+    /*** @param {Item} item */
+    removeFromBack(item) {
+        if (!item) return;
+        for (let i = this.size - 1; i >= 0; i--) {
             if (item.count === 0) return;
             this.removeAt(i, item);
         }
@@ -48,6 +74,7 @@ export class Inventory {
 
     /*** @param {ItemDescriptor} desc */
     removeDesc(desc) {
+        if (!desc) return;
         let count = desc.count ?? 1;
         for (let i = 0; i < this.size; i++) {
             if (count === 0) return 0;
@@ -61,8 +88,9 @@ export class Inventory {
      * @param {Item} item
      */
     addAt(index, item) {
+        if (!item) return;
         const it = this.contents[index];
-        const maxStack = getItemMaxStack(item.id);
+        const maxStack = item.maxStack;
         if (!it) {
             const putting = Math.min(maxStack, item.count);
             item.count -= putting;
@@ -84,6 +112,7 @@ export class Inventory {
      * @param {Item} item
      */
     removeAt(index, item) {
+        if (!item) return;
         const it = this.contents[index];
         if (!it || !it.equals(item, false, true)) return;
         if (it.count <= item.count) {
@@ -104,6 +133,7 @@ export class Inventory {
      * @param {number} count
      */
     removeDescAt(index, desc, count) {
+        if (!desc) return;
         const it = this.contents[index];
         if (!it || !desc.equalsItem(it)) return count;
         if (it.count <= count) {
@@ -133,7 +163,7 @@ export class Inventory {
     clear() {
         this.cleanDirty = true;
         this.dirtyIndexes.clear();
-        this.contents = new Array(this.size).fill(null);
+        this.contents.fill(null);
     };
 
     serialize() {

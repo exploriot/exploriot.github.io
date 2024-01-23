@@ -1,5 +1,5 @@
 import http from "http";
-import * as IO from "socket.io";
+import {WebSocketServer} from "ws";
 import express from "express";
 import {Terminal} from "./terminal/Terminal.js";
 import {S_Player} from "./entity/Player.js";
@@ -43,15 +43,13 @@ if (!existsSync("./logs")) mkdirSync("./logs");
 // todo: if someone drops someone else an item and the player with the item quits and before the dropper leaves the server crashes,
 //  the dropper would get his items back therefore duping the item.
 
-const io = new IO.Server(server, {
-    cors: {
-        origin: "*",
-        methods: ["GET", "POST"],
-    }
-});
+// todo: check out multiplayer interpolation (smoothed the movement, kinda)
+// todo: water is broken
+
+const wss = new WebSocketServer({server});
 
 process.on("SIGINT", () => {
-    Terminal.send("§4A key interruption was caught.");
+    Terminal.warn("A key interruption was caught.");
     Server.stop();
 });
 
@@ -63,31 +61,51 @@ Server.init();
     `${Ids.BEDROCK};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.DIRT};${Ids.DIRT};${Ids.DIRT};${Ids.GRASS_BLOCK}`
 );*/
 
-io.on("connection", ws => {
+wss.on("connection", (ws, req) => {
     let hasAuth = false;
     const T = Date.now();
     /*** @type {S_Player} */
     let player;
+    ws.active = true;
+    ws.disconnectReason = null;
+    ws.ipAddress = req.socket.remoteAddress;
 
-    function kick(reason) {
-        ws.emit("packet", DisconnectPacket(reason));
-        ws.disconnect();
-    }
-
-    setTimeout(() => {
-        if (!hasAuth) kick("Timed out.");
-    }, 5000);
-
-    ws.on("disconnect", () => {
+    ws.onDisconnect = () => {
+        if (!ws.active) return;
+        ws.active = false;
         if (!player) return;
-        player.save();
+        Terminal.info(`§7[${player.username} ${ws.ipAddress} disconnected for ${JSON.stringify(ws.disconnectReason ?? "client disconnect")}§7]`);
         Server.broadcastMessage(`§e${player.username} left the server.`);
         Server.getPlayers().delete(player);
         player.remove();
         player.broadcastDespawn();
+        player.save();
+    };
+
+    function kick(reason) {
+        ws.disconnectReason = reason;
+        ws.send(JSON.stringify(DisconnectPacket(reason)));
+        ws.onDisconnect();
+        setTimeout(() => ws.close(), 1000);
+    }
+
+    ws.on("error", () => {
+        kick("Internal server error.");
     });
 
-    ws.on("packet", pk => {
+    let authInt = setTimeout(() => {
+        if (!hasAuth) kick("Timed out.");
+    }, 5000);
+
+    ws.on("close", ws.onDisconnect);
+
+    ws.on("message", pk => {
+        if (!ws.active) return;
+        try {
+            pk = JSON.parse(pk);
+        } catch (e) {
+            return kick("Invalid packet.");
+        }
         try {
             if (player) appendFileSync("./logs/" + player.username + "-" + T + ".txt", "\n" + JSON.stringify(pk));
             if (!hasAuth) {
@@ -97,6 +115,7 @@ io.on("connection", ws => {
                 if (Array.from(Server.getPlayers()).some(i => i.username === pk.username)) return kick("You are already in the server.");
                 hasAuth = true;
                 ws.player = player = new S_Player(ws, Server.getDefaultWorld(), pk.username);
+                Terminal.info(`§7[${pk.username} ${ws.ipAddress} connected]`);
                 Server.getPlayers().add(player);
                 if (existsSync("./players/" + pk.username + ".json")) {
                     const data = JSON.parse(readFileSync("./players/" + pk.username + ".json", "utf-8"));
@@ -113,7 +132,6 @@ io.on("connection", ws => {
                 } else {
                     const spawn = player.getWorld().getSafeSpawnLocation();
                     player.teleport(spawn.x, spawn.y);
-                    // player.playerInventory.add(new Item(Ids.PLANKS, 0, 32));
                 }
                 player.world.addEntity(player);
                 player.session.sendWelcomePacket();
@@ -122,13 +140,15 @@ io.on("connection", ws => {
                 player.session.requestPing();
                 player.session.sendInventories();
                 player.session.sendHandItemIndex();
+                clearTimeout(authInt);
                 Server.broadcastMessage(`§e${player.username} joined the server.`);
                 return;
             }
+            if (!player.session.active) return;
             player.session.handlePacket(pk);
         } catch (e) {
-            console.error(e);
-            if (player) player.kick("Failed to process packet.");
+            Terminal.error(e);
+            if (player) player.kick("Internal server error.");
             else kick("Invalid auth packet.");
         }
     });
@@ -140,9 +160,27 @@ function update() {
     for (const world of Server.getWorlds()) {
         world.update(dt);
     }
+    const updatingEntities = new Set;
+    const updatingTiles = new Set;
     for (const player of Server.getPlayers()) {
         player.session.cleanPackets();
+        const cx = player.x >> 4;
+        const chunkDistance = Server.getChunkDistance();
+        for (let x = cx - chunkDistance; x < cx + chunkDistance; x++) {
+            player.session.sendChunk(x);
+            if (x in player.world.chunkEntities) for (const entity of player.world.chunkEntities[x]) updatingEntities.add(entity);
+            if (x in player.world.chunkTiles) for (const tile of player.world.chunkTiles[x]) updatingTiles.add(tile);
+        }
     }
+    for (const entity of updatingEntities) entity.update(dt);
+    for (const tile of updatingTiles) {
+        tile.__updateCounter += dt;
+        if (tile.__updateCounter >= tile.updatePeriod) {
+            tile.__updateCounter = 0;
+            tile.update(dt);
+        }
+    }
+
     setTimeout(update);
 }
 

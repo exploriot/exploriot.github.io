@@ -15,6 +15,14 @@ export class S_Entity extends Entity {
         super(++_entityId, type, world, bb);
     }
 
+    teleport(x, y) {
+        this.x = x;
+        this.y = y;
+        this.handleMovement();
+        this.broadcastMovement();
+        this.broadcastEntity();
+    };
+
     /*** @return {S_Player[]} */
     getViewers() {
         return this.world.getChunkViewers(this.x >> 4);

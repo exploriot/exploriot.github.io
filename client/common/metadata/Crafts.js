@@ -146,3 +146,43 @@ for (const o of [
     [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
     new ItemDescriptor(o[1])
 );
+
+registerCraft(
+    [
+        "000",
+        "0 0",
+        "000"
+    ],
+    [new ItemDescriptor(Ids.PLANKS)],
+    new ItemDescriptor(Ids.CHEST)
+);
+
+registerCraft(
+    [
+        "000",
+        "0 0",
+        "000"
+    ],
+    [new ItemDescriptor(Ids.COBBLESTONE)],
+    new ItemDescriptor(Ids.FURNACE)
+);
+
+registerCraft(
+    [
+        "000",
+        "000",
+        "000"
+    ],
+    [new ItemDescriptor(Ids.IRON_NUGGET)],
+    new ItemDescriptor(Ids.IRON_INGOT)
+);
+
+registerCraft(
+    [
+        "000",
+        "000",
+        "000"
+    ],
+    [new ItemDescriptor(Ids.GOLDEN_NUGGET)],
+    new ItemDescriptor(Ids.GOLD_INGOT)
+);

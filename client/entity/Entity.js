@@ -6,7 +6,7 @@ export class C_Entity extends Entity {
     };
 
     renderImage(image, ctx, size) {
-        const pos = getCanvasPosition(this.x, this.y, size);
+        const pos = getCanvasPosition(this.renderX ?? this.x, this.renderY ?? this.y, size);
         const w = (this.baseBB.x2 - this.baseBB.x1) * size;
         const h = (this.baseBB.y2 - this.baseBB.y1) * size;
         ctx.drawImage(

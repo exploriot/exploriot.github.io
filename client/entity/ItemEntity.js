@@ -1,6 +1,6 @@
 import {C_Entity} from "./Entity.js";
 import {EntityIds, ITEM_BB} from "../common/metadata/Entities.js";
-import {getTexture} from "../texture/Texture.js";
+import {Texture} from "../loader/Texture.js";
 import {getItemTexture} from "../common/metadata/Items.js";
 
 export class C_ItemEntity extends C_Entity {
@@ -11,7 +11,7 @@ export class C_ItemEntity extends C_Entity {
 
     render(ctx, size) {
         const texture = getItemTexture(this.item.id, this.item.meta);
-        this.renderImage(getTexture(texture), ctx, size);
+        this.renderImage(Texture.get(texture).image, ctx, size);
     };
 
     update(dt) {

@@ -1,8 +1,8 @@
-import {canvas, ctx, CServer, C_OPTIONS} from "./main/Game.js";
+import {C_OPTIONS, canvas, CServer, ctx} from "./main/Game.js";
 import {PreloadTextures} from "./common/metadata/Metadata.js";
-import {getTexture} from "./texture/Texture.js";
-import {C_sendBlockBreakingUpdatePacket} from "./packet/ClientPacketHandler.js";
+import {Texture} from "./loader/Texture.js";
 import {Mouse} from "./input/Mouse.js";
+import {ClientSession} from "./network/ClientSession.js";
 
 export function getDominantSize() {
     return Math.max(innerWidth, innerHeight);
@@ -22,7 +22,7 @@ export function resetBlockBreaking() {
     CServer.player.removeBlockBreakProcess();
     CServer.player.breakingTime = 0;
     if (CServer.player.breaking) {
-        C_sendBlockBreakingUpdatePacket(Mouse.rx, Mouse.ry, false);
+        ClientSession.sendBlockBreakingUpdatePacket(Mouse.rx, Mouse.ry, false);
         CServer.player.breaking = null;
     }
 }
@@ -39,5 +39,5 @@ export function getCanvasPosition(x, y, size) {
 }
 
 for (const texture of PreloadTextures) {
-    getTexture("./assets/" + texture);
+    Texture.get("./assets/" + texture);
 }

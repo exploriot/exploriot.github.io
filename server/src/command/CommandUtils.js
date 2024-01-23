@@ -3,8 +3,10 @@
 import {EntityIds} from "../../../client/common/metadata/Entities.js";
 import {S_Player} from "../entity/Player.js";
 import {CommandLabels} from "./CommandManager.js";
+import {getItemIdByName} from "../../../client/common/metadata/Items.js";
+import {Metadata} from "../../../client/common/metadata/Metadata.js";
 
-export const Selectors = ["a", "p", "r", "s", "e", "c"];
+export const Selectors = ["a", "p", "r", "s", "e", "c", "w"];
 
 export function processSelector(tokens, sel) {
     for (let i = 0; i < tokens.length; i++) {
@@ -216,6 +218,10 @@ function applySelectorFilters(entities, sel) {
         const t = EntityIds[sel.type];
         entities = entities.filter(i => i.type === t);
     }
+    if ("op" in sel) {
+        const isIt = ["yes", "true"].includes(sel.op);
+        entities = entities.filter(i => Server.isOp(i) === isIt);
+    }
     return entities;
 }
 
@@ -244,6 +250,8 @@ function computeSelectorType(self, selT) {
             return Server.getWorlds().map(i => Object.values(i.entityMap)).flat(1);
         case "c":
             return [_ConsoleCommandSender];
+        case "w":
+            return [_ConsoleCommandSender, ...Array.from(Server.getPlayers())];
     }
 }
 
@@ -333,9 +341,44 @@ const Pos = {
         const cmd = CommandLabels[t.value];
         return cmd ? [ind + 1, cmd] : "Command not found: " + t.value + ".";
     },
+    item(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "word" && t.type !== "string" && t.type !== "number") return "Invalid item.";
+        const n1 = tokens[ind + 1];
+        const n2 = tokens[ind + 2];
+        let id = t.value;
+        let meta = 0;
+        if (typeof id === "string") id = getItemIdByName(id);
+        if (n1 && n2 && n1.type === "symbol" && n1.value === ":" && n2.type === "number") {
+            ind += 2;
+            meta = n2.value;
+        }
+        return [ind + 1, {id, meta}];
+    },
+    block(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "word" && t.type !== "string" && t.type !== "number") return "Invalid block.";
+        const n1 = tokens[ind + 1];
+        const n2 = tokens[ind + 2];
+        let id = t.value;
+        let meta = 0;
+        if (typeof id === "string") id = getItemIdByName(id);
+        if (!Metadata.block.includes(id)) return "Invalid block: " + id + ".";
+        if (n1 && n2 && n1.type === "symbol" && n1.value === ":" && n2.type === "number") {
+            ind += 2;
+            meta = n2.value;
+        }
+        return [ind + 1, {id, meta}];
+    },
+    world(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "word" && t.type !== "string") return "Invalid world.";
+        const cmd = Server.getWorlds().find(i => i.name === t.value);
+        return cmd ? [ind + 1, cmd] : "World not found: " + t.value + ".";
+    },
     string(ind, tokens, self, sender, text) {
         const t = tokens[ind];
-        const next = text.substring(t.index).findIndex(" ");
+        const next = text.substring(t.index).indexOf(" ");
         let str = "";
         for (; ind < tokens.length; ind++) {
             const t2 = tokens[ind];
@@ -345,22 +388,31 @@ const Pos = {
             }
             str += t2.value;
         }
-        return str;
+        return [ind + 1, str];
     },
     float(ind, tokens) {
         const t = tokens[ind];
         if (t.type !== "number") return "Invalid float.";
-        return t.value;
+        return [ind + 1, t.value];
     },
     int(ind, tokens) {
         const t = tokens[ind];
         if (t.type !== "number" || Math.floor(t.value) !== t.value) return "Invalid integer.";
-        return t.value;
+        return [ind + 1, t.value];
     },
     uint(ind, tokens) {
         const t = tokens[ind];
         if (t.type !== "number" || Math.floor(t.value) !== t.value || t.value < 0) return "Invalid positive integer.";
-        return t.value;
+        return [ind + 1, t.value];
+    },
+    json(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "parent" || t.value[0] !== "{") return "Invalid JSON.";
+        try {
+            return [ind + 1, t.value];
+        } catch (e) {
+            return e;
+        }
     }
 };
 
@@ -377,6 +429,7 @@ export function testArguments(self, sender, text, all) {
         for (let j = 0; j < p.pos.length; j++) {
             if (fail) break;
             if (tokInd >= tokens.length) {
+                if (p.pos[j][0].endsWith("?")) break;
                 fail = true;
                 break;
             }

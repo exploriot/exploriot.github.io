@@ -1,4 +1,4 @@
-import {getFlippedTexture, getTexture} from "../texture/Texture.js";
+import {Texture} from "../loader/Texture.js";
 import {CREATIVE_REACH, EntityIds, PLAYER_BB, SURVIVAL_REACH} from "../common/metadata/Entities.js";
 import {C_BodyEntity} from "./BodyEntity.js";
 import {CServer} from "../main/Game.js";
@@ -11,6 +11,8 @@ export class C_Player extends C_BodyEntity {
     breaking = null;
     breakingTime = 0;
     handItem = null;
+    renderX = 0;
+    renderY = 0;
 
     constructor(id, world, username) {
         super(id, EntityIds.PLAYER, world, PLAYER_BB);
@@ -36,19 +38,25 @@ export class C_Player extends C_BodyEntity {
 
     render(ctx, size) {
         ctx.textAlign = "center";
-        const pos = getCanvasPosition(this.x, this.y, size);
+        this.renderX += (this.x - this.renderX) / 5;
+        this.renderY += (this.y - this.renderY) / 5;
+        if (this === CServer.player) {
+            this.renderX = this.x;
+            this.renderY = this.y;
+        }
+        const pos = getCanvasPosition(this.renderX, this.renderY, size);
         ctx.font = "16px monospace";
         ctx.fillStyle = "white";
         ctx.fillText(this.username, pos.x, pos.y - this.baseBB.y2 * size - 10);
         this.renderImage(
-            this.bodyRotation ? getTexture(STEVE_TEXTURE_PATH) : getFlippedTexture(STEVE_TEXTURE_PATH),
+            this.bodyRotation ? Texture.get(STEVE_TEXTURE_PATH).image : Texture.get(STEVE_TEXTURE_PATH).flip(),
             ctx, size
         );
         const item = this === CServer.player ? CServer.getHandItem() : this.handItem;
         if (item) {
             const texture = getItemTexture(item.id, item.meta);
             ctx.drawImage(
-                getTexture(texture), pos.x + (this.bodyRotation ? 0 : -size * 0.4), pos.y - size * 0.4, size * 0.4, size * 0.4
+                Texture.get(texture).image, pos.x + (this.bodyRotation ? 0 : -size * 0.4), pos.y - size * 0.4, size * 0.4, size * 0.4
             );
         }
     };

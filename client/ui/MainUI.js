@@ -1,6 +1,17 @@
 import {C_OPTIONS, CServer} from "../main/Game.js";
-import {closeInventoryUI, isCraftingTableUIOn, isInventoryUIOn, openInventoryUI} from "./ContainerUI.js";
-import {C_sendCloseContainerPacket, C_sendMessagePacket} from "../packet/ClientPacketHandler.js";
+import {
+    closeInventoryUI,
+    isAnyContainerOn,
+    isChestUIOn,
+    isCraftingTableUIOn,
+    isDoubleChestUIOn,
+    isFurnaceUIOn,
+    isInventoryUIOn,
+    MouseContainerPosition,
+    openInventoryUI
+} from "./ContainerUI.js";
+import {ClientSession} from "../network/ClientSession.js";
+import {InventoryIds} from "../common/item/Inventory.js";
 
 const escMenu = document.querySelector(".esc-menu");
 const pauseBtn = document.querySelector(".pause");
@@ -30,7 +41,7 @@ export function isTypingToInput() {
 }
 
 export function isAnyUIOn() {
-    return isEscMenuOn() || isInventoryUIOn() || isCraftingTableUIOn() || isTypingToInput();
+    return isEscMenuOn() || isAnyContainerOn() || isTypingToInput();
 }
 
 pauseBtn.addEventListener("click", toggleEscMenu);
@@ -41,19 +52,58 @@ let chatHistoryIndex = 0;
 // ["hi", "hii"]
 // 2
 
+window.AAA = n => {
+    ClientSession.sendDropItemPacket(InventoryIds.CRAFT, 4, n);
+};
+
+export function dropHands() {
+    const cursorItem = CServer.cursorInventory.contents[0];
+    if (cursorItem) {
+        ClientSession.sendItemTransferPacket(InventoryIds.CURSOR, InventoryIds.PLAYER, 0, cursorItem.count);
+        ClientSession.sendDropItemPacket(InventoryIds.CURSOR, 0, cursorItem.count);
+    }
+    for (let i = 0; i < 4; i++) {
+        const it = CServer.craftInventory.contents[i];
+        if (it) {
+            ClientSession.sendItemTransferPacket(InventoryIds.CRAFT, InventoryIds.PLAYER, i, it.count);
+            ClientSession.sendDropItemPacket(InventoryIds.CRAFT, i, it.count);
+        }
+    }
+}
+
 addEventListener("keydown", e => {
     const key = e.key.toLowerCase();
     if (key === "escape") {
         if (isTypingToInput()) document.activeElement.blur();
         else if (isInventoryUIOn()) closeInventoryUI();
-        else if (isCraftingTableUIOn()) C_sendCloseContainerPacket();
+        else if (isCraftingTableUIOn()) ClientSession.sendCloseContainerPacket();
         else toggleEscMenu();
     }
-    if (key === "e") {
+    if (key === "e" && !isEscMenuOn()) {
         if (isAnyUIOn()) {
-            if (isInventoryUIOn()) closeInventoryUI();
-            else if (isCraftingTableUIOn()) C_sendCloseContainerPacket();
+            if (isInventoryUIOn()) {
+                dropHands();
+                closeInventoryUI();
+            } else if (isFurnaceUIOn() || isCraftingTableUIOn() || isChestUIOn() || isDoubleChestUIOn()) ClientSession.sendCloseContainerPacket();
         } else openInventoryUI();
+    }
+    if (isAnyContainerOn() && !isNaN(key * 1) && MouseContainerPosition) {
+        const {inv: inv1, index: index1} = MouseContainerPosition;
+        const index2 = key * 1 - 1;
+        const inv2 = CServer.playerInventory;
+        if (index1 === index2 && inv1 === inv2) return;
+        const item1 = inv1.contents[index1];
+        const item2 = inv2.contents[index2];
+        if (!item1 && !item2) return;
+        if (!item2) ClientSession.sendInventoryTransactionPacket(
+            inv1.type, inv2.type,
+            index1, index2,
+            item1.count
+        ); else ClientSession.sendInventoryTransactionPacket(
+            inv2.type, inv1.type,
+            index2, index1,
+            item2.count
+        );
     }
     if (key === "t" && !isAnyUIOn()) setTimeout(() => chatInput.focus());
     if (!isAnyUIOn()) {
@@ -64,17 +114,19 @@ addEventListener("keydown", e => {
     const input = document.activeElement;
     if (input && input.tagName === "INPUT") {
         if (key === "enter") {
-            C_sendMessagePacket(input.value);
+            ClientSession.sendMessagePacket(input.value);
             chatHistory.push(input.value);
             chatHistoryIndex++;
             chatHistory.splice(chatHistoryIndex, chatHistory.length - chatHistoryIndex);
             input.value = "";
         } else if (key === "arrowup") {
-            input.value = chatHistory[chatHistoryIndex];
+            if (chatHistoryIndex <= 0) return;
             chatHistoryIndex--;
-        } else if (key === "arrowdown") {
             input.value = chatHistory[chatHistoryIndex];
+        } else if (key === "arrowdown") {
+            if (chatHistoryIndex >= chatHistory.length) return;
             chatHistoryIndex++;
+            input.value = chatHistory[chatHistoryIndex] ?? "";
         }
     }
 });
@@ -83,6 +135,18 @@ document.getElementById("back-btn").addEventListener("click", closeEscMenu);
 
 document.getElementById("disconnect-btn").addEventListener("click", () => {
     location.href = "./";
+});
+
+document.getElementById("reconnect-btn").addEventListener("click", () => {
+    location.reload();
+});
+
+document.getElementById("leave-btn").addEventListener("click", () => {
+    location.href = "./";
+});
+
+document.getElementById("rejoin-btn").addEventListener("click", () => {
+    location.reload();
 });
 
 addEventListener("wheel", e => {

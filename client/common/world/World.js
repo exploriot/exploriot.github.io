@@ -2,6 +2,8 @@ import {Metadata} from "../metadata/Metadata.js";
 import {Around} from "../Utils.js";
 import {EntityIds} from "../metadata/Entities.js";
 import {getBlockHardness} from "../metadata/Blocks.js";
+import {Ids} from "../metadata/Ids.js";
+import {CServer} from "../../main/Game.js";
 
 export const MAX_WORLD_HEIGHT = 256; // 0 to 255
 export const CHUNK_SIZE = 16;
@@ -30,13 +32,22 @@ const EmptyGenerator = {
 export class World {
     /*** @type {Record<string, Record<string, Int8Array>>} */
     chunks = {};
-    entityChunks = {};
+    /*** @type {Record<number, Entity[]>} */
+    chunkEntities = {};
     entityMap = {};
     id = 0;
     generator = EmptyGenerator;
 
     constructor(id) {
         this.id = id;
+    };
+
+    /**
+     * @param {number} chunkX
+     * @return {Entity[]}
+     */
+    getChunkEntities(chunkX) {
+        return this.chunkEntities[chunkX];
     };
 
     isInWorld(x, y) {
@@ -103,7 +114,7 @@ export class World {
     };
 
     canPlaceBlockAt(player, x, y) {
-        const chunkEntities = this.entityChunks[x >> 4];
+        const chunkEntities = this.chunkEntities[x >> 4];
         if (
             !this.isInWorld(x, y)
             || !player.canReachBlock(x, y)
@@ -123,8 +134,20 @@ export class World {
     };
 
     canInteractBlockAt(player, x, y) {
-        return !(!this.isInWorld(x, y)
-            || !player.canReachBlock(x, y));
+        return this.isInWorld(x, y)
+            && player.canReachBlock(x, y)
+            && player.world.getBlock(x, y)[0] !== Ids.AIR
+            && !this.isBlockCovered(x, y);
+    };
+
+    isBlockCovered(x, y) {
+        for (const pos of Around) {
+            const id = CServer.world.getBlock(x + pos[0], y + pos[1])[0];
+            if (Metadata.transparent.includes(id)) {
+                return false;
+            }
+        }
+        return true;
     };
 
     canBreakBlockAt(player, x, y, mode, handItem = player.getHandItem()) {
@@ -132,17 +155,7 @@ export class World {
             !this.isInWorld(x, y)
             || !player.canReachBlock(x, y)
         ) return false;
-        if (y > 0 && y < MAX_WORLD_HEIGHT - 1) {
-            let isShadow = true;
-            for (const pos of Around) {
-                const id = this.getBlock(x + pos[0], y + pos[1])[0];
-                if (Metadata.transparent.includes(id)) {
-                    isShadow = false;
-                    break;
-                }
-            }
-            if (isShadow) return false;
-        }
+        if (y > 0 && y < MAX_WORLD_HEIGHT - 1 && this.isBlockCovered(x, y)) return false;
         const existing = this.getBlock(x, y);
         if (Metadata.neverBreakable.includes(existing[0])) return false;
         return mode === 1 || getBlockHardness(existing[0], handItem ? handItem.id : 0, 0, 0);

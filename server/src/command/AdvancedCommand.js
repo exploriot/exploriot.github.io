@@ -38,6 +38,7 @@ export class AdvancedCommand extends Command {
     execute(sender, args) {
         const res = testArguments(sender, sender, args.join(" "), this.__usage);
         if (typeof res === "string") return sender.sendMessage("§c" + res);
+        if (!res) return Command.ERR_USAGE;
         const keys = Object.keys(this.executor);
         this.executor[keys[res[0]]](sender, res[1]);
     };

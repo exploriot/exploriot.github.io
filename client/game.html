@@ -79,6 +79,80 @@
         ></div>
     </div>
 </div>
+<div class="inventory-ui gone" id="furnace-ui">
+    <div class="container">
+        <div
+                class="player-inventory"
+                data-inv="player"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="9,35"
+        ></div>
+        <div
+                class="hotbar-inventory"
+                data-inv="player"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="0,8"
+        ></div>
+        <div
+                class="furnace-in"
+                data-inv="external"
+                data-inv-dep="furnace-inventory"
+                data-inv-index="0,1"
+        ></div>
+        <div
+                class="furnace-out"
+                data-inv="external"
+                data-inv-dep="furnace-inventory"
+                data-inv-index="2,2"
+        ></div>
+        <div id="furnace-arrow"></div>
+        <div id="furnace-smelt"></div>
+    </div>
+</div>
+<div class="inventory-ui gone" id="chest-ui">
+    <div class="container">
+        <div
+                class="player-inventory"
+                data-inv="player"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="9,35"
+        ></div>
+        <div
+                class="hotbar-inventory"
+                data-inv="player"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="0,8"
+        ></div>
+        <div
+                class="chest-inventory"
+                data-inv="external"
+                data-inv-dep="furnace-inventory"
+                data-inv-index="0,26"
+        ></div>
+    </div>
+</div>
+<div class="inventory-ui gone" id="double-chest-ui">
+    <div class="container">
+        <div
+                class="player-inventory"
+                data-inv="player"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="9,35"
+        ></div>
+        <div
+                class="hotbar-inventory"
+                data-inv="player"
+                data-inv-dep="crafting-inventory"
+                data-inv-index="0,8"
+        ></div>
+        <div
+                class="chest-inventory"
+                data-inv="external"
+                data-inv-dep="furnace-inventory"
+                data-inv-index="0,53"
+        ></div>
+    </div>
+</div>
 <div
         class="cursor-inventory"
         data-inv="cursor"
@@ -88,7 +162,16 @@
 <div class="esc-menu gone">
     <div class="container">
         <div class="btn" id="back-btn">Back</div>
+        <div class="btn" id="reconnect-btn">Reconnect</div>
         <div class="btn" id="disconnect-btn">Disconnect</div>
+    </div>
+</div>
+<div class="disconnect-menu gone">
+    <div class="bg"></div>
+    <div class="container">
+        <div class="text"></div>
+        <div class="btn" id="rejoin-btn">Rejoin</div>
+        <div class="btn" id="leave-btn">Leave</div>
     </div>
 </div>
 </body>

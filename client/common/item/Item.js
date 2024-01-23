@@ -10,6 +10,7 @@ export class Item {
         this.meta = meta;
         this.count = count;
         this.nbt = nbt;
+        this.maxStack = _getItemMaxStack(id);
     };
 
     equals(item, count = true, nbt = true) {

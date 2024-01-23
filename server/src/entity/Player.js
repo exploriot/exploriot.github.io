@@ -1,5 +1,5 @@
 import {CREATIVE_REACH, EntityIds, PLAYER_BB, SURVIVAL_REACH} from "../../../client/common/metadata/Entities.js";
-import {Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
+import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
 import {NetworkSession} from "../network/NetworkSession.js";
 import {HandItemPacket} from "../packet/HandItemPacket.js";
 import {S_BodyEntity} from "./BodyEntity.js";
@@ -18,7 +18,12 @@ export class S_Player extends S_BodyEntity {
     breakingEndAt = null;
     /*** @type {Inventory | null} */
     externalInventory = null;
-    externalInventoryType = null;
+    /*** @type {{type: number | null, x: number | null, y: number | null}} */
+    eInv = {
+        type: null,
+        x: null,
+        y: null
+    };
     handIndex = 0;
     playerInventory = new Inventory(36, InventoryIds.PLAYER);
     cursorInventory = new Inventory(1, InventoryIds.CURSOR);
@@ -74,7 +79,7 @@ export class S_Player extends S_BodyEntity {
     };
 
     kick(reason, immediate = false) {
-        this.session.disconnect("You got kicked." + (reason ? " Reason: " + reason : ""), immediate);
+        this.session.disconnect(reason ?? "You got kicked.", immediate);
     };
 
     getInventory(id) {
@@ -106,11 +111,7 @@ export class S_Player extends S_BodyEntity {
     };
 
     teleport(x, y) {
-        this.x = x;
-        this.y = y;
-        this.handleMovement();
-        this.broadcastMovement();
-        this.broadcastEntity();
+        super.teleport(x, y);
         this.session.sendPosition();
     };
 
@@ -142,6 +143,29 @@ export class S_Player extends S_BodyEntity {
             armorInventory: this.armorInventory.serialize(),
             handIndex: this.handIndex
         }));
+    };
+
+    holdOrDrop(item) {
+        if (!item) return;
+        this.playerInventory.add(item);
+        if (item.count > 0) {
+            this.world.dropItem(this.x, this.y, item);
+        }
+    };
+
+    remove() {
+        for (const item of this.craftInventory.contents) this.holdOrDrop(item);
+        this.craftInventory.clear();
+        for (const item of this.cursorInventory.contents) this.holdOrDrop(item);
+        this.cursorInventory.clear();
+        const ext = this.externalInventory;
+        if (ext && [ContainerIds.CRAFTING_TABLE].includes(ext.extra.containerId)) {
+            for (let i = 0; i < ext.size - 1; i++) { // -1 is for not giving the resulted item to the player
+                this.holdOrDrop(ext.contents[i]);
+            }
+            ext.clear();
+        }
+        super.remove();
     };
 
     serialize() {

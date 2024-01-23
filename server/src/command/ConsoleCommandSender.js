@@ -5,7 +5,7 @@ export const ConsoleCommandSender = new class extends CommandSender {
     username = "Server";
 
     sendMessage(message) {
-        Terminal.send(message);
+        Terminal.info(message);
     };
 };
 

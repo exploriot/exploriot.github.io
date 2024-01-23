@@ -30,7 +30,7 @@ export class DefaultGenerator extends Generator {
                 const treeSize = randInt(3, 5);
                 const treeType = (Math.floor(chunkX / 6) % 6 + 6) % 6;
                 for (let y = 0; y < treeSize; y++) Generator.setBlock(chunk, x, pY + y + 1, [Ids.NATURAL_LOG, treeType]);
-                DefaultGenerator.LEAVES.forEach(pos => Generator.setBlock(chunk, pos[0] + x, pos[1] + pY + treeSize + 1, [Ids.NATURAL_LEAVES, treeType]));
+                DefaultGenerator.LEAVES.forEach(pos => Generator.setBlock(chunk, pos[0] + x, pos[1] + pY + treeSize + 1, [Ids.LEAVES, treeType]));
             }
             for (let y = 1; y < Math.max(Math.round(pY), 55); y++) {
                 if (Generator.getBlock(chunk, x, y)[0] !== Ids.AIR) continue;
