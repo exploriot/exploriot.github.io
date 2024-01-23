@@ -76,6 +76,9 @@ const ColorsRGB = {
     f: [0xff, 0xff, 0xff]
 };
 
+const EMOTE_REGEX = /(:[a-z_]+:)/;
+const EMOTE_LIST = ["skull", "eyes", "slight_smile", "nerd"];
+
 export function splitColors(text) {
     return text.split(/(§[a-f\d])/);
 }
@@ -94,7 +97,11 @@ export function colorizeTextHTML(text) {
             style.color = ColorsHex[sp[1]];
             continue;
         }
-        const data = document.createTextNode(sp).data;
+        const emo = sp.split(EMOTE_REGEX);
+        const data = emo.map(i => {
+            if (EMOTE_REGEX.test(i) && EMOTE_LIST.includes(i.slice(1, -1))) return `<img src="./assets/emotes/${i.slice(1, -1)}.png" width="16">`;
+            return document.createTextNode(i).data;
+        }).join("");
         if (!style.color) {
             result += data;
             continue;
@@ -117,4 +124,8 @@ export function colorizeTextTerminal(text) {
         result += sp;
     }
     return result + "\x1B[39m";
+}
+
+export function roundToPrecision(number, precision) {
+    return parseFloat(number.toFixed(precision));
 }

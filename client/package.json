@@ -10,7 +10,6 @@
   "author": "OguzhanUmutlu",
   "license": "MIT",
   "dependencies": {
-    "socket.io": "^4.7.2",
     "vite": "^5.0.10"
   }
 }

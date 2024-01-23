@@ -11,6 +11,6 @@ export class ListCommand extends Command {
 
     execute(sender, args) {
         const players = Server.getPlayers();
-        sender.sendMessage(`Player${players.length > 1 ? "s" : ""}(${players.size}): ${Array.from(players).join(", ")}`);
+        sender.sendMessage(`Player${players.size > 1 ? "s" : ""}(${players.size}): ${Array.from(players).map(i => i.username).join(", ")}`);
     };
 }

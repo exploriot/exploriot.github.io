@@ -103,11 +103,11 @@ function renderServers() {
             messageMenu.innerHTML = `<div class="text">Joining the server...</div>`;
             messageMenu.classList.remove("gone");
             bg.classList.remove("gone");
-            let protocol = "http";
+            let protocol = "ws";
             let response = await fetch("http://" + server.ip + (server.port !== 80 ? ":" + server.port : "")).then(r => r).catch(r => r);
             if (response instanceof Error) {
                 response = await fetch("https://" + server.ip + (server.port !== 80 ? ":" + server.port : "")).then(r => r).catch(r => r);
-                protocol = "https";
+                protocol = "wss";
                 if (response instanceof Error) {
                     messageMenu.innerHTML = `<div class="text">Couldn't connect to the server.</div><div class="close" onclick="closeUI()">x</div>`;
                     return;

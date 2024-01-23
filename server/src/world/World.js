@@ -9,6 +9,9 @@ import {existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {EntityIds} from "../../../client/common/metadata/Entities.js";
 import {Generators} from "./GeneratorManager.js";
 import {FlowerIds, getBlockDrops} from "../../../client/common/metadata/Blocks.js";
+import {TileBlockIdMap, TileIds} from "../tile/Tile.js";
+import {FurnaceTile} from "../tile/FurnaceTile.js";
+import {ChestTile} from "../tile/ChestTile.js";
 
 const BlockUpdater = {
     [Ids.SAND](world, x, y, self) {
@@ -98,6 +101,14 @@ export class S_World extends World {
     _info = {};
     dirtyUpdateBlocks = new Set;
 
+    // worldX, worldY
+    /*** @type {Record<number, Record<number, Tile>>} */
+    tiles = {};
+
+    // chunkX
+    /*** @type {Record<number, Tile[]>} */
+    chunkTiles = {};
+
     /**
      * @param {number} id
      * @param {string} name
@@ -123,9 +134,10 @@ export class S_World extends World {
         this.generator = new (Generators[this.getGeneratorType()])(this, this.getGeneratorOptions());
     };
 
-    breakBlock(x, y, breakItem = null) {
-        this.summonBlockDrops(x, y, breakItem);
+    breakBlock(x, y, breakItem = null, instant = false) {
+        if (!instant) this.summonBlockDrops(x, y, breakItem);
         this.setBlock(x, y, Ids.AIR);
+        this.checkTile(x, y);
     };
 
     summonBlockDrops(x, y, breakItem = null) {
@@ -160,14 +172,25 @@ export class S_World extends World {
     getChunk(x) {
         if (!this.chunks[x] && existsSync(this.path + "/chunks/" + x + ".json")) {
             const loaded = JSON.parse(readFileSync(this.path + "/chunks/" + x + ".json", "utf8"));
-            this.entityChunks[x] = loaded.entities.map(i => {
+            for (const data of loaded.entities) {
                 const clas = {
                     [EntityIds.ITEM]: S_ItemEntity,
                     [EntityIds.FALLING_BLOCK]: S_FallingBlockEntity
-                }[i.type];
-                if (!clas) return null;
-                return clas.deserialize(this, i);
-            }).filter(Boolean);
+                }[data.type];
+                if (!clas) continue;
+                const entity = clas.deserialize(this, data);
+                this.addEntity(entity);
+            }
+            for (const data of loaded.tiles) {
+                const clas = {
+                    [TileIds.FURNACE]: FurnaceTile,
+                    [TileIds.CHEST]: ChestTile
+                }[data.type];
+                if (!clas) continue;
+                const tile = clas.deserialize(this, data);
+                tile.init();
+                tile.add();
+            }
             return this.chunks[x] = loaded.subChunks;
         }
         return super.getChunk(x);
@@ -208,6 +231,34 @@ export class S_World extends World {
         entity.handleMovement();
     };
 
+    getTile(worldX, worldY) {
+        return (this.tiles[worldX] ?? {})[worldY];
+    };
+
+    setTile(worldX, worldY, tile) {
+        const old = this.getTile(worldX, worldY);
+        if (old) old.remove();
+        if (tile) tile.add();
+    };
+
+    checkTile(worldX, worldY) {
+        const id = this.getBlock(worldX, worldY)[0];
+        const old = this.getTile(worldX, worldY);
+        if (!(id in TileBlockIdMap)) {
+            if (old) old.remove();
+            return;
+        }
+        const tileType = TileBlockIdMap[id];
+        const tileClass = {
+            [TileIds.FURNACE]: FurnaceTile,
+            [TileIds.CHEST]: ChestTile
+        }[tileType];
+        if (old && old.type === tileType) return;
+        const tile = new tileClass(this, worldX, worldY);
+        tile.init();
+        this.setTile(worldX, worldY, tile);
+    };
+
     /**
      * @param chunkX
      * @return {S_Player[]}
@@ -233,19 +284,20 @@ export class S_World extends World {
         return entity;
     };
 
-    savePlayers() {
-    };
-
     saveChunk(x) {
         const chunk = this.chunks[x];
-        const entities = this.entityChunks[x] ?? [];
-        const data = {subChunks: [], entities: []};
+        const entities = this.chunkEntities[x] ?? [];
+        const tiles = this.chunkTiles[x] ?? [];
+        const data = {subChunks: [], entities: [], tiles: []};
         for (const y in chunk) {
             data.subChunks[y] = Array.from(chunk[y]);
         }
         for (const entity of entities) {
             if (entity.type === EntityIds.PLAYER) continue;
             data.entities.push(entity.serialize());
+        }
+        for (const tile of tiles) {
+            data.tiles.push(tile.serialize());
         }
         writeFileSync(this.path + "/chunks/" + x + ".json", JSON.stringify(data));
     };
@@ -255,16 +307,9 @@ export class S_World extends World {
             this.saveChunk(x);
         });
         this.dirtyChunks.clear();
-        this.savePlayers();
     };
 
-    update(dt) {
-        for (const chunkX in this.entityChunks) {
-            const entities = this.entityChunks[chunkX];
-            for (const entity of entities) {
-                entity.update(dt);
-            }
-        }
+    update() {
         for (const b of this.dirtyUpdateBlocks) {
             const t = b.split(" ");
             this.onBlockUpdate(Number(t[0]), Number(t[1]));

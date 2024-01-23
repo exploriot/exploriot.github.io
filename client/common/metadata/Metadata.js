@@ -50,6 +50,7 @@ export const Metadata = {
     canPlaceBlockOnIt: [],
     isExplodeable: [],
     blockDrops: {},
+    xpDrops: {},
     edible: {[Ids.APPLE]: 4},
     itemName: {
         other: id => (Object.keys(Ids).find(i => Ids[i] === id) || "UNKNOWN").split("_").map(i => i[0].toUpperCase() + i.substring(1).toLowerCase()).join(" ")
@@ -73,5 +74,8 @@ export const Metadata = {
     toolTypeItems: {},
     toolLevelItems: {},
     liquid: [],
-    liquidCanBreak: []
+    liquidCanBreak: [],
+    fuel: {},
+    smeltsTo: {},
+    smeltXP: {}
 };

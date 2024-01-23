@@ -9,6 +9,7 @@ export class Command {
         this.usage = usage;
         this.aliases = aliases;
         this.permission = permission;
+        this.usageMessage = "§cUsage: /" + name + (usage ? " " + usage : "");
     };
 
     init() {

@@ -118,7 +118,7 @@ img {
 .hotbar-item {
     position: relative;
     background-image: url("../assets/gui/hotbar.png");
-    background-size: 100% 100%;
+    background-size: 100%;
     width: calc(100% / 9);
     height: 100%;
 }
@@ -171,13 +171,55 @@ img {
 
 #player-inventory-ui > .container {
     background: url("../assets/gui/player_inventory.png") no-repeat;
-    background-size: 100% 100%;
+    background-size: 100%;
     aspect-ratio: 176 / 166;
 }
 
 #crafting-table-ui > .container {
     background: url("../assets/gui/crafting_table.png") no-repeat;
-    background-size: 100% 100%;
+    background-size: 100%;
+    aspect-ratio: 176 / 166;
+}
+
+#furnace-ui > .container {
+    background: url("../assets/gui/furnace_inventory.png") no-repeat;
+    background-size: 100%;
+    aspect-ratio: 176 / 166;
+}
+
+#chest-ui > .container {
+    background: url("../assets/gui/chest_inventory.png") no-repeat;
+    background-size: 100%;
+    aspect-ratio: 176 / 166;
+}
+
+#double-chest-ui > .container {
+    background: url("../assets/gui/double_chest_inventory.png") no-repeat;
+    background-size: 100%;
+    aspect-ratio: 176 / 222;
+}
+
+#hopper-ui > .container {
+    background: url("../assets/gui/hopper_inventory.png") no-repeat;
+    background-size: 100%;
+    aspect-ratio: 121 / 92;
+}
+
+#shulker-ui > .container {
+    background: url("../assets/gui/shulker_inventory.png") no-repeat;
+    background-size: 100%;
+    aspect-ratio: 176 / 166;
+}
+
+#dropper-ui > .container {
+    background: url("../assets/gui/dropper_inventory.png") no-repeat;
+    background-size: 100%;
+    aspect-ratio: 176 / 166;
+}
+
+#grindstone-ui > .container {
+    background: url("../assets/gui/grindstone_inventory.png") no-repeat;
+    background-size: 100%;
     aspect-ratio: 176 / 166;
 }
 
@@ -323,4 +365,144 @@ img {
 .crafting-inventory-out > .item {
     width: 100%;
     height: 100%;
+}
+
+.disconnect-menu {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.disconnect-menu > .container {
+    width: 70%;
+}
+
+.disconnect-menu > .container > .text {
+    font-size: 25px;
+    margin-bottom: 50px;
+    text-align: center;
+    word-wrap: anywhere;
+}
+
+.disconnect-menu > .container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.disconnect-menu > .container > .btn {
+    width: 10vw;
+}
+
+.disconnect-menu > .bg {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: url("../assets/blocks/dirt.png");
+    background-size: 64px 64px;
+    filter: brightness(0.4);
+}
+
+.furnace-in {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 31.5%;
+    top: 9.5%;
+    width: 10%;
+    height: 32%;
+}
+
+.furnace-in > .item {
+    width: 100%;
+    height: calc(100% / 3);
+}
+
+.furnace-in > .item:nth-child(2) {
+    translate: 0 56%;
+}
+
+.furnace-out {
+    position: absolute;
+    left: 65.4%;
+    top: 21%;
+    width: 10%;
+    height: 10%;
+}
+
+.furnace-out > .item {
+    width: 100%;
+    height: 100%;
+}
+
+#furnace-arrow {
+    position: absolute;
+    left: 45.5%;
+    top: 21.1%;
+    background: url("../assets/gui/furnace_arrow.png") no-repeat;
+    background-size: 100%;
+    width: 12.5%;
+    aspect-ratio: 22 / 15;
+    opacity: 1;
+    #animation-name: furnace-arrow-animation;
+    animation-duration: 10s;
+    animation-fill-mode: forwards;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+@keyframes furnace-arrow-animation {
+    0% {
+        clip-path: polygon(0 0, 0% 0, 0% 100%, 0 100%);
+    }
+
+    100% {
+        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+    }
+}
+
+#furnace-smelt {
+    position: absolute;
+    left: 32.4%;
+    top: 22.2%;
+    background: url("../assets/gui/furnace_smelt.png") no-repeat;
+    background-size: 100%;
+    width: 7.5%;
+    aspect-ratio: 13 / 13;
+    opacity: 1;
+    #animation-name: furnace-smelt-animation;
+    #animation-duration: 10s;
+    animation-fill-mode: forwards;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+}
+
+@keyframes furnace-smelt-animation {
+    0% {
+        clip-path: polygon(100% 100%, 0 100%, 0 0%, 100% 0%);
+    }
+
+    100% {
+        clip-path: polygon(100% 100%, 0 100%, 0 100%, 100% 100%);
+    }
+}
+
+.chest-inventory {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 4%;
+    top: 10%;
+    width: 92%;
+    height: 32%;
+}
+
+.chest-inventory > .item {
+    width: calc(100% / 9);
+    height: calc(100% / 3);
 }

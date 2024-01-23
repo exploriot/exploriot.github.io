@@ -17,7 +17,7 @@ export class OpCommand extends AdvancedCommand {
                 player.sendMessage("§7You have been opped.");
                 Server.addOp(player);
             }
-            sender.sendMessage("Player" + (players.length > 1 ? "s" : "") + " " + players.map(i => i.username).join(" and ") + " has been de-opped.");
+            sender.sendMessage("Player" + (players.length > 1 ? "s" : "") + " " + players.map(i => i.username).join(" and ") + " has been opped.");
         },
         "<player: string>": (sender, [name]) => {
             if (Server.isOp(name)) return sender.sendMessage("Player " + name + " is already not an operator.");

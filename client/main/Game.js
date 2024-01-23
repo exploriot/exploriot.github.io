@@ -1,11 +1,10 @@
 // noinspection JSUnresolvedReference,JSUnusedGlobalSymbols
-import "../packet/ClientPacketHandler.js";
+import "../network/ClientPacketHandler.js";
 import {C_World} from "../world/World.js";
 import {Inventory, InventoryIds} from "../common/item/Inventory.js";
 import {animate} from "../ui/Animator.js";
 import {C_Player} from "../entity/Player.js";
 import "../common/metadata/Crafts.js";
-import {C_sendAuthPacket} from "../packet/ClientPacketHandler.js";
 
 // todo: head looking at mouse
 
@@ -31,8 +30,9 @@ export const CServer = {
     cursorInventory: new Inventory(1, InventoryIds.CURSOR),
     craftInventory: new Inventory(5, InventoryIds.CRAFT),
     armorInventory: new Inventory(4, InventoryIds.ARMOR),
+    /*** @type {Inventory | null} */
     externalInventory: null,
-    externalInventoryType: null,
+    containerState: {},
     handIndex: 0,
     player: null,
     world: null,
@@ -52,5 +52,3 @@ CServer.world.entityMap[CServer.player.x >> 4] = CServer.player;
 
 animate();
 CServer.world.update();
-
-C_sendAuthPacket();

@@ -3,7 +3,8 @@ import {EntityIds, ITEM_BB} from "../../../client/common/metadata/Entities.js";
 import {Item} from "../../../client/common/item/Item.js";
 
 export class S_ItemEntity extends S_Entity {
-    despawnsAt = Date.now() + 1000 * 60 * 0.5;
+    despawnsAt = Date.now() + 1000 * 60 * 5;
+    combineTimer = 0;
 
     constructor(world, item, holdDelay = 500) {
         super(EntityIds.ITEM, world, ITEM_BB);
@@ -16,14 +17,29 @@ export class S_ItemEntity extends S_Entity {
             this.remove();
             return false;
         }
+        this.combineTimer += dt;
+        if (this.combineTimer > 1) {
+            this.combineTimer = 0;
+            for (const entity of this.world.getChunkEntities(this.x >> 4)) if (
+                entity instanceof S_ItemEntity
+                && entity !== this
+                && entity.distance(this.x, this.y) < 2
+                && entity.item.equals(this.item, false, true)
+            ) {
+                this.item.count += entity.item.count;
+                entity.remove();
+                return false;
+            }
+        }
         this.applyGravity(dt);
         this.vx *= 0.9;
         if (this.canBeHoldAfter < Date.now()) for (const player of this.getViewers()) {
             if (player.distance(this.x, this.y) < 0.75) {
-                this.remove();
                 player.playerInventory.add(this.item);
-                player.session.sendInventory();
-                return false;
+                if (this.item.count <= 0) {
+                    this.remove();
+                    return false;
+                }
             }
         }
         return super.update(dt);

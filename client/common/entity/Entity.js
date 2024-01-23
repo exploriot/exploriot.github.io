@@ -86,12 +86,12 @@ export class Entity {
     updateChunk() {
         const newCX = this.x >> 4;
         if (newCX === this.lastChunkX) return false;
-        const oldChunk = this.world.entityChunks[this.lastChunkX];
+        const oldChunk = this.world.chunkEntities[this.lastChunkX];
         if (oldChunk) {
             const index = oldChunk.indexOf(this);
             if (index !== -1) oldChunk.splice(index, 1);
         }
-        const newEntities = this.world.entityChunks[newCX] ??= [];
+        const newEntities = this.world.chunkEntities[newCX] ??= [];
         if (!newEntities.includes(this)) {
             newEntities.push(this);
         }
@@ -105,7 +105,7 @@ export class Entity {
 
     remove() {
         if (this.lastChunkX !== null) {
-            const chunk = this.world.entityChunks[this.lastChunkX];
+            const chunk = this.world.chunkEntities[this.lastChunkX];
             if (chunk) {
                 const index = chunk.indexOf(this);
                 if (index !== -1) chunk.splice(index, 1);
@@ -120,5 +120,13 @@ export class Entity {
 
     distance(x, y) {
         return Math.sqrt((this.x - x) ** 2 + (this.y - y) ** 2);
+    };
+
+    serialize() {
+        return {
+            type: this.type,
+            x: this.x,
+            y: this.y
+        };
     };
 }

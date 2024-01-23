@@ -4,21 +4,12 @@ import {Keyboard} from "../input/Keyboard.js";
 import {PLAYER_JUMP_ACCELERATION, PLAYER_SPEED} from "../common/metadata/Entities.js";
 import {Mouse} from "../input/Mouse.js";
 import {resetBlockBreaking} from "../Utils.js";
-import {
-    C_sendBlockBreakingUpdatePacket,
-    C_sendBlockBreakPacket,
-    C_sendBlockPlacePacket,
-    C_sendDropItemPacket,
-    C_sendHandIndex,
-    C_sendInteractBlockPacket,
-    C_sendMovementPacket,
-    C_sendToggleFlightPacket
-} from "../packet/ClientPacketHandler.js";
 import {Ids} from "../common/metadata/Ids.js";
 import {Around} from "../common/Utils.js";
 import {C_OPTIONS, CServer} from "../main/Game.js";
 import {getBlockHardness, isBlockItem} from "../common/metadata/Blocks.js";
 import {InventoryIds} from "../common/item/Inventory.js";
+import {ClientSession} from "../network/ClientSession.js";
 
 let lastMouseX = 0;
 let lastMouseY = 0;
@@ -37,6 +28,7 @@ export class C_World extends World {
         const adt = (Date.now() - this.lastUpdate) / 1000;
         const dt = Math.min(adt, 0.1);
         this.lastUpdate = Date.now();
+        ClientSession.cleanPackets();
         if (!CServer.isWelcome) return;
         const onGround = CServer.player._onGround;
         const isFlying = CServer.attributes.isFlying;
@@ -59,7 +51,7 @@ export class C_World extends World {
                 lastDrop = Date.now();
                 const item = CServer.getHandItem();
                 if (item && item.count > 0) {
-                    C_sendDropItemPacket(InventoryIds.PLAYER, CServer.handIndex, 1);
+                    ClientSession.sendDropItemPacket(InventoryIds.PLAYER, CServer.handIndex, 1);
                 }
             }
         }
@@ -81,7 +73,7 @@ export class C_World extends World {
         const handItemId = handItem ? handItem.id : 0;
         if (Mouse.leftDown && !isAnyUIOn() && this.canBreakBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.attributes.gamemode, CServer.getHandItem())) {
             if (CServer.player.breakingTime === 0 && !isCreative) {
-                C_sendBlockBreakingUpdatePacket(Mouse.rx, Mouse.ry, true);
+                ClientSession.sendBlockBreakingUpdatePacket(Mouse.rx, Mouse.ry, true);
             }
             CServer.player.reAddBlockBreakProcess(Mouse.rx >> 4);
             CServer.player.breaking = {x: Mouse.rx, y: Mouse.ry};
@@ -90,7 +82,7 @@ export class C_World extends World {
             const hardness = getBlockHardness(blockId, handItemId, 0, 0);
             if (CServer.player.breakingTime >= hardness || isCreative) {
                 this.setBlock(Mouse.rx, Mouse.ry, Ids.AIR);
-                C_sendBlockBreakPacket(Mouse.rx, Mouse.ry);
+                ClientSession.sendBlockBreakPacket(Mouse.rx, Mouse.ry);
                 resetBlockBreaking();
             }
         }
@@ -115,12 +107,15 @@ export class C_World extends World {
                     const handItem = CServer.getHandItem();
                     if (handItem && isBlockItem(handItem.id)) {
                         this.setBlock(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
-                        C_sendBlockPlacePacket(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
+                        ClientSession.sendBlockPlacePacket(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
                     }
                 }
-            } else if (this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry)) {
+            } else if (
+                this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry) &&
+                Date.now() - lastPlace > 300
+            ) {
                 lastPlace = Date.now();
-                C_sendInteractBlockPacket(Mouse.rx, Mouse.ry);
+                ClientSession.sendInteractBlockPacket(Mouse.rx, Mouse.ry);
             }
         }
 
@@ -129,7 +124,7 @@ export class C_World extends World {
         const renderChunkMinX = playerChunkX - renderDistChunks;
         const renderChunkMaxX = playerChunkX + renderDistChunks;
         for (let x = renderChunkMinX; x <= renderChunkMaxX; x++) {
-            const entities = this.entityChunks[x];
+            const entities = this.chunkEntities[x];
             if (!entities) continue;
             for (const entity of entities) {
                 if (
@@ -143,13 +138,13 @@ export class C_World extends World {
         CServer.player._onGround = CServer.player.isOnGround();
 
         if (CServer.canUpdateMovement) {
-            C_sendMovementPacket();
+            ClientSession.sendMovement();
         }
         CServer.canUpdateMovement = false;
 
         if (CServer.attributes.gamemode % 2 !== 0 && Keyboard[" "] && !isPressingSpace) {
             if (Date.now() - lastSpace < 300) {
-                C_sendToggleFlightPacket();
+                ClientSession.sendToggleFlightPacket();
                 isPressingSpace = false;
             }
             lastSpace = Date.now();
@@ -157,7 +152,7 @@ export class C_World extends World {
         isPressingSpace = Keyboard[" "];
 
         if (CServer.lastHandIndex !== CServer.handIndex) {
-            C_sendHandIndex();
+            ClientSession.sendHandIndex();
             CServer.lastHandIndex = CServer.handIndex;
         }
     };

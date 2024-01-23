@@ -3,6 +3,7 @@ import {S_World} from "./world/World.js";
 import {startCommandReader, Terminal} from "./terminal/Terminal.js";
 import {ConsoleCommandSender} from "./command/ConsoleCommandSender.js";
 import {SERVER_BEGIN_TIME} from "./Main.js";
+import {S_Player} from "./entity/Player.js";
 
 export const S_Server = {
     /*** @type {Set<S_Player>} */
@@ -14,6 +15,8 @@ export const S_Server = {
     chunkDistance: 3,
 
     init() {
+        if (this.ops.size === 1 && !Array.from(this.ops)[0]) this.ops.clear();
+
         const overworld = new S_World(0, "overworld", {
             generatorType: "default"
         });
@@ -42,13 +45,16 @@ export const S_Server = {
     },
     isOp(sender) {
         if (sender === ConsoleCommandSender) return true;
+        if (!(sender instanceof S_Player) && typeof sender !== "string") return false;
         return this.ops.has(typeof sender === "string" ? sender : sender.username);
     },
     addOp(player, save = true) {
+        if (!(player instanceof S_Player) && typeof player !== "string") return false;
         this.ops.add(typeof player === "string" ? player : player.username);
         if (save) this.saveOps();
     },
     removeOp(player, save = true) {
+        if (!(player instanceof S_Player) && typeof player !== "string") return false;
         this.ops.delete(typeof player === "string" ? player : player.username);
         if (save) this.saveOps();
     },
@@ -56,7 +62,7 @@ export const S_Server = {
         for (const player of this.getPlayers()) {
             player.sendMessage(message);
         }
-        Terminal.send(message);
+        Terminal.info(message);
     },
     /**
      * @param {string} name
@@ -76,18 +82,18 @@ export const S_Server = {
         return null;
     },
     onLoad() {
-        Terminal.send("Server has been loaded in " + (Date.now() - SERVER_BEGIN_TIME) / 1000 + "s. Type 'help' to see the command list.");
+        Terminal.info("Server has been loaded in " + (Date.now() - SERVER_BEGIN_TIME) / 1000 + "s. Type 'help' to see the command list.");
         startCommandReader();
     },
     stop() {
-        Terminal.send("§4Stopping the server...");
+        Terminal.warn("Stopping the server...");
         for (const world of this.getWorlds()) world.save();
-        Terminal.send("§7Saved the worlds.");
+        Terminal.info("Saved the worlds.");
         for (const player of this.getPlayers()) {
-            player.kick("§4Server was remotely closed.");
+            player.kick("§cServer was remotely closed.");
             player.save();
         }
-        Terminal.send("§7Saved and kicked players.");
+        Terminal.info("Saved and kicked players.");
         process.exit(0);
     },
     crash(error) {

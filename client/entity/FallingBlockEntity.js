@@ -1,8 +1,8 @@
 import {C_Entity} from "./Entity.js";
 import {getBlockTexture} from "../common/metadata/Blocks.js";
-import {getTexture} from "../texture/Texture.js";
 import {EntityIds, FALLING_BLOCK_BB} from "../common/metadata/Entities.js";
 import {getCanvasPosition} from "../Utils.js";
+import {Texture} from "../loader/Texture.js";
 
 export class C_FallingBlockEntity extends C_Entity {
     constructor(id, world, blockId, blockMeta) {
@@ -19,6 +19,6 @@ export class C_FallingBlockEntity extends C_Entity {
     render(ctx, size) {
         const texture = getBlockTexture(this.blockId, this.blockMeta);
         const pos = getCanvasPosition(this.x - 0.5, this.y + 0.5, size);
-        ctx.drawImage(getTexture(texture), pos.x, pos.y, size, size);
+        ctx.drawImage(Texture.get(texture).image, pos.x, pos.y, size, size);
     };
 }

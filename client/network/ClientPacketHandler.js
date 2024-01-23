@@ -1,46 +1,25 @@
 import {PacketIds} from "../common/metadata/PacketIds.js";
-import {MovementPacket} from "./MovementPacket.js";
 import {makeSubChunk} from "../common/world/World.js";
 import {EntityIds} from "../common/metadata/Entities.js";
 import {C_Player} from "../entity/Player.js";
 import {CServer} from "../main/Game.js";
-import {BlockPlacePacket} from "./BlockPlacePacket.js";
-import {BlockBreakPacket} from "./BlockBreakPacket.js";
-import {BlockBreakingUpdatePacket} from "./BlockBreakingUpdatePacket.js";
 import {C_FallingBlockEntity} from "../entity/FallingBlockEntity.js";
-import {PingPacket} from "./PingPacket.js";
 import {ContainerIds, Inventory, InventoryIds} from "../common/item/Inventory.js";
 import {Item} from "../common/item/Item.js";
-import {SetHandIndexPacket} from "./SetHandIndexPacket.js";
-import "./socket.io.min.js";
-import {InventoryTransactionPacket} from "./InventoryTransactionPacket.js";
 import {C_ItemEntity} from "../entity/ItemEntity.js";
-import {AuthPacket} from "./AuthPacket.js";
-import {ItemDropPacket} from "./ItemDropPacket.js";
-import {SendMessagePacket} from "./SendMessagePacket.js";
-import {InteractBlockPacket} from "./InteractBlockPacket.js";
-import {CloseContainerPacket} from "./CloseContainerPacket.js";
-import {closeCraftingTableUI, closeInventoryUI, openCraftingTableUI} from "../ui/ContainerUI.js";
-import {ToggleFlightPacket} from "./ToggleFlightPacket.js";
+import {
+    closeAllInventoryUIs,
+    closeDoubleChestUI,
+    openChestUI,
+    openCraftingTableUI,
+    openFurnaceUI,
+    updateStateUI
+} from "../ui/ContainerUI.js";
 import {C_TNTEntity} from "../entity/TNTEntity.js";
 import {colorizeTextHTML} from "../common/Utils.js";
-
-const query = new URLSearchParams(location.search);
-const ip = query.get("ip");
-const port = query.get("port");
-const protocol = query.get("protocol");
-
-const socket = io(protocol + "://" + ip + (port === "80" ? "" : ":" + port));
-
-socket.on("connect", () => {
-    console.info("Connected to the Socket.IO server");
-});
-
-socket.on("disconnect", () => {
-    location.href = "./";
-});
-
-socket.on("packet", C_handlePacket);
+import {SoundIds} from "../common/metadata/Sounds.js";
+import {ClientSession} from "./ClientSession.js";
+import {dropHands} from "../ui/MainUI.js";
 
 const EntityCreator = {
     [EntityIds.PLAYER]: data => new C_Player(
@@ -117,7 +96,7 @@ export function getInventoryIdByName(name) {
     }
 }
 
-function C_handleWelcomePacket(pk) {
+export function C_handleWelcomePacket(pk) {
     CServer.player.id = pk.entityId;
     CServer.world.entityMap[pk.entityId] = CServer.player;
     CServer.chunkDistance = pk.chunkDistance;
@@ -125,23 +104,23 @@ function C_handleWelcomePacket(pk) {
     CServer.player.handleMovement();
 }
 
-function C_handleSubChunkPacket(pk) {
+export function C_handleSubChunkPacket(pk) {
     const chunk = CServer.world.getChunk(pk.x);
     const subChunk = chunk[pk.y] ??= makeSubChunk();
     subChunk.set(pk.blocks);
 }
 
-function C_handleBatchPacket(batch) {
+export function C_handleBatchPacket(batch) {
     for (const pk of batch.packets) {
         C_handlePacket(pk);
     }
 }
 
-function C_handleEntityUpdatePacket(pk) {
+export function C_handleEntityUpdatePacket(pk) {
     packetToEntity(pk.entity);
 }
 
-function C_handleEntityMovementPacket(pk) {
+export function C_handleEntityMovementPacket(pk) {
     const entity = CServer.world.entityMap[pk.id];
     if (!entity) return;
     entity.x = pk.x;
@@ -149,17 +128,17 @@ function C_handleEntityMovementPacket(pk) {
     entity.handleMovement();
 }
 
-function C_handleEntityRemovePacket(pk) {
+export function C_handleEntityRemovePacket(pk) {
     const entity = CServer.world.entityMap[pk.id];
     if (!entity) return;
     entity.remove();
 }
 
-function C_handleBlockUpdatePacket(pk) {
+export function C_handleBlockUpdatePacket(pk) {
     CServer.world.setBlock(pk.x, pk.y, pk.id, pk.meta);
 }
 
-function C_handleBlockBreakingUpdatePacket(pk) {
+export function C_handleBlockBreakingUpdatePacket(pk) {
     const entity = CServer.world.entityMap[pk.id];
     if (!entity) return;
     if (pk.position) entity.reAddBlockBreakProcess(pk.position.x >> 4);
@@ -168,44 +147,49 @@ function C_handleBlockBreakingUpdatePacket(pk) {
     entity.breakingTime = 0;
 }
 
-function C_handleDisconnectPacket(pk) {
-    alert(pk.reason);
+export function C_handleDisconnectPacket(pk) {
+    ClientSession.kickReason = pk.reason;
+    ClientSession.close();
 }
 
-function C_handlePingPacket() {
-    C_sendPacket(PingPacket());
+export function C_handlePingPacket() {
+    // ClientSession.sendPing(); now it's handled in the worker
 }
 
-function C_handleInventorySetIndexPacket(pk) {
+export function C_handleInventorySetIndexPacket(pk) {
     const inv = getInventory(pk.id);
     if (inv) inv.contents[pk.index] = Item.deserialize(pk.item);
 }
 
-function C_handleInventoryUpdatePacket(pk) {
+export function C_handleInventoryUpdatePacket(pk) {
+    if (pk.id === InventoryIds.EXTERNAL && !CServer.externalInventory) {
+        C_handleOpenContainerPacket()
+    }
     const inv = getInventory(pk.id);
     inv.contents = pk.contents.map(i => Item.deserialize(i));
 }
 
-function C_handleHandItemPacket(pk) {
+export function C_handleHandItemPacket(pk) {
     const entity = CServer.world.entityMap[pk.id];
     if (!entity) return;
     entity.handItem = Item.deserialize(pk.item);
 }
 
-function C_handleSetPositionPacket(pk) {
+export function C_handleSetPositionPacket(pk) {
     CServer.player.x = pk.x;
     CServer.player.y = pk.y;
 }
 
-function C_handleSendMessagePacket(pk) {
+export function C_handleSendMessagePacket(pk) {
     const messages = document.querySelector(".chat > .messages");
     const msg = document.createElement("div");
     msg.classList.add("msg");
+
     msg.innerHTML = colorizeTextHTML(pk.message);
     messages.appendChild(msg);
 }
 
-function C_handleSetAttributesPacket(pk) {
+export function C_handleSetAttributesPacket(pk) {
     if (pk.attributes.isFlying !== undefined && pk.attributes.isFlying !== CServer.attributes.isFlying) {
         CServer.player.vx = 0;
         CServer.player.vy = 0;
@@ -213,28 +197,57 @@ function C_handleSetAttributesPacket(pk) {
     Object.assign(CServer.attributes, pk.attributes);
 }
 
-function C_handleSetHandIndexPacket(pk) {
+export function C_handleSetHandIndexPacket(pk) {
     CServer.handIndex = pk.index;
 }
 
-function C_handleOpenContainerPacket(pk) {
-    switch (pk.id) {
+export function C_handleOpenContainerPacket(pk) {
+    let size;
+    switch (pk.data.containerId) {
         case ContainerIds.CRAFTING_TABLE:
-            closeInventoryUI();
+            closeAllInventoryUIs();
             openCraftingTableUI();
-            CServer.externalInventory = new Inventory(10, InventoryIds.EXTERNAL);
+            size = 10;
+            break;
+        case ContainerIds.FURNACE:
+            closeAllInventoryUIs();
+            openFurnaceUI();
+            size = 3;
+            break;
+        case ContainerIds.CHEST:
+            closeAllInventoryUIs();
+            openChestUI();
+            size = 27;
+            break;
+        case ContainerIds.DOUBLE_CHEST:
+            closeAllInventoryUIs();
+            closeDoubleChestUI();
+            size = 54;
             break;
     }
-    CServer.externalInventoryType = pk.id;
+    CServer.externalInventory = new Inventory(size, InventoryIds.EXTERNAL, pk.data);
 }
 
-function C_handleCloseContainerPacket() {
-    switch (CServer.externalInventoryType) {
-        case ContainerIds.CRAFTING_TABLE:
-            closeCraftingTableUI();
-            break;
+export function C_handleCloseContainerPacket() {
+    closeAllInventoryUIs();
+    if (CServer.externalInventory && [ContainerIds.CRAFTING_TABLE].includes(CServer.externalInventory.extra.containerId)) {
+        dropHands();
     }
-    CServer.externalInventory = CServer.externalInventoryType = null;
+    CServer.externalInventory = null;
+}
+
+export function C_handlePlaySoundPacket(pk) {
+    if (pk.isAmbient) Sound.playAmbient(SoundIds[pk.id]);
+    else Sound.play(SoundIds[pk.id]);
+}
+
+export function C_handleStopSoundPacket(pk) {
+    Sound.stopAmbient(SoundIds[pk.id]);
+}
+
+export function C_handleContainerStatePacket(pk) {
+    CServer.containerState = pk.state;
+    updateStateUI();
 }
 
 const PacketMap = {
@@ -256,66 +269,16 @@ const PacketMap = {
     [PacketIds.SERVER_SET_ATTRIBUTES]: C_handleSetAttributesPacket,
     [PacketIds.SERVER_HAND_ITEM_INDEX]: C_handleSetHandIndexPacket,
     [PacketIds.SERVER_OPEN_CONTAINER]: C_handleOpenContainerPacket,
-    [PacketIds.SERVER_CLOSE_CONTAINER]: C_handleCloseContainerPacket
+    [PacketIds.SERVER_CLOSE_CONTAINER]: C_handleCloseContainerPacket,
+    [PacketIds.SERVER_PLAY_SOUND]: C_handlePlaySoundPacket,
+    [PacketIds.SERVER_STOP_SOUND]: C_handleStopSoundPacket,
+    [PacketIds.SERVER_CONTAINER_STATE]: C_handleContainerStatePacket
 };
 
-function C_handlePacket(pk) {
+export function C_handlePacket(pk) {
     if (!PacketMap[pk.type]) {
         console.warn("Invalid packet", pk);
         return;
     }
     PacketMap[pk.type](pk);
-}
-
-export function C_sendPacket(pk) {
-    socket.emit("packet", pk);
-}
-
-export function C_sendMovementPacket() {
-    C_sendPacket(MovementPacket(CServer.player.x, CServer.player.y));
-}
-
-export function C_sendBlockPlacePacket(x, y, id, meta) {
-    C_sendPacket(BlockPlacePacket(x, y, id, meta));
-}
-
-export function C_sendBlockBreakPacket(x, y) {
-    C_sendPacket(BlockBreakPacket(x, y));
-}
-
-export function C_sendBlockBreakingUpdatePacket(x, y, state) {
-    C_sendPacket(BlockBreakingUpdatePacket(x, y, state));
-}
-
-export function C_sendHandIndex() {
-    C_sendPacket(SetHandIndexPacket(CServer.handIndex));
-}
-
-export function C_sendInventoryTransactionPacket(id1, id2, index1, index2, transactionType) {
-    C_sendPacket(InventoryTransactionPacket(id1, id2, index1, index2, transactionType));
-}
-
-export function C_sendAuthPacket() {
-    C_sendPacket(AuthPacket(CServer.username));
-}
-
-export function C_sendDropItemPacket(id, index, count) {
-    C_sendPacket(ItemDropPacket(id, index, count));
-}
-
-export function C_sendMessagePacket(message) {
-    C_sendPacket(SendMessagePacket(message));
-}
-
-export function C_sendInteractBlockPacket(x, y) {
-    C_sendPacket(InteractBlockPacket(x, y));
-}
-
-export function C_sendCloseContainerPacket() {
-    C_sendPacket(CloseContainerPacket());
-    C_handleCloseContainerPacket();
-}
-
-export function C_sendToggleFlightPacket() {
-    C_sendPacket(ToggleFlightPacket());
 }
