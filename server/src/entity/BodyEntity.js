@@ -18,11 +18,4 @@ export class S_BodyEntity extends S_Entity {
     getDrops() {
         return [];
     };
-
-    kill() {
-        for (const item of this.getDrops()) {
-            this.world.dropItem(this.x, this.y, item);
-        }
-        this.remove();
-    };
 }

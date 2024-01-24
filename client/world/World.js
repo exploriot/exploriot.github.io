@@ -30,7 +30,7 @@ export class C_World extends World {
         const dt = Math.min(adt, 0.1);
         this.lastUpdate = Date.now();
         ClientSession.cleanPackets();
-        if (!CServer.isWelcome) return;
+        if (!CServer.isWelcome || !CServer.hasAnyChunks) return;
         const isFlying = CServer.isFlying();
         const isSpectator = CServer.getGamemode() === 3;
         const onGround = CServer.player._onGround;

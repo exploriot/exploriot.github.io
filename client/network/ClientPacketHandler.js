@@ -109,6 +109,7 @@ export function C_handleWelcomePacket(pk) {
 }
 
 export function C_handleSubChunkPacket(pk) {
+    CServer.hasAnyChunks = true;
     const chunk = CServer.world.getChunk(pk.x);
     const subChunk = chunk[pk.y] ??= makeSubChunk();
     subChunk.set(pk.blocks);

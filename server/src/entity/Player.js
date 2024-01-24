@@ -37,6 +37,7 @@ export class S_Player extends S_BodyEntity {
     craftInventory = new Inventory(5, InventoryIds.CRAFT);
     armorInventory = new Inventory(4, InventoryIds.ARMOR);
     dirtyAttributes = new Set;
+    fallY = null;
 
     /**
      * @param ws
@@ -226,18 +227,28 @@ export class S_Player extends S_BodyEntity {
     };
 
     update(dt) {
+        const isOnGround = this.isOnGround();
+        if (isOnGround) {
+            this.onFall(this.fallY - this.y);
+            this.fallY = this.y;
+        }
+
         if (this.getHealth() <= 0) {
             this.remove(true);
+            return false;
         }
         return super.update(dt);
     };
 
-    kill() {
-        super.kill();
-        this.playerInventory.clear();
-        this.cursorInventory.clear();
-        this.armorInventory.clear();
-        this.craftInventory.clear();
+    damage(hp) {
+        const newHealth = this.getHealth() - hp;
+        this.setHealth(newHealth);
+        if (newHealth <= 0) this.remove(true);
+    };
+
+    onFall(fallDistance) {
+        if (fallDistance < 3) return;
+        this.damage(fallDistance - 3);
     };
 
     save() {
@@ -268,8 +279,13 @@ export class S_Player extends S_BodyEntity {
     };
 
     respawn() {
+        this.setHealth(this.getMaxHealth());
+        this.setXP(0);
+        this.setFood(this.getMaxFood());
+        this.setBreath(10);
         const spawn = this.getSpawnPoint();
         this.teleport(spawn.x, spawn.y);
+        this.broadcastHandItem();
     };
 
     remove(kill = true) {
@@ -280,21 +296,20 @@ export class S_Player extends S_BodyEntity {
         }
         this.holdOrDrop(this.cursorInventory.contents[0]);
         this.cursorInventory.clear();
+        for (const item of this.craftInventory.contents) this.holdOrDrop(item);
+        this.craftInventory.clear();
+        for (const item of this.cursorInventory.contents) this.holdOrDrop(item);
+        this.cursorInventory.clear();
         if (kill) {
             const xp = this.getXP();
             if (xp > 0) this.world.dropXP(this.x, this.y, xp);
             this.setXP(0);
-            for (const item of this.craftInventory.contents) this.holdOrDrop(item);
-            this.craftInventory.clear();
-            for (const item of this.cursorInventory.contents) this.holdOrDrop(item);
-            this.cursorInventory.clear();
-            const ext = this.externalInventory;
-            if (ext && [ContainerIds.CRAFTING_TABLE].includes(ext.extra.containerId)) {
-                for (let i = 0; i < ext.size - 1; i++) { // -1 is for not giving the resulted item to the player
-                    this.holdOrDrop(ext.contents[i]);
-                }
-                ext.clear();
-            }
+            for (const item of this.playerInventory.contents) this.world.dropItem(this.x, this.y, item);
+            for (const item of this.armorInventory.contents) this.world.dropItem(this.x, this.y, item);
+            this.playerInventory.clear();
+            this.armorInventory.clear();
+            this.respawn();
+            return;
         }
         super.remove();
     };
