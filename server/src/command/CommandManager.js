@@ -12,6 +12,7 @@ import {SayCommand} from "./list/SayCommand.js";
 import {SetBlockCommand} from "./list/SetBlockCommand.js";
 import {PingCommand} from "./list/PingCommand.js";
 import {FillCommand} from "./list/FillCommand.js";
+import {KillCommand} from "./list/KillCommand.js";
 
 export const CommandLabels = {};
 export const Commands = new Set;
@@ -47,5 +48,6 @@ registerCommands(
     new SayCommand,
     new SetBlockCommand,
     new PingCommand,
-    new FillCommand
+    new FillCommand,
+    new KillCommand
 );

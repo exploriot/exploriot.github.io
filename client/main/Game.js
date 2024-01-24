@@ -23,6 +23,7 @@ export const C_OPTIONS = {
 
 export const CServer = {
     username: C_OPTIONS.username,
+    hasAnyChunks: false,
     chunkDistance: null,
     canUpdateMovement: false,
     isWelcome: false,
