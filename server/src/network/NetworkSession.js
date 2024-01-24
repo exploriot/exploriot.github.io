@@ -14,7 +14,7 @@ import {PingPacket} from "../packet/PingPacket.js";
 import {InventoryUpdatePacket} from "../packet/InventoryUpdatePacket.js";
 import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
 import {InventorySetIndexPacket} from "../packet/InventorySetIndexPacket.js";
-import {getBlockHardness, isBlockItem} from "../../../client/common/metadata/Blocks.js";
+import {BlockTextures, getBlockHardness, isBlockItem} from "../../../client/common/metadata/Blocks.js";
 import {SetPositionPacket} from "../packet/SetPositionPacket.js";
 import {findCrafting} from "../../../client/common/metadata/Crafts.js";
 import {SendMessagePacket} from "../packet/SendMessagePacket.js";
@@ -25,6 +25,9 @@ import {EntityRemovePacket} from "../packet/EntityRemovePacket.js";
 import {SetHandIndexPacket} from "../packet/SetHandIndexPacket.js";
 import {S_TNTEntity} from "../entity/TNTEntity.js";
 import {ContainerStatePacket} from "../packet/ContainerStatePacket.js";
+import {Item} from "../../../client/common/item/Item.js";
+import {FurnaceTile} from "../tile/FurnaceTile.js";
+import {UpdatePlayerListPacket} from "../packet/UpdatePlayerListPacket.js";
 
 const PacketMap = {
     [PacketIds.BATCH]: "handleBatchPacket",
@@ -41,6 +44,7 @@ const PacketMap = {
     [PacketIds.CLIENT_CLOSE_CONTAINER]: "handleCloseContainerPacket",
     [PacketIds.CLIENT_TOGGLE_FLIGHT]: "handleToggleFlightPacket",
     [PacketIds.CLIENT_ITEM_TRANSFER]: "handleItemTransferPacket",
+    [PacketIds.CLIENT_OBTAIN_ITEM]: "handleObtainItemPacket",
 };
 
 const PING_INTERVAL = 2000; // the time it takes the server to send the new ping
@@ -77,6 +81,12 @@ export class NetworkSession {
                 this.sendInventory(inv);
             } else this.sendIndexPackets(inv.type, inv.dirtyIndexes);
             inv.dirtyIndexes.clear();
+        }
+        if (this.player.dirtyAttributes.size) {
+            const attr = {};
+            for (const name of this.player.dirtyAttributes) attr[name] = this.player.attributes[name];
+            this.player.dirtyAttributes.clear();
+            this.sendAttributes(attr);
         }
     };
 
@@ -139,8 +149,8 @@ export class NetworkSession {
         this.sendPacket(InventoryUpdatePacket(inventory.type, inventory.serialize(), inventory.extra ?? {}));
     };
 
-    sendAttributes() {
-        this.sendPacket(SetAttributesPacket(this.player.attributes));
+    sendAttributes(attributes = this.player.attributes) {
+        this.sendPacket(SetAttributesPacket(attributes));
     };
 
     serializeItem(item) {
@@ -194,6 +204,12 @@ export class NetworkSession {
         this.sendPacket(SetHandIndexPacket(this.player.handIndex));
     };
 
+    sendPlayerList() {
+        this.sendPacket(UpdatePlayerListPacket(Array.from(Server.getPlayers()).map(player => (
+            {username: player.username, ping: player.session.ping}
+        ))));
+    };
+
     handleBatchPacket(pk) {
         for (const packet of pk.packets) this.handlePacket(packet);
     };
@@ -225,15 +241,15 @@ export class NetworkSession {
         const x = Math.round(pk.x);
         const y = Math.round(pk.y);
 
-        if (this.player.attributes.gamemode > 1 || !this.player.world.canBreakBlockAt(this.player, x, y, this.player.attributes.gamemode)) return this.sendBlock(x, y);
+        if (this.player.getGamemode() > 1 || !this.player.world.canBreakBlockAt(this.player, x, y)) return this.sendBlock(x, y);
 
         const existing = this.player.world.getBlock(x, y);
         const baseHardness = Metadata.hardness[existing[0]];
         const handItem = this.player.getHandItem();
-        if (this.player.attributes.gamemode !== 1) {
+        if (this.player.getGamemode() !== 1) {
             if (baseHardness !== 0) {
                 if (!this.player.breaking) return this.sendBlock(x, y);
-                if (this.player.breakingEndAt - Date.now() > 100 * Math.max(50, this.ping) / 100) return this.sendBlock(x, y);
+                if (this.player.breakingEndAt - Date.now() > 250 * Math.max(50, this.ping) / 100) return this.sendBlock(x, y);
             }
             if (handItem && handItem.id in Metadata.durabilities) {
                 const durability = Metadata.durabilities[handItem.id];
@@ -245,7 +261,7 @@ export class NetworkSession {
             }
         }
 
-        this.player.world.breakBlock(x, y, handItem, this.player.attributes.gamemode === 1);
+        this.player.world.breakBlock(x, y, handItem, this.player.getGamemode() === 1);
     };
 
     handleBlockPlacePacket(pk) {
@@ -259,13 +275,13 @@ export class NetworkSession {
         const x = Math.round(pk.x);
         const y = Math.round(pk.y);
 
-        if (this.player.attributes.gamemode > 1 || !this.player.world.canPlaceBlockAt(this.player, x, y)) return this.sendBlock(x, y);
+        if (!this.player.world.canPlaceBlockAt(this.player, x, y)) return this.sendBlock(x, y);
 
         const handItem = this.player.getHandItem();
 
         if (!handItem || !isBlockItem(handItem.id)) return this.sendBlock(x, y);
 
-        if (this.player.attributes.gamemode !== 1) {
+        if (this.player.getGamemode() !== 1) {
             handItem.count--;
             if (handItem.count <= 0) this.player.playerInventory.removeIndex(this.player.handIndex);
             else this.player.playerInventory.updateIndex(this.player.handIndex);
@@ -406,27 +422,29 @@ export class NetworkSession {
         ) this.handleCraftingTable();
     };
 
-    handleInventoryTransactionPacket(packet) {
-        _TA(
-            packet.id1, "number",
-            packet.id2, "number",
-            packet.index1, "uint",
-            packet.index2, "uint",
-            packet.count, "uint"
-        );
+    _checkFurnaceXP(id, index) {
+        if (
+            id === InventoryIds.EXTERNAL
+            && this.player.externalInventory.extra.containerId === ContainerIds.FURNACE
+            && index === 2
+            && this.player.externalInventory._tile instanceof FurnaceTile
+        ) {
+            const tile = this.player.externalInventory._tile;
+            this.player.setXP(this.player.getXP() + tile.holdingXP);
+            tile.holdingXP = 0;
+        }
+    };
 
-        const {id1, id2, index1, index2, count} = packet;
-
-        const success = () => true; // do something maybe
-
+    computeItemTransaction(id1, id2, index1, index2, count, noSwap = false) {
         // should be cancelling here, but can't, if this happens they're cheating anyway :eyes:
-        if (this._firstTransactionFailCheck(id1, id2, index1, index2, count)) return;
+        if (this._firstTransactionFailCheck(id1, id2, index1, index2, count)) return false;
 
         const inv1 = this.player.getInventory(id1);
         const inv2 = this.player.getInventory(id2);
         const cancel = () => {
             inv1.updateIndex(index1);
             inv2.updateIndex(index2);
+            return false;
         };
 
         if (!inv1 || !inv2 || index1 >= inv1.size || index2 >= inv2.size) return cancel();
@@ -472,6 +490,7 @@ export class NetworkSession {
         } else if (!item2) { // if the target item is empty, put the `count` amount of items to the target
             this.computeCombine(inv1, inv2, index1, index2, item1, item2, count);
         } else if (!item1.equals(item2, false, true)) { // if the items are different, swap
+            if (noSwap) return cancel();
             inv1.setIndex(index1, item2);
             inv2.setIndex(index2, item1);
         } else {
@@ -483,23 +502,60 @@ export class NetworkSession {
             this.computeCombine(inv1, inv2, index1, index2, item1, item2, count);
         }
 
+        this._checkFurnaceXP(id1, index1);
+
         if ((id1 === InventoryIds.EXTERNAL || id2 === InventoryIds.EXTERNAL) && this.player.externalInventory._tile) {
             this.player.externalInventory._tile.cleanPackets();
         }
 
         this._endTransactionUpdate(id1, id2);
 
-        success();
+        return true;
     };
 
-    computeItemTransfer(inv1, inv2, item1, index1, count) {
-        const it = item1.clone(count);
-        if (inv1.type === inv2.type && index1 < inv1.size / 2) inv2.addFromBack(it);
-        else inv2.add(it);
-        const done = count - it.count;
-        item1.count -= done;
-        if (item1.count <= 0) inv1.removeIndex(index1);
-        else inv1.updateIndex(index1);
+    handleInventoryTransactionPacket(packet) {
+        _TA(
+            packet.id1, "number",
+            packet.id2, "number",
+            packet.index1, "uint",
+            packet.index2, "uint",
+            packet.count, "uint"
+        );
+
+        this.computeItemTransaction(
+            packet.id1, packet.id2,
+            packet.index1, packet.index2,
+            packet.count
+        );
+    };
+
+    computeInventoryTransactionAt(id1, id2, inv1, index1, index2, targetCount) {
+        const it = inv1.contents[index1];
+        if (!it || it.count <= targetCount) return false;
+        return this.computeItemTransaction(id1, id2, index1, index2, it.count - targetCount, true);
+
+    };
+
+    computeItemTransfer(id1, id2, index1, count) {
+        const inv1 = this.player.getInventory(id1);
+        const inv2 = this.player.getInventory(id2);
+        const cancel = () => {
+            inv1.updateIndex(index1);
+            return false;
+        };
+
+        if (!inv1 || !inv2 || index1 >= inv1.size) return cancel();
+
+        const oItem = inv1.contents[index1];
+
+        if (!oItem || oItem.count < count) return cancel();
+
+        const targetCount = oItem.count - count;
+        if (inv1.type === inv2.type && index1 < inv1.size / 2) for (let i = inv2.size - 1; i >= 0; i--) {
+            this.computeInventoryTransactionAt(id1, id2, inv1, index1, i, targetCount);
+        } else for (let i = 0; i < inv2.size; i++) {
+            this.computeInventoryTransactionAt(id1, id2, inv1, index1, i, targetCount);
+        }
     };
 
     handleItemTransferPacket(packet) {
@@ -512,56 +568,7 @@ export class NetworkSession {
 
         const {id1, id2, index1, count} = packet;
 
-        const success = () => true; // do something maybe
-
-        const ext = this.player.externalInventory;
-
-        if (
-            id2 === InventoryIds.CRAFT
-            || (!ext && (id1 === InventoryIds.EXTERNAL || id2 === InventoryIds.EXTERNAL))
-            || (id2 === InventoryIds.EXTERNAL && ext && ext.extra.containerId === ContainerIds.CRAFTING_TABLE)
-            || count <= 0
-        ) return; // should be cancelling here, but can't, if this happens they're cheating anyway :eyes:
-
-        const inv1 = this.player.getInventory(id1);
-        const inv2 = this.player.getInventory(id2);
-        const cancel = () => {
-            inv1.updateIndex(index1);
-            this.sendInventory(inv2.type);
-        };
-
-        if (
-            !inv1
-            || !inv2
-            || index1 >= inv1.size
-            || inv2.type === InventoryIds.CRAFT
-            || (inv2.type === InventoryIds.EXTERNAL && ext.extra.containerId === ContainerIds.CRAFTING_TABLE)
-        ) return cancel();
-
-        const item1 = inv1.contents[index1];
-
-        if (!item1 || count > item1.count) return cancel();
-
-        let crafting = this._getTransactionCraftInfo(id1, inv1, index1)
-        if (crafting === undefined) return cancel();
-
-        if (crafting) {
-            if (item1.count > 0) {
-                this.player.world.dropItem(this.player.x, this.player.y, item1);
-                inv1.removeIndex(index1);
-            }
-            for (const desc of crafting.recipe.flat(1)) inv1.removeDesc(desc);
-        }
-
-        if ((id1 === InventoryIds.EXTERNAL || id2 === InventoryIds.EXTERNAL) && this.player.externalInventory._tile) {
-            this.player.externalInventory._tile.cleanPackets();
-        }
-
-        this.computeItemTransfer(inv1, inv2, item1, index1, count);
-
-        this._endTransactionUpdate(id1, id2);
-
-        success();
+        this.computeItemTransfer(id1, id2, index1, count);
     };
 
     handleHandItemPacket(packet) {
@@ -622,7 +629,6 @@ export class NetworkSession {
 
         const x = Math.round(pk.x);
         const y = Math.round(pk.y);
-
         if (!this.player.world.canInteractBlockAt(this.player, x, y)) return;
 
         const block = this.player.world.getBlock(x, y);
@@ -665,7 +671,7 @@ export class NetworkSession {
     handleCloseContainerPacket() {
         let ext = this.player.externalInventory;
         if (ext && [ContainerIds.CRAFTING_TABLE].includes(ext.extra.containerId)) {
-            for (const item of ext.contents) this.player.holdOrDrop(item);
+            for (let i = 0; i < ext.size - 1; i++) this.player.holdOrDrop(ext.contents[i]);
             ext.clear();
         }
         this.player.externalInventory = null;
@@ -676,10 +682,40 @@ export class NetworkSession {
     };
 
     handleToggleFlightPacket() {
-        if (!this.player.attributes.canFly) return;
-        this.sendPacket(SetAttributesPacket({
-            isFlying: this.player.attributes.isFlying = !this.player.attributes.isFlying
-        }));
+        if (!this.player.canFly() || this.player.getGamemode() === 3) return;
+        this.player.setFlying(!this.player.isFlying());
+    };
+
+    handleObtainItemPacket(pk) {
+        _TA(
+            pk.item, "object",
+            pk.invId, "number",
+            pk.invIndex, "number"
+        );
+
+        _TA(
+            pk.item.id, "number",
+            pk.item.meta, "number",
+            pk.item.count, "number",
+            pk.item.nbt, "object"
+        );
+
+        if (this.player.getGamemode() !== 1) return;
+
+        const texture = BlockTextures[pk.item.id];
+
+        const item = new Item(
+            pk.item.id,
+            typeof texture === "object" ? pk.item.meta % texture.__MOD : pk.item.meta,
+            pk.item.count,
+            pk.item.nbt
+        );
+
+        const handItem = this.player.getHandItem();
+
+        this.player.playerInventory.setIndex(this.player.handIndex, item);
+
+        this.player.playerInventory.add(handItem); // add it back
     };
 
     handlePacket(pk) {

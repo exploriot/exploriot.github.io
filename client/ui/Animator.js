@@ -1,23 +1,37 @@
 import {getBaseBlockSize, getCanvasPosition} from "../Utils.js";
 import {Mouse, recalculateMouse} from "../input/Mouse.js";
 import {Ids} from "../common/metadata/Ids.js";
-import {Around} from "../common/Utils.js";
-import {Metadata} from "../common/metadata/Metadata.js";
-import {getBlockHardness, getBlockTexture} from "../common/metadata/Blocks.js";
+import {BlockTextures, getBlockHardness, getBlockTexture} from "../common/metadata/Blocks.js";
 import {Texture} from "../loader/Texture.js";
-import {isAnyUIOn} from "./MainUI.js";
-import {renderCursorItemPosition, renderHotbarPosition, renderInventories} from "./ContainerUI.js";
+import {
+    isAnyUIOn,
+    renderArmorBar,
+    renderBreathBar,
+    renderFoodBar,
+    renderHealthBar,
+    renderXPBar,
+    showActionbar
+} from "./MainUI.js";
+import {renderContainerStates, renderHotbarPosition, renderInventories} from "./ContainerUI.js";
 import "./ContainerUI.js";
 import {C_OPTIONS, CServer, ctx} from "../main/Game.js";
+import {getItemName} from "../common/metadata/Items.js";
+import {Metadata} from "../common/metadata/Metadata.js";
+import {Keyboard} from "../input/Keyboard.js";
 
+const playerListDiv = document.querySelector(".player-list");
 let lastRender = Date.now() - 1;
 let _fps = [];
 
 export let AnimatorFrame = 0;
+let lastHandIndex = 0;
+
+let dg = 0;
 
 export function animate() {
     AnimatorFrame = requestAnimationFrame(animate);
     const dt = (Date.now() - lastRender) / 1000;
+    dg += dt * 100;
     lastRender = Date.now();
     const size = getBaseBlockSize();
     _fps.push(Date.now());
@@ -36,25 +50,18 @@ export function animate() {
             const ry = fy + y;
             const id = CServer.world.getBlock(rx, ry);
             if (id[0] === Ids.AIR) continue;
-            let isShadow = true;
-            if (C_OPTIONS.showCoveredBlocks) {
-                isShadow = false;
-            } else {
-                for (const pos of Around) {
-                    const id = CServer.world.getBlock(rx + pos[0], ry + pos[1])[0];
-                    if (Metadata.transparent.includes(id)) {
-                        isShadow = false;
-                        break;
-                    }
-                }
-            }
             const pos = getCanvasPosition(rx - 0.5, ry + 0.5, size);
-            if (isShadow) {
+            if (!C_OPTIONS.showCoveredBlocks && CServer.world.isBlockCovered(rx, ry)) {
                 ctx.fillStyle = "black";
                 ctx.fillRect(pos.x - 0.5, pos.y - 0.5, size + 1, size + 1);
             } else {
-                const texture = getBlockTexture(id[0], id[1]);
-                ctx.drawImage(Texture.get(texture).image, pos.x - 0.5, pos.y - 0.5, size + 1, size + 1);
+                const texture = Texture.get(getBlockTexture(id[0], id[1]));
+                const raw = BlockTextures[id[0]];
+                let img = texture.image;
+                if (typeof raw === "object" && id[1] >= raw.__MOD && (Metadata.slab.includes(id[0]) || Metadata.stairs.includes(id[0]))) {
+                    img = texture.rotate(Math.floor(id[1] / raw.__MOD) * 90);
+                }
+                ctx.drawImage(img, pos.x - 0.5, pos.y - 0.5, size + 1, size + 1);
             }
         }
     }
@@ -95,28 +102,51 @@ export function animate() {
         }
     }
 
-    if (!isAnyUIOn()) {
-        if (CServer.world.canBreakBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.attributes.gamemode, CServer.getHandItem())) {
-            ctx.strokeStyle = "white";
-            ctx.lineWidth = 4;
-            ctx.lineCap = "round";
-            const pos = getCanvasPosition(Mouse.rx - 0.5, Mouse.ry + 0.5, size);
-            ctx.strokeRect(pos.x, pos.y, size, size);
-        } else if (CServer.world.canPlaceBlockAt(CServer.player, Mouse.rx, Mouse.ry)) {
-            ctx.strokeStyle = "white";
-            ctx.lineWidth = 4;
-            ctx.lineCap = "round";
-            const pos = getCanvasPosition(Mouse.rx - 0.5, Mouse.ry + 0.5, size);
-            ctx.strokeRect(pos.x, pos.y, size, size);
-        }
+    if (
+        !isAnyUIOn() && (
+            CServer.world.canBreakBlockAt(
+                CServer.player,
+                Mouse.rx, Mouse.ry,
+                CServer.getGamemode(), CServer.getHandItem()
+            ) || CServer.world.canPlaceBlockAt(
+                CServer.player,
+                Mouse.rx, Mouse.ry,
+                CServer.getGamemode(), CServer.getHandItem()
+            ) || CServer.world.canInteractBlockAt(
+                CServer.player,
+                Mouse.rx, Mouse.ry,
+                CServer.getGamemode()
+            )
+        )
+    ) {
+        ctx.strokeStyle = "white";
+        ctx.lineWidth = 4;
+        ctx.lineCap = "round";
+        const pos = getCanvasPosition(Mouse.rx - 0.5, Mouse.ry + 0.5, size);
+        ctx.strokeRect(pos.x, pos.y, size, size);
     }
 
     CServer.player.render(ctx, size);
     if (C_OPTIONS.showBoundingBoxes) CServer.player.renderBoundingBox(ctx, size);
 
+    document.documentElement.style.setProperty("--mouse-x", Mouse.pageX + "px");
+    document.documentElement.style.setProperty("--mouse-y", Mouse.pageY + "px");
+
     renderInventories();
-    renderCursorItemPosition();
     renderHotbarPosition();
+    renderContainerStates();
+    renderHealthBar();
+    renderFoodBar();
+    renderBreathBar();
+    renderArmorBar();
+    renderXPBar();
+    if (lastHandIndex !== CServer.handIndex) {
+        lastHandIndex = CServer.handIndex;
+        const item = CServer.getHandItem();
+        if (item) showActionbar(getItemName(item.id, item.meta));
+    }
+    playerListDiv.style.opacity = Keyboard["tab"] ? "1" : "0";
+
 
     document.querySelector(".info").innerHTML = C_OPTIONS.isDebugMode ? `X: ${CServer.player.x}<br>
 Y: ${CServer.player.y}<br>

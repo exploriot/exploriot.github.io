@@ -1,4 +1,5 @@
 export function _T(thing, type) {
+    if (type === "object" && thing === null) throw new Error("Invalid object.");
     if (type === "int") {
         _T(thing, "number");
         if (thing !== Math.floor(thing)) throw new Error("Invalid int.");
@@ -9,9 +10,7 @@ export function _T(thing, type) {
         if (thing < 0) throw new Error("Invalid uint.");
         return;
     }
-    if (typeof thing !== type) throw new Error("Invalid type.");
-    if (type === "number") {
-    }
+    if (typeof thing !== type) throw new Error("Invalid " + type + ".");
 }
 
 export function _TA(...things) {
@@ -128,4 +127,12 @@ export function colorizeTextTerminal(text) {
 
 export function roundToPrecision(number, precision) {
     return parseFloat(number.toFixed(precision));
+}
+
+export function getLevelFromXP(xp) {
+    return Math.sqrt(xp + 9) - 3;
+}
+
+export function getXPFromLevel(level) {
+    return level ** 2 + 6 * level;
 }

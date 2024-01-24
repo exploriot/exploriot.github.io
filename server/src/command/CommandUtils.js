@@ -323,7 +323,18 @@ const Pos = {
                 const n = tokens[ind];
                 const m = i === 0 ? self.x : self.y;
                 if (!n || n.type !== "number") {
-                    ind--;
+                    pos.push(m);
+                } else {
+                    ind++;
+                    pos.push(m + n.value);
+                }
+                continue;
+            }
+            if (t.type === "symbol" && t.value === "^") {
+                const n = tokens[ind];
+                const m = i === 0 ? self.x : self.y;
+                // TODO: add this after adding head rotation.
+                if (!n || n.type !== "number") {
                     pos.push(m);
                 } else {
                     ind++;

@@ -12,6 +12,7 @@ export class Texture {
 
     image = imagePlaceholder;
     _flipped = [null, null];
+    _rotated = {};
 
     /**
      * @param {Promise<Image>} promise
@@ -37,6 +38,19 @@ export class Texture {
         if (way === 1) ctx.scale(-1, 1);
         else ctx.scale(1, -1);
         ctx.drawImage(image, 0, 0);
+        ctx.restore();
+        return canvas;
+    };
+
+    static rotateImage(image, degrees = 90) {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        ctx.save();
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate((degrees * Math.PI) / 180);
+        ctx.drawImage(image, -canvas.width / 2, -canvas.height / 2);
         ctx.restore();
         return canvas;
     };
@@ -73,7 +87,12 @@ export class Texture {
 
     flip(way = 1) {
         if (!this.loaded) return imagePlaceholder;
-        return this._flipped[way] = this._flipped[way] || Texture.flipImage(this.image, way);
+        return this._flipped[way] ??= Texture.flipImage(this.image, way);
+    };
+
+    rotate(degrees = 90) {
+        if (!this.loaded) return imagePlaceholder;
+        return this._rotated[degrees] ??= Texture.rotateImage(this.image, degrees);
     };
 
     async wait() {

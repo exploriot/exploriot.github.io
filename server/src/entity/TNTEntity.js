@@ -4,7 +4,7 @@ import {Metadata} from "../../../client/common/metadata/Metadata.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
 
 export class S_TNTEntity extends S_Entity {
-    explodeTick = 0.75;
+    fuse = 4;
     explodeRadius = 5;
     damageRadius = 5;
     maxDamage = 13;
@@ -15,7 +15,7 @@ export class S_TNTEntity extends S_Entity {
     };
 
     update(dt) {
-        if ((this.explodeTick -= dt) <= 0) this.explode();
+        if ((this.fuse -= dt) <= 0) this.explode();
         if (this.y <= 0) this.remove();
         return super.update(dt);
     };

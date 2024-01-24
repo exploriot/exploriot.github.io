@@ -1,6 +1,5 @@
 import {CServer} from "../main/Game.js";
-import {getItemTexture} from "../common/metadata/Items.js";
-import {Mouse} from "../input/Mouse.js";
+import {getItemName, getItemTexture} from "../common/metadata/Items.js";
 import {Metadata} from "../common/metadata/Metadata.js";
 import {getInventoryByName} from "../network/ClientPacketHandler.js";
 import {Keyboard} from "../input/Keyboard.js";
@@ -13,7 +12,7 @@ const craftingTableUI = document.getElementById("crafting-table-ui");
 const furnaceUI = document.getElementById("furnace-ui");
 const chestUI = document.getElementById("chest-ui");
 const doubleChestUI = document.getElementById("double-chest-ui");
-const cursorInv = document.querySelector(".cursor-inventory");
+const invInfoText = document.querySelector(".container-cursor-text");
 const furnaceSmeltDiv = document.getElementById("furnace-smelt");
 const furnaceArrowDiv = document.getElementById("furnace-arrow");
 const mainDivs = document.querySelectorAll(`[data-inv]`);
@@ -140,6 +139,7 @@ function initContainers() {
             }
 
             function onRightClick() {
+                if (Keyboard["shift"]) return onShiftClick();
                 const inv1 = getInventoryByName(h.type);
                 const index1 = h.index[0] + i;
                 const targetItem = inv1.contents[index1];
@@ -228,24 +228,35 @@ addEventListener("mousemove", e => {
     const index = viewIndex + invIndex;
     const inv = getInventoryByName(invName);
     MouseContainerPosition = {inv, index};
+
+    const item = inv.contents[index];
+
+    if (item && !CServer.cursorInventory.contents[0]) {
+        invInfoText.innerText = getItemName(item.id, item.meta);
+        invInfoText.style.opacity = "1";
+    } else invInfoText.style.opacity = "0";
 });
 
-export function updateStateUI() {
-    if (isFurnaceUIOn()) {
-        const state = {
-            fuel: 5,
-            maxFuel: 10,
-            smeltProgress: 3
-        };
-        furnaceArrowDiv.style.animationName = "furnace-arrow-animation";
-        furnaceArrowDiv.style.animationDelay = `-${10 - state.smeltProgress / 10}s`;
-        console.log(CServer.containerState);
+export function renderContainerStates() {
+    if (!CServer.externalInventory || !CServer.containerState) return;
+    switch (CServer.externalInventory.extra.containerId) {
+        case ContainerIds.FURNACE:
+            const {fuel, maxFuel, smeltProgress, smeltProgressMax, __time} = CServer.containerState;
+            const dt = (Date.now() - __time) / 1000;
+            const smeltPercent = (smeltProgress + dt) / smeltProgressMax * 100;
+            furnaceArrowDiv.style.setProperty(
+                "--progress",
+                smeltPercent > 100 || !isFinite(smeltPercent) || !smeltProgress || !fuel
+                    ? "0%" : smeltPercent + "%"
+            );
+            const fuelPercent = (fuel - dt) / maxFuel * 100;
+            furnaceSmeltDiv.style.setProperty(
+                "--progress",
+                fuelPercent < 0 || !isFinite(fuelPercent)
+                    ? "0%" : fuelPercent + "%"
+            );
+            break;
     }
-}
-
-export function renderCursorItemPosition() {
-    cursorInv.style.left = Mouse.pageX + "px";
-    cursorInv.style.top = Mouse.pageY + "px";
 }
 
 export function renderHotbarPosition() {
@@ -296,6 +307,7 @@ export function openInventoryUI() {
 }
 
 export function closeInventoryUI() {
+    invInfoText.style.opacity = "0";
     invUI.classList.add("gone");
 }
 
@@ -313,6 +325,7 @@ export function openCraftingTableUI() {
 }
 
 export function closeCraftingTableUI() {
+    invInfoText.style.opacity = "0";
     craftingTableUI.classList.add("gone");
 }
 
@@ -330,6 +343,7 @@ export function openFurnaceUI() {
 }
 
 export function closeFurnaceUI() {
+    invInfoText.style.opacity = "0";
     furnaceUI.classList.add("gone");
     furnaceArrowDiv.style.animationName = " ";
     furnaceArrowDiv.style.animationDelay = "0";
@@ -352,6 +366,7 @@ export function openChestUI() {
 }
 
 export function closeChestUI() {
+    invInfoText.style.opacity = "0";
     chestUI.classList.add("gone");
 }
 
@@ -369,6 +384,7 @@ export function openDoubleChestUI() {
 }
 
 export function closeDoubleChestUI() {
+    invInfoText.style.opacity = "0";
     doubleChestUI.classList.add("gone");
 }
 

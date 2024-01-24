@@ -7,8 +7,14 @@
     image-rendering: pixelated;
     -ms-interpolation-mode: nearest-neighbor;
     color: white;
-    font-family: monospace, serif;
+    font-family: Minecraft, serif;
     user-select: none;
+    letter-spacing: 1px;
+}
+
+:root {
+    --mouse-x: 0;
+    --mouse-y: 0;
 }
 
 body {
@@ -17,6 +23,7 @@ body {
 }
 
 canvas {
+    cursor: crosshair;
     background: #64d5ff;
 }
 
@@ -65,7 +72,7 @@ img {
     left: 0;
     top: 0;
     color: white;
-    font-family: monospace, serif;
+    font-family: Minecraft, serif;
     font-size: 20px;
 }
 
@@ -76,7 +83,7 @@ img {
     translate: -50%;
     display: flex;
     pointer-events: none;
-    width: 40%;
+    height: 7%;
     aspect-ratio: 9 / 1;
 }
 
@@ -117,14 +124,14 @@ img {
 
 .hotbar-item {
     position: relative;
-    background-image: url("../assets/gui/hotbar.png");
+    background-image: url("../assets/gui/inventory/hotbar.png");
     background-size: 100%;
     width: calc(100% / 9);
     height: 100%;
 }
 
 .hotbar-item-selected {
-    background-image: url("../assets/gui/selected_hotbar.png");
+    background-image: url("../assets/gui/inventory/selected_hotbar.png");
 }
 
 .hotbar-item > img {
@@ -151,6 +158,7 @@ img {
     font-size: 25px;
     rotate: 90deg;
     cursor: pointer;
+    font-family: monospace, serif;
 }
 
 .inventory-ui {
@@ -170,55 +178,55 @@ img {
 }
 
 #player-inventory-ui > .container {
-    background: url("../assets/gui/player_inventory.png") no-repeat;
+    background: url("../assets/gui/inventory/player_inventory.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 176 / 166;
 }
 
 #crafting-table-ui > .container {
-    background: url("../assets/gui/crafting_table.png") no-repeat;
+    background: url("../assets/gui/inventory/crafting_table.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 176 / 166;
 }
 
 #furnace-ui > .container {
-    background: url("../assets/gui/furnace_inventory.png") no-repeat;
+    background: url("../assets/gui/inventory/furnace_inventory.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 176 / 166;
 }
 
 #chest-ui > .container {
-    background: url("../assets/gui/chest_inventory.png") no-repeat;
+    background: url("../assets/gui/inventory/chest_inventory.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 176 / 166;
 }
 
 #double-chest-ui > .container {
-    background: url("../assets/gui/double_chest_inventory.png") no-repeat;
+    background: url("../assets/gui/inventory/double_chest_inventory.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 176 / 222;
 }
 
 #hopper-ui > .container {
-    background: url("../assets/gui/hopper_inventory.png") no-repeat;
+    background: url("../assets/gui/inventory/hopper_inventory.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 121 / 92;
 }
 
 #shulker-ui > .container {
-    background: url("../assets/gui/shulker_inventory.png") no-repeat;
+    background: url("../assets/gui/inventory/shulker_inventory.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 176 / 166;
 }
 
 #dropper-ui > .container {
-    background: url("../assets/gui/dropper_inventory.png") no-repeat;
+    background: url("../assets/gui/inventory/dropper_inventory.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 176 / 166;
 }
 
 #grindstone-ui > .container {
-    background: url("../assets/gui/grindstone_inventory.png") no-repeat;
+    background: url("../assets/gui/inventory/grindstone_inventory.png") no-repeat;
     background-size: 100%;
     aspect-ratio: 176 / 166;
 }
@@ -297,8 +305,9 @@ img {
 .cursor-inventory {
     pointer-events: none;
     position: fixed;
-    left: 50%;
-    top: 40%;
+    left: var(--mouse-x);
+    top: var(--mouse-y);
+    translate: -50% -50%;
     width: 64px;
     height: 64px;
 }
@@ -326,7 +335,7 @@ img {
     outline: none;
     background: rgba(0, 0, 0, 0.5);
     font-size: 20px;
-    font-family: monospace, serif;
+    font-family: Minecraft, serif;
 }
 
 .chat > .messages {
@@ -336,7 +345,7 @@ img {
 }
 
 .chat > .messages > .msg {
-    font-family: monospace, serif;
+    font-family: Minecraft, serif;
 }
 
 .crafting-inventory-in {
@@ -441,55 +450,29 @@ img {
 }
 
 #furnace-arrow {
+    --progress: 0;
     position: absolute;
     left: 45.5%;
     top: 21.1%;
-    background: url("../assets/gui/furnace_arrow.png") no-repeat;
+    background: url("../assets/gui/inventory/furnace_arrow.png") no-repeat;
     background-size: 100%;
     width: 12.5%;
     aspect-ratio: 22 / 15;
     opacity: 1;
-    #animation-name: furnace-arrow-animation;
-    animation-duration: 10s;
-    animation-fill-mode: forwards;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-}
-
-@keyframes furnace-arrow-animation {
-    0% {
-        clip-path: polygon(0 0, 0% 0, 0% 100%, 0 100%);
-    }
-
-    100% {
-        clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
-    }
+    clip-path: polygon(0 0, var(--progress) 0, var(--progress) 100%, 0 100%);
 }
 
 #furnace-smelt {
+    --progress: 0%;
     position: absolute;
     left: 32.4%;
     top: 22.2%;
-    background: url("../assets/gui/furnace_smelt.png") no-repeat;
+    background: url("../assets/gui/inventory/furnace_smelt.png") no-repeat;
     background-size: 100%;
     width: 7.5%;
     aspect-ratio: 13 / 13;
     opacity: 1;
-    #animation-name: furnace-smelt-animation;
-    #animation-duration: 10s;
-    animation-fill-mode: forwards;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-}
-
-@keyframes furnace-smelt-animation {
-    0% {
-        clip-path: polygon(100% 100%, 0 100%, 0 0%, 100% 0%);
-    }
-
-    100% {
-        clip-path: polygon(100% 100%, 0 100%, 0 100%, 100% 100%);
-    }
+    clip-path: polygon(100% 100%, 0 100%, 0 calc(100% - var(--progress)), 100% calc(100% - var(--progress)));
 }
 
 .chest-inventory {
@@ -505,4 +488,156 @@ img {
 .chest-inventory > .item {
     width: calc(100% / 9);
     height: calc(100% / 3);
+}
+
+.attributes {
+    position: fixed;
+    left: 50%;
+    bottom: 8%;
+    translate: -50%;
+    display: flex;
+    pointer-events: none;
+    height: 7%;
+    aspect-ratio: 9 / 1;
+}
+
+.attributes > .container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.xp-attribute {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    border-radius: 5px;
+    background: url("../assets/gui/inventory/xp_bar_empty.png") no-repeat;
+    background-size: 100%;
+    aspect-ratio: 182 / 5;
+}
+
+.xp-attribute > div:first-child {
+    --progress: 0%;
+    width: 100%;
+    border-radius: 5px;
+    background: url("../assets/gui/inventory/xp_bar_full.png") no-repeat;
+    background-size: 100%;
+    aspect-ratio: 182 / 5;
+    clip-path: polygon(0 0, var(--progress) 0, var(--progress) 100%, 0 100%);
+}
+
+.xp-attribute > div:nth-child(2) {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -100%;
+    color: lime;
+    font-weight: bold;
+}
+
+.group-armor-health {
+    position: absolute;
+    bottom: 40%;
+    width: 45%;
+    height: max-content;
+}
+
+.group-food-breath {
+    position: absolute;
+    bottom: 40%;
+    right: 0;
+    width: 45%;
+    height: max-content;
+}
+
+.food-attribute > div, .breath-attribute > div, .health-attribute > div, .armor-attribute > div {
+    width: 100%;
+    display: flex;
+}
+
+.health-attribute > div > div {
+    background-repeat: no-repeat;
+    background-size: 90%;
+    aspect-ratio: 10 / 9;
+    width: 10%;
+}
+
+.food-attribute > div > div {
+    background: url("../assets/gui/food/food_full.png") no-repeat;
+    background-size: 90%;
+    aspect-ratio: 9 / 9;
+    width: 10%;
+}
+
+.breath-attribute > div > div {
+    background: url("../assets/gui/breath/breath_full.png") no-repeat;
+    background-size: 90%;
+    aspect-ratio: 9 / 9;
+    width: 10%;
+    margin-bottom: 2px;
+}
+
+.armor-attribute > div > div {
+    background: url("../assets/gui/armor/armor_full.png") no-repeat;
+    background-size: 90%;
+    aspect-ratio: 9 / 9;
+    width: 10%;
+    margin-bottom: 2px;
+}
+
+.actionbar {
+    position: absolute;
+    pointer-events: none;
+    left: 50%;
+    translate: -50%;
+    top: calc(-30% - 10px);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 5px 15px;
+    border-radius: 5px;
+    font-size: 20px;
+    opacity: 0;
+}
+
+.container-cursor-text {
+    position: absolute;
+    pointer-events: none;
+    left: var(--mouse-x);
+    top: var(--mouse-y);
+    background: #361b38;
+    padding: 8px;
+    border-radius: 0 8px 8px 8px;
+    opacity: 0;
+}
+
+.player-list {
+    position: fixed;
+    left: 50%;
+    top: 2%;
+    translate: -50%;
+    padding: 20px 37px 20px 20px;
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.7);
+    min-width: 7%;
+    height: max-content;
+}
+
+.player-list > .player {
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.player-list > .player:last-child {
+    margin-bottom: 0;
+}
+
+.player-list > .player > .connection {
+    position: absolute;
+    right: 0;
+    top: 0;
+    translate: 100%;
+    height: 100%;
+    aspect-ratio: 10 / 7;
+    background-repeat: no-repeat;
+    background-size: 100%;
 }

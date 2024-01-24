@@ -1,5 +1,6 @@
 import {BoundingBox} from "./BoundingBox.js";
 import {GRAVITY_FORCE} from "../metadata/Entities.js";
+import {SLAB_BB, STAIRS_BB} from "../metadata/Blocks.js";
 
 export class Entity {
     lastChunkX = null;
@@ -46,9 +47,17 @@ export class Entity {
         this.downBB.y2 = this.bb.y1 - 0.01;
     };
 
+    forceMove(dx, dy) {
+        if (dx === 0 && dy === 0) return false;
+        this.x += dx;
+        this.y += dy;
+        this.handleMovement();
+        return true;
+    };
+
     move(dx, dy) {
         if (dx === 0 && dy === 0) return false;
-        const already = this.world.getCollidingBlocks(this.bb);
+        const already = this.world.getCollidingBlock(this.bb);
         if (already) {
             this.vy = 0;
             this.y += 0.05;
@@ -58,16 +67,36 @@ export class Entity {
         if (Math.abs(dx) > 0.0000001) {
             this.x += dx;
             this.recalculateBoundingBox();
-            if (!already && this.world.getCollidingBlocks(this.bb)) {
-                this.x -= dx;
-                this.recalculateBoundingBox();
-                this.vx = 0;
+            const b = this.world.getCollidingBlock(this.bb);
+            if (!already && b) {
+                const maxY = b.collisions.sort((a, b) => b.y2 - a.y2)[0].y2 + b.y;
+                const dy = maxY - this.bb.y1;
+                if (
+                    b.collisions.length === 1
+                    && (SLAB_BB.includes(b.bb) || STAIRS_BB.includes(b.bb))
+                    && dy < 0.5
+                ) {
+                    this.y += dy + 0.002;
+                    this.recalculateBoundingBox();
+                    // check if it will bump into something if it steps up
+                    if (this.world.getCollidingBlock(this.bb)) {
+                        this.y -= dy
+                        this.x -= dx;
+                        this.recalculateBoundingBox();
+                        this.vx = 0;
+                    } else moved = true;
+                } else {
+                    this.x -= dx;
+                    this.recalculateBoundingBox();
+                    this.vx = 0;
+                }
             } else moved = true;
         }
         if (!already && Math.abs(dy) > 0.0000001) {
             this.y += dy;
             this.recalculateBoundingBox();
-            if (this.world.getCollidingBlocks(this.bb)) {
+            const b = this.world.getCollidingBlock(this.bb);
+            if (b) {
                 this.y -= dy;
                 this.recalculateBoundingBox();
                 this.vy = 0;
@@ -100,7 +129,7 @@ export class Entity {
     };
 
     isOnGround() {
-        return this.world.getCollidingBlocks(this.downBB);
+        return this.world.getCollidingBlock(this.downBB);
     };
 
     remove() {

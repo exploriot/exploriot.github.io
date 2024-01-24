@@ -1,5 +1,5 @@
 * {
-    font-family: Calibri, serif;
+    font-family: Minecraft, serif;
     color: white;
     user-select: none;
 }
@@ -85,7 +85,7 @@ input::placeholder {
 
 .title {
     font-size: 100px;
-    font-family: monospace, serif;
+    font-family: Minecraft, serif;
     white-space: nowrap;
     margin-top: 10px;
     text-align: center;
@@ -143,16 +143,16 @@ input::placeholder {
     pointer-events: none;
 }
 
-#server-add-menu, #join-menu {
+#server-add-menu, #join-menu, #server-edit-menu {
     justify-content: center;
 }
 
-#server-add-menu > input {
+#server-add-menu > input, #server-edit-menu > input {
     font-size: 20px;
     margin: 10px;
 }
 
-#server-add-menu > .btn {
+#server-add-menu > .btn, #server-edit-menu > .btn {
     font-size: 20px;
 }
 
@@ -173,6 +173,15 @@ input::placeholder {
 }
 
 .remove:hover {
+    scale: 1.1;
+}
+
+.edit {
+    float: right;
+    margin-top: -20px;
+}
+
+.edit:hover {
     scale: 1.1;
 }
 

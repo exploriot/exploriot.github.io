@@ -18,6 +18,7 @@ import {ItemTransferPacket} from "../packet/ItemTransferPacket.js";
 import {AnimatorFrame} from "../ui/Animator.js";
 import {colorizeTextHTML, roundToPrecision} from "../common/Utils.js";
 import {PacketIds} from "../common/metadata/PacketIds.js";
+import {ObtainItemPacket} from "../packet/ObtainItemPacket.js";
 
 const disconnectDiv = document.querySelector(".disconnect-menu");
 const disconnectText = document.querySelector(".disconnect-menu > .container > .text");
@@ -144,6 +145,10 @@ export const ClientSession = {
 
     sendToggleFlightPacket() {
         this.sendPacket(ToggleFlightPacket());
+    },
+
+    sendObtainItemPacket(item, invId, invIndex) {
+        this.sendPacket(ObtainItemPacket(item.serialize(), invId, invIndex));
     },
 
     handlePacket(pk) {

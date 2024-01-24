@@ -6,16 +6,24 @@ export class BoundingBox {
         this.y2 = y2;
     };
 
-    isCollidingWithBlockCoordinate(x, y) {
-        const blockLeft = x - 0.5;
-        const blockRight = x + 0.5;
-        const blockBottom = y - 0.5;
-        const blockTop = y + 0.5;
-        return blockRight >= this.x1 && blockLeft <= this.x2 && blockBottom <= this.y2 && blockTop >= this.y1;
+    isCollidingWith(bb) {
+        if (Array.isArray(bb)) return bb.some(b => this.isCollidingWith(b, x, y));
+        return bb.x2 >= this.x1 && bb.x1 <= this.x2 && bb.y1 <= this.y2 && bb.y2 >= this.y1;
     };
 
-    isCollidingWith(bb) {
-        return bb.x2 >= this.x2 && bb.x1 <= this.x2 && bb.y1 <= this.y2 && bb.y2 >= this.y1;
+    getCollidingBoxes(boxes) {
+        if (!Array.isArray(boxes)) boxes = [boxes];
+        return boxes.filter(bb => this.isCollidingWith(bb));
+    };
+
+    isCollidingWithTranslated(bb, x, y) {
+        if (Array.isArray(bb)) return bb.some(b => this.isCollidingWithTranslated(b, x, y));
+        return bb.x2 + x >= this.x1 && bb.x1 + x <= this.x2 && bb.y1 + y <= this.y2 && bb.y2 + y >= this.y1;
+    };
+
+    getCollidingBoxesTranslated(boxes, x, y) {
+        if (!Array.isArray(boxes)) boxes = [boxes];
+        return boxes.filter(bb => this.isCollidingWithTranslated(bb, x, y));
     };
 
     translateCopy(x, y) {
