@@ -51,13 +51,31 @@ export function findCrafting(map) {
     });
 }
 
-for (let meta = 0; meta <= 5; meta++) registerCraft(
-    [
-        "0"
-    ],
-    [new ItemDescriptor(Ids.LOG, meta)],
-    new ItemDescriptor(Ids.PLANKS, meta, 4)
-);
+for (let meta = 0; meta <= 5; meta++) {
+    registerCraft(
+        [
+            "0"
+        ],
+        [new ItemDescriptor(Ids.LOG, meta)],
+        new ItemDescriptor(Ids.PLANKS, meta, 4)
+    );
+    registerCraft(
+        [
+            "000"
+        ],
+        [new ItemDescriptor(Ids.PLANKS, meta)],
+        new ItemDescriptor(Ids.WOODEN_SLAB, meta, 6)
+    );
+    registerCraft(
+        [
+            "  0",
+            " 00",
+            "000"
+        ],
+        [new ItemDescriptor(Ids.PLANKS, meta)],
+        new ItemDescriptor(Ids.WOODEN_STAIRS, meta, 4)
+    );
+}
 
 registerCraft(
     [
@@ -186,3 +204,24 @@ registerCraft(
     [new ItemDescriptor(Ids.GOLDEN_NUGGET)],
     new ItemDescriptor(Ids.GOLD_INGOT)
 );
+
+for (const o of [
+    [Ids.STONE, Ids.STONE_SLAB, Ids.STONE_STAIRS],
+    [Ids.DIRT, Ids.DIRT_SLAB, Ids.DIRT_STAIRS],
+    [Ids.COBBLESTONE, Ids.COBBLESTONE_SLAB, Ids.COBBLESTONE_STAIRS]
+]) {
+    registerCraft(
+        [
+            "000"
+        ], [new ItemDescriptor(o[0])],
+        new ItemDescriptor(o[1])
+    );
+    registerCraft(
+        [
+            "  0",
+            " 00",
+            "000"
+        ], [new ItemDescriptor(o[0])],
+        new ItemDescriptor(o[2])
+    );
+}

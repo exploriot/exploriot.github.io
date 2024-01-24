@@ -2,6 +2,7 @@ import {TileIds} from "./Tile.js";
 import {ContainerTile} from "./ContainerTile.js";
 import {ContainerIds} from "../../../client/common/item/Inventory.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
+import {Ids} from "../../../client/common/metadata/Ids.js";
 
 export class FurnaceTile extends ContainerTile {
     size = 3;
@@ -10,6 +11,7 @@ export class FurnaceTile extends ContainerTile {
     fuel = 0;
     maxFuel = 0;
     smeltProgress = 0; // 0 to 10
+    holdingXP = 0;
 
     constructor(world, x, y) {
         super(TileIds.FURNACE, world, x, y);
@@ -17,9 +19,10 @@ export class FurnaceTile extends ContainerTile {
 
     static deserialize(world, data) {
         const tile = new FurnaceTile(world, data.x, data.y);
-        tile._contents = data.contents;
-        tile.fuel = data.fuel;
-        tile.maxFuel = data.maxFuel;
+        tile._contents = data.contents ?? null;
+        tile.fuel = data.fuel ?? 0;
+        tile.maxFuel = data.maxFuel ?? 0;
+        tile.holdingXP = data.holdingXP ?? 0;
         return tile;
     };
 
@@ -44,41 +47,49 @@ export class FurnaceTile extends ContainerTile {
         if (item.count <= 0) this.container.removeIndex(0);
         else this.container.updateIndex(0);
         const result = Metadata.smeltsTo[item.id]?.evaluate();
+        this.holdingXP += Metadata.smeltXP[item.id] ?? 0;
         const currentResult = this.container.contents[2];
-        if (!result) return;
         if (!currentResult) {
             this.container.setIndex(2, result);
-        } else if (result.equalsItem(currentResult)) {
+        } else if (result.equals(currentResult, false, true)) {
             currentResult.count++;
             this.container.updateIndex(2);
         }
-        return !currentResult || result.equalsItem(currentResult);
     };
 
     getClientState() {
         return {
             fuel: this.fuel,
             maxFuel: this.maxFuel,
-            smeltProgress: this.smeltProgress
+            smeltProgress: this.smeltProgress,
+            smeltProgressMax: 10
         };
     };
 
-    update(dt) {
+    update() {
+        const dt = this.updatePeriod;
         if (this.fuel > 0) {
             this.fuel -= dt;
             if (this.fuel <= 0) {
                 this.fuel = 0;
                 this.maxFuel = 0;
+                this.world.setBlock(this.x, this.y, Ids.FURNACE, 0);
                 this.broadcastState();
             } else {
                 if (this.canSmeltItem()) {
+                    if (this.smeltProgress === 0) {
+                        this.smeltProgress = 0.01;
+                        this.broadcastState();
+                    }
                     if ((this.smeltProgress += dt) >= 10) {
                         this.smeltProgress = 0;
                         this.smeltItem();
                         this.broadcastState();
                     }
                 } else {
-                    if ((this.smeltProgress -= dt) < 0) this.smeltProgress = 0;
+                    // if ((this.smeltProgress -= dt) < 0) this.smeltProgress = 0;
+                    this.smeltProgress = 0;
+                    this.broadcastState();
                 }
             }
         } else {
@@ -88,9 +99,16 @@ export class FurnaceTile extends ContainerTile {
                 if (fuelItem.count <= 0) this.container.removeIndex(1);
                 else this.container.updateIndex(1);
                 this.fuel = this.maxFuel = (Metadata.fuel[fuelItem.id] ?? 0) * 10;
+                this.world.setBlock(this.x, this.y, Ids.FURNACE, 1);
                 this.broadcastState();
             }
         }
         super.update(dt);
+    };
+
+    remove() {
+        this.world.dropXP(this.x, this.y, this.holdingXP);
+        this.holdingXP = 0;
+        super.remove();
     };
 }

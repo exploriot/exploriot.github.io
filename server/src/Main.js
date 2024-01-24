@@ -12,8 +12,6 @@ import {PacketIds} from "../../client/common/metadata/PacketIds.js";
 import {_T} from "../../client/common/Utils.js";
 import {DisconnectPacket} from "./packet/DisconnectPacket.js";
 
-global._ = {};
-
 export const SERVER_BEGIN_TIME = Date.now();
 const app = express();
 app.use((req, res, next) => {
@@ -75,9 +73,11 @@ wss.on("connection", (ws, req) => {
         ws.active = false;
         if (!player) return;
         Terminal.info(`§7[${player.username} ${ws.ipAddress} disconnected for ${JSON.stringify(ws.disconnectReason ?? "client disconnect")}§7]`);
+        lastBroadcastPlayerList = Date.now();
+        Server.broadcastPlayerList();
         Server.broadcastMessage(`§e${player.username} left the server.`);
         Server.getPlayers().delete(player);
-        player.remove();
+        player.remove(false);
         player.broadcastDespawn();
         player.save();
     };
@@ -123,7 +123,7 @@ wss.on("connection", (ws, req) => {
                     player.y = data.y;
                     player.vx = data.vx;
                     player.vy = data.vy;
-                    player.attributes = data.attributes;
+                    Object.assign(player.attributes, data.attributes);
                     player.playerInventory.contents = data.playerInventory.map(Item.deserialize);
                     player.cursorInventory.contents = data.cursorInventory.map(Item.deserialize);
                     player.craftInventory.contents = data.craftInventory.map(Item.deserialize);
@@ -134,14 +134,16 @@ wss.on("connection", (ws, req) => {
                     player.teleport(spawn.x, spawn.y);
                 }
                 player.world.addEntity(player);
-                player.session.sendWelcomePacket();
                 player.session.sendAttributes();
                 player.session.sendPosition();
                 player.session.requestPing();
                 player.session.sendInventories();
                 player.session.sendHandItemIndex();
+                player.session.sendWelcomePacket();
                 clearTimeout(authInt);
                 Server.broadcastMessage(`§e${player.username} joined the server.`);
+                lastBroadcastPlayerList = Date.now();
+                Server.broadcastPlayerList();
                 return;
             }
             if (!player.session.active) return;
@@ -153,6 +155,8 @@ wss.on("connection", (ws, req) => {
         }
     });
 });
+
+let lastBroadcastPlayerList = Date.now();
 
 function update() {
     const dt = (Date.now() - lastUpdate) / 1000;
@@ -179,6 +183,11 @@ function update() {
             tile.__updateCounter = 0;
             tile.update(dt);
         }
+    }
+
+    if (Date.now() - lastBroadcastPlayerList > 5000) {
+        lastBroadcastPlayerList = Date.now();
+        Server.broadcastPlayerList();
     }
 
     setTimeout(update);

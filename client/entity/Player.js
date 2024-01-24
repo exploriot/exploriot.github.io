@@ -29,7 +29,7 @@ export class C_Player extends C_BodyEntity {
     };
 
     getBlockReach() {
-        return CServer.attributes.gamemode % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
+        return CServer.getGamemode() % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
     };
 
     canReachBlock(x, y) {

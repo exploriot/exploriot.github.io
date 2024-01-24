@@ -5,15 +5,16 @@ import {PLAYER_JUMP_ACCELERATION, PLAYER_SPEED} from "../common/metadata/Entitie
 import {Mouse} from "../input/Mouse.js";
 import {resetBlockBreaking} from "../Utils.js";
 import {Ids} from "../common/metadata/Ids.js";
-import {Around} from "../common/Utils.js";
 import {C_OPTIONS, CServer} from "../main/Game.js";
 import {getBlockHardness, isBlockItem} from "../common/metadata/Blocks.js";
 import {InventoryIds} from "../common/item/Inventory.js";
 import {ClientSession} from "../network/ClientSession.js";
+import {Item} from "../common/item/Item.js";
 
 let lastMouseX = 0;
 let lastMouseY = 0;
 let lastPlace = 0;
+let lastMiddle = 0;
 let lastDrop = 0;
 let jumpT = 0;
 let isPressingSpace = false;
@@ -30,22 +31,36 @@ export class C_World extends World {
         this.lastUpdate = Date.now();
         ClientSession.cleanPackets();
         if (!CServer.isWelcome) return;
+        const isFlying = CServer.isFlying();
+        const isSpectator = CServer.getGamemode() === 3;
         const onGround = CServer.player._onGround;
-        const isFlying = CServer.attributes.isFlying;
         if (!isAnyUIOn()) {
             const speedBoost = isFlying ? 2 : 1;
-            if (!Keyboard.d || !Keyboard.a) {
-                if (Keyboard.a) CServer.player.move(-dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost, 0);
-                if (Keyboard.d) CServer.player.move(dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost, 0);
-            }
-            if (!isFlying) {
-                if ((Keyboard.w || Keyboard[" "]) && onGround && (jumpT -= adt) <= 0) {
-                    CServer.player.vy += PLAYER_JUMP_ACCELERATION;
-                    jumpT = 0.05;
+            if (isSpectator) {
+                if (!Keyboard.d || !Keyboard.a) {
+                    if (Keyboard.a) CServer.player.forceMove(-dt * PLAYER_SPEED * speedBoost, 0);
+                    if (Keyboard.d) CServer.player.forceMove(dt * PLAYER_SPEED * speedBoost, 0);
                 }
-            } else if (!Keyboard.w || !Keyboard.s) {
-                if (Keyboard.w) CServer.player.move(0, dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost);
-                if (Keyboard.s) CServer.player.move(0, -dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost);
+                if (!Keyboard.w || !Keyboard.s) {
+                    if (Keyboard.w) CServer.player.forceMove(0, dt * PLAYER_SPEED * speedBoost);
+                    if (Keyboard.s) CServer.player.forceMove(0, -dt * PLAYER_SPEED * speedBoost);
+                }
+            } else {
+                if (!Keyboard.d || !Keyboard.a) {
+                    if (Keyboard.a) {
+                        CServer.player.move(-dt * PLAYER_SPEED * speedBoost, 0);
+                    }
+                    if (Keyboard.d) CServer.player.move(dt * PLAYER_SPEED * speedBoost, 0);
+                }
+                if (!isFlying) {
+                    if ((Keyboard.w || Keyboard[" "]) && onGround && (jumpT -= adt) <= 0) {
+                        CServer.player.vy += PLAYER_JUMP_ACCELERATION;
+                        jumpT = 0.05;
+                    }
+                } else if (!Keyboard.w || !Keyboard.s) {
+                    if (Keyboard.w) CServer.player.move(0, dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost);
+                    if (Keyboard.s) CServer.player.move(0, -dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost);
+                }
             }
             if (Keyboard.q && Date.now() - lastDrop > 250) {
                 lastDrop = Date.now();
@@ -64,14 +79,15 @@ export class C_World extends World {
             resetBlockBreaking();
         }
         if (!isFlying) CServer.player.applyGravity(dt);
-        const isCreative = CServer.attributes.gamemode === 1;
+        const isCreative = CServer.getGamemode() === 1;
         CServer.player.update(dt);
         if (!Mouse.leftDown) {
             resetBlockBreaking();
         }
         const handItem = CServer.getHandItem();
         const handItemId = handItem ? handItem.id : 0;
-        if (Mouse.leftDown && !isAnyUIOn() && this.canBreakBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.attributes.gamemode, CServer.getHandItem())) {
+        const handItemMeta = handItem ? handItem.meta : 0;
+        if (Mouse.leftDown && !isAnyUIOn() && this.canBreakBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), CServer.getHandItem())) {
             if (CServer.player.breakingTime === 0 && !isCreative) {
                 ClientSession.sendBlockBreakingUpdatePacket(Mouse.rx, Mouse.ry, true);
             }
@@ -89,33 +105,40 @@ export class C_World extends World {
         if (!Mouse.rightDown) lastPlace = 0;
         if (
             !isAnyUIOn()
-            && CServer.attributes.gamemode < 2
-            && Date.now() - lastPlace > (CServer.attributes.gamemode % 2 === 0 ? 300 : 0)
+            && Date.now() - lastPlace > (CServer.getGamemode() % 2 === 0 ? 300 : 0)
             && Mouse.rightDown
         ) {
-            if (this.canPlaceBlockAt(CServer.player, Mouse.rx, Mouse.ry)) {
-                let hasBlockAround = false;
-                for (const pos of Around) {
-                    const block = this.getBlock(Mouse.rx + pos[0], Mouse.ry + pos[1]);
-                    if (block[0] !== Ids.AIR) {
-                        hasBlockAround = true;
-                        break;
-                    }
-                }
-                if (hasBlockAround) {
-                    lastPlace = Date.now();
-                    const handItem = CServer.getHandItem();
-                    if (handItem && isBlockItem(handItem.id)) {
-                        this.setBlock(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
-                        ClientSession.sendBlockPlacePacket(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
-                    }
+            if (this.canPlaceBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), CServer.getHandItem())) {
+                lastPlace = Date.now();
+                const handItem = CServer.getHandItem();
+                if (handItem && isBlockItem(handItem.id)) {
+                    this.setBlock(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
+                    ClientSession.sendBlockPlacePacket(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
                 }
             } else if (
-                this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry) &&
-                Date.now() - lastPlace > 300
+                this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode())
+                && Date.now() - lastPlace > 300
             ) {
                 lastPlace = Date.now();
                 ClientSession.sendInteractBlockPacket(Mouse.rx, Mouse.ry);
+            }
+        }
+
+        if (
+            !isAnyUIOn()
+            && CServer.getGamemode() === 1
+            && Mouse.middleDown
+            && Date.now() - lastMiddle > 300
+            && !this.isBlockCovered(Mouse.rx, Mouse.ry)
+        ) {
+            const block = this.getBlock(Mouse.rx, Mouse.ry);
+            if (block[0] !== handItemId || block[1] !== handItemMeta) {
+                lastMiddle = Date.now();
+                ClientSession.sendObtainItemPacket(
+                    new Item(block[0] === Ids.NATURAL_LOG ? Ids.LOG : block[0], block[1]),
+                    InventoryIds.PLAYER,
+                    CServer.handIndex
+                );
             }
         }
 
@@ -138,11 +161,12 @@ export class C_World extends World {
         CServer.player._onGround = CServer.player.isOnGround();
 
         if (CServer.canUpdateMovement) {
+            if (CServer.player._onGround && !onGround && isFlying) ClientSession.sendToggleFlightPacket();
             ClientSession.sendMovement();
         }
         CServer.canUpdateMovement = false;
 
-        if (CServer.attributes.gamemode % 2 !== 0 && Keyboard[" "] && !isPressingSpace) {
+        if (CServer.getGamemode() % 2 !== 0 && Keyboard[" "] && !isPressingSpace) {
             if (Date.now() - lastSpace < 300) {
                 ClientSession.sendToggleFlightPacket();
                 isPressingSpace = false;

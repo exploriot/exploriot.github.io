@@ -77,5 +77,7 @@ export const Metadata = {
     liquidCanBreak: [],
     fuel: {},
     smeltsTo: {},
-    smeltXP: {}
+    smeltXP: {},
+    slab: [],
+    stairs: []
 };

@@ -12,10 +12,19 @@ import {
 } from "./ContainerUI.js";
 import {ClientSession} from "../network/ClientSession.js";
 import {InventoryIds} from "../common/item/Inventory.js";
+import {colorizeTextHTML, getLevelFromXP} from "../common/Utils.js";
 
 const escMenu = document.querySelector(".esc-menu");
 const pauseBtn = document.querySelector(".pause");
 const chatInput = document.querySelector(".chat > input");
+const healthDiv = document.querySelector(".health-attribute");
+const foodDiv = document.querySelector(".food-attribute");
+const breathDiv = document.querySelector(".breath-attribute");
+const armorDiv = document.querySelector(".armor-attribute");
+const xpDiv = document.querySelector(".xp-attribute");
+const xpProgressDiv = document.querySelector(".xp-attribute > div");
+const xpTextDiv = document.querySelector(".xp-attribute > div:nth-child(2)");
+const actionbar = document.querySelector(".actionbar");
 
 export function openEscMenu() {
     escMenu.classList.remove("gone");
@@ -71,6 +80,155 @@ export function dropHands() {
     }
 }
 
+let lastHealth, lastMaxHealth, lastFood, lastMaxFood, lastBreath, lastArmor, lastXP;
+
+function toolStackRender(value, maxValue, div, cb) {
+    const totalAmount = Math.ceil(maxValue / 2);
+    const fullAmount = Math.floor(value / 2);
+    const halfAmount = value % 2 === 0 ? 0 : 1;
+    const emptyAmount = totalAmount - fullAmount - halfAmount;
+    const lineAmount = Math.ceil(totalAmount / 10);
+
+    div.innerHTML = "";
+
+    let emptyRemaining = emptyAmount;
+    let halfRemaining = halfAmount;
+
+    for (let i = 0; i < lineAmount; i++) {
+        const line = document.createElement("div");
+        const handling = i === 0 ? totalAmount % 10 : 10;
+        for (let j = 0; j < (handling || 10); j++) {
+            const d = document.createElement("div");
+            let img = "full";
+            if (emptyRemaining-- > 0) {
+                img = "empty";
+            } else if (halfRemaining-- > 0) {
+                img = "half";
+            }
+            d.style.backgroundImage = cb(img);
+            line.insertAdjacentElement("afterbegin", d);
+        }
+        div.appendChild(line);
+    }
+}
+
+export function renderHealthBar() {
+    if (CServer.getGamemode() % 2 === 1) {
+        healthDiv.hidden = true;
+        return;
+    }
+    healthDiv.hidden = false;
+    const maxHealth = Math.floor(CServer.getMaxHealth());
+    const health = Math.min(Math.floor(CServer.getHealth()), maxHealth);
+    if (lastHealth === health && lastMaxHealth === maxHealth) return;
+    lastHealth = health;
+    lastMaxHealth = maxHealth;
+
+    toolStackRender(health, maxHealth, healthDiv, t => `url("../assets/gui/heart/heart_${t}.png")`);
+}
+
+export function renderFoodBar() {
+    if (CServer.getGamemode() % 2 === 1) {
+        foodDiv.hidden = true;
+        return;
+    }
+    foodDiv.hidden = false;
+    const maxFood = Math.floor(CServer.getMaxFood());
+    const food = Math.min(Math.floor(CServer.getFood()), maxFood);
+    if (lastFood === food && lastMaxFood === maxFood) return;
+    lastFood = food;
+    lastMaxFood = maxFood;
+
+    toolStackRender(food, maxFood, foodDiv, t => `url("../assets/gui/food/food_${t}.png")`);
+}
+
+export function renderBreathBar() {
+    if (CServer.getGamemode() % 2 === 1) {
+        breathDiv.hidden = true;
+        return;
+    }
+    breathDiv.hidden = false;
+    const breath = CServer.getBreath();
+    if (lastBreath === breath) return;
+    lastBreath = breath;
+
+    if (breath >= 10) {
+        breathDiv.innerHTML = "";
+        return;
+    }
+
+    toolStackRender(breath * 2, 20, breathDiv, t => `url("../assets/gui/breath/breath_${t}.png")`);
+}
+
+export function renderArmorBar() {
+    if (CServer.getGamemode() % 2 === 1) {
+        armorDiv.hidden = true;
+        return;
+    }
+    armorDiv.hidden = false;
+    const armor = 0;
+    if (lastArmor === armor) return;
+    lastArmor = armor;
+
+    if (armor <= 0) {
+        armorDiv.innerHTML = "";
+        return;
+    }
+
+    toolStackRender(armor * 2, 20, armorDiv, t => `url("../assets/gui/armor/armor_${t}.png")`);
+}
+
+export function renderXPBar() {
+    if (CServer.getGamemode() % 2 === 1) {
+        xpDiv.hidden = true;
+        return;
+    }
+    xpDiv.hidden = false;
+    const xp = CServer.getXP();
+    if (lastXP === xp) return;
+    lastXP = xp;
+
+    const levelDec = getLevelFromXP(xp);
+    const levelFloor = Math.floor(levelDec);
+    const levelPercent = (levelDec - levelFloor) * 100;
+
+    xpProgressDiv.style.setProperty("--progress", levelPercent + "%");
+    xpTextDiv.innerText = levelFloor || "";
+}
+
+let actionbarTimeout0 = null;
+let actionbarTimeout1 = null;
+let actionbarAnimation = null;
+
+export function showActionbar(text) {
+    clearTimeout(actionbarTimeout0);
+    clearTimeout(actionbarTimeout1);
+    if (actionbarAnimation) actionbarAnimation.cancel();
+    actionbar.style.opacity = "1";
+    actionbar.innerHTML = colorizeTextHTML(text);
+    actionbarTimeout0 = setTimeout(() => actionbarAnimation = actionbar.animate(
+        {opacity: [1, 0]},
+        {
+            duration: 2000,
+            easing: "ease-in-out",
+            fill: "forwards"
+        }
+    ), 3000);
+    actionbarTimeout1 = setTimeout(() => {
+        actionbar.style.opacity = "0";
+        actionbar.innerHTML = "";
+    }, 5000);
+}
+
+function resetInput() {
+    const input = document.activeElement;
+    input.value = chatHistory[chatHistoryIndex] ?? "";
+    requestAnimationFrame(() => {
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    });
+}
+
 addEventListener("keydown", e => {
     const key = e.key.toLowerCase();
     if (key === "escape") {
@@ -112,6 +270,7 @@ addEventListener("keydown", e => {
         e.preventDefault();
     }
     const input = document.activeElement;
+
     if (input && input.tagName === "INPUT") {
         if (key === "enter") {
             ClientSession.sendMessagePacket(input.value);
@@ -120,13 +279,15 @@ addEventListener("keydown", e => {
             chatHistory.splice(chatHistoryIndex, chatHistory.length - chatHistoryIndex);
             input.value = "";
         } else if (key === "arrowup") {
+            e.preventDefault();
             if (chatHistoryIndex <= 0) return;
             chatHistoryIndex--;
-            input.value = chatHistory[chatHistoryIndex];
+            resetInput();
         } else if (key === "arrowdown") {
+            e.preventDefault();
             if (chatHistoryIndex >= chatHistory.length) return;
             chatHistoryIndex++;
-            input.value = chatHistory[chatHistoryIndex] ?? "";
+            resetInput();
         }
     }
 });

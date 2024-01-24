@@ -12,6 +12,8 @@ import {FlowerIds, getBlockDrops} from "../../../client/common/metadata/Blocks.j
 import {TileBlockIdMap, TileIds} from "../tile/Tile.js";
 import {FurnaceTile} from "../tile/FurnaceTile.js";
 import {ChestTile} from "../tile/ChestTile.js";
+import {S_XPOrbEntity} from "../entity/XPOrbEntity.js";
+import {S_TNTEntity} from "../entity/TNTEntity.js";
 
 const BlockUpdater = {
     [Ids.SAND](world, x, y, self) {
@@ -125,12 +127,14 @@ export class S_World extends World {
             this._info = Object.assign({
                 generator: "default",
                 generatorOptions: "",
-                seed: generateSeed()
+                seed: generateSeed(),
+                gameRules: this.gameRules
             }, this._info);
             writeFileSync(this.path + "/world.json", JSON.stringify(this._info));
         } else {
             this._info = JSON.parse(readFileSync(this.path + "/world.json", "utf8"));
         }
+        this.gameRules = this._info.gameRules;
         this.generator = new (Generators[this.getGeneratorType()])(this, this.getGeneratorOptions());
     };
 
@@ -169,13 +173,20 @@ export class S_World extends World {
         return this._info.generatorOptions;
     };
 
+    generateChunk(x) {
+        this.dirtyChunks.add(x);
+        return this.generator.generate({}, x);
+    };
+
     getChunk(x) {
         if (!this.chunks[x] && existsSync(this.path + "/chunks/" + x + ".json")) {
             const loaded = JSON.parse(readFileSync(this.path + "/chunks/" + x + ".json", "utf8"));
             for (const data of loaded.entities) {
                 const clas = {
                     [EntityIds.ITEM]: S_ItemEntity,
-                    [EntityIds.FALLING_BLOCK]: S_FallingBlockEntity
+                    [EntityIds.FALLING_BLOCK]: S_FallingBlockEntity,
+                    [EntityIds.TNT]: S_TNTEntity,
+                    [EntityIds.XP_ORB]: S_XPOrbEntity
                 }[data.type];
                 if (!clas) continue;
                 const entity = clas.deserialize(this, data);
@@ -275,7 +286,18 @@ export class S_World extends World {
     };
 
     dropItem(x, y, item, holdDelay = 250, vx = (Math.random() - 0.5) * 5, vy = Math.random() * 3 + 2) {
+        if (!item) return;
         const entity = new S_ItemEntity(this, item, holdDelay);
+        entity.x = x;
+        entity.y = y;
+        entity.vx = vx;
+        entity.vy = vy;
+        this.addEntity(entity);
+        return entity;
+    };
+
+    dropXP(x, y, amount, vx = (Math.random() - 0.5) * 5, vy = Math.random() * 3 + 2) {
+        const entity = new S_XPOrbEntity(this, amount);
         entity.x = x;
         entity.y = y;
         entity.vx = vx;

@@ -99,6 +99,11 @@ export const S_Server = {
     crash(error) {
         Terminal.error(error);
         this.stop();
+    },
+    broadcastPlayerList() {
+        for (const player of this.getPlayers()) {
+            player.session.sendPlayerList();
+        }
     }
 };
 

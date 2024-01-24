@@ -1,5 +1,6 @@
 <head>
     <title>Block Game</title>
+    <link rel="stylesheet" href="./style/Fonts.css">
     <link rel="stylesheet" href="./style/Index.css">
 </head>
 <body>
@@ -7,7 +8,7 @@
     <span style="font-size: 30px">This game is not affiliated with Mojang. Buy the actual 3D version too.</span>
 </div>
 <div class="container">
-    <div class="btn" id="servers-btn">Servers</div>
+    <div class="btn" id="servers-btn">Multiplayer</div>
     <div class="btn" id="options-btn">Options</div>
 </div>
 <div class="bg gone" id="bg"></div>
@@ -27,11 +28,19 @@
 </div>
 <div id="server-add-menu" class="menu gone">
     <div class="close" onclick="closeUI()">x</div>
-    <div class="error"></div>
+    <div class="error" id="add-error"></div>
     <input spellcheck="false" placeholder="Server name..." maxlength="32" id="create-name">
     <input spellcheck="false" placeholder="Server IP..." id="create-ip">
     <input spellcheck="false" placeholder="Server port..." id="create-port">
     <div class="btn" id="add-server-btn">Add server</div>
+</div>
+<div id="server-edit-menu" class="menu gone">
+    <div class="close" onclick="closeUI()">x</div>
+    <div class="error" id="edit-error"></div>
+    <input spellcheck="false" placeholder="Server name..." maxlength="32" id="edit-name">
+    <input spellcheck="false" placeholder="Server IP..." id="edit-ip">
+    <input spellcheck="false" placeholder="Server port..." id="edit-port">
+    <div class="btn" id="edit-server-btn">Edit server</div>
 </div>
 <div id="options-menu" class="menu gone">
     <div class="close" onclick="closeUI()">x</div>

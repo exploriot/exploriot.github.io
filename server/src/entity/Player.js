@@ -1,4 +1,10 @@
-import {CREATIVE_REACH, EntityIds, PLAYER_BB, SURVIVAL_REACH} from "../../../client/common/metadata/Entities.js";
+import {
+    AttributeIds,
+    CREATIVE_REACH,
+    EntityIds,
+    PLAYER_BB,
+    SURVIVAL_REACH
+} from "../../../client/common/metadata/Entities.js";
 import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
 import {NetworkSession} from "../network/NetworkSession.js";
 import {HandItemPacket} from "../packet/HandItemPacket.js";
@@ -10,25 +16,27 @@ import {writeFileSync} from "fs";
 /*** @extends CommandSender */
 export class S_Player extends S_BodyEntity {
     attributes = {
-        gamemode: 0,
-        isFlying: false,
-        canFly: false
+        [AttributeIds.GAMEMODE]: 0,
+        [AttributeIds.IS_FLYING]: false,
+        [AttributeIds.CAN_FLY]: false,
+        [AttributeIds.HEALTH]: 20,
+        [AttributeIds.MAX_HEALTH]: 20,
+        [AttributeIds.FOOD]: 20,
+        [AttributeIds.MAX_FOOD]: 20,
+        [AttributeIds.SATURATION]: 20,
+        [AttributeIds.BREATH]: 10,
+        [AttributeIds.XP]: 0
     };
     breaking = null;
     breakingEndAt = null;
     /*** @type {Inventory | null} */
     externalInventory = null;
-    /*** @type {{type: number | null, x: number | null, y: number | null}} */
-    eInv = {
-        type: null,
-        x: null,
-        y: null
-    };
     handIndex = 0;
     playerInventory = new Inventory(36, InventoryIds.PLAYER);
     cursorInventory = new Inventory(1, InventoryIds.CURSOR);
     craftInventory = new Inventory(5, InventoryIds.CRAFT);
     armorInventory = new Inventory(4, InventoryIds.ARMOR);
+    dirtyAttributes = new Set;
 
     /**
      * @param ws
@@ -40,6 +48,98 @@ export class S_Player extends S_BodyEntity {
         this.ws = ws;
         this.username = username;
         this.session = new NetworkSession(this, ws);
+    };
+
+    getAttribute(name) {
+        return this.attributes[name];
+    };
+
+    setAttribute(name, value) {
+        this.attributes[name] = value;
+        this.dirtyAttributes.add(name);
+    };
+
+    isFlying() {
+        return this.getAttribute(AttributeIds.IS_FLYING);
+    };
+
+    setFlying(value = true) {
+        this.setAttribute(AttributeIds.IS_FLYING, value);
+    };
+
+    canFly() {
+        return this.getAttribute(AttributeIds.CAN_FLY);
+    };
+
+    setCanFly(value = true) {
+        this.setAttribute(AttributeIds.CAN_FLY, value);
+    };
+
+    getGamemode() {
+        return this.getAttribute(AttributeIds.GAMEMODE);
+    };
+
+    setGamemode(mode) {
+        this.setAttribute(AttributeIds.GAMEMODE, mode);
+        this.setCanFly(mode % 2 === 1);
+        if (!this.canFly()) this.setFlying(false);
+        if (mode === 3) this.setFlying(true);
+    };
+
+    getXP() {
+        return this.getAttribute(AttributeIds.XP);
+    };
+
+    setXP(xp) {
+        this.setAttribute(AttributeIds.XP, xp);
+    };
+
+    getHealth() {
+        return this.getAttribute(AttributeIds.HEALTH);
+    };
+
+    setHealth(health) {
+        this.setAttribute(AttributeIds.HEALTH, health);
+    };
+
+    getMaxHealth() {
+        return this.getAttribute(AttributeIds.MAX_HEALTH);
+    };
+
+    setMaxHealth(maxHealth) {
+        this.setAttribute(AttributeIds.MAX_HEALTH, maxHealth);
+    };
+
+    getFood() {
+        return this.getAttribute(AttributeIds.FOOD);
+    };
+
+    setFood(food) {
+        this.setAttribute(AttributeIds.FOOD, food);
+    };
+
+    getMaxFood() {
+        return this.getAttribute(AttributeIds.MAX_FOOD);
+    };
+
+    setMaxFood(maxFood) {
+        this.setAttribute(AttributeIds.MAX_FOOD, maxFood);
+    };
+
+    getSaturation() {
+        return this.getAttribute(AttributeIds.SATURATION);
+    };
+
+    setSaturation(saturation) {
+        this.setAttribute(AttributeIds.SATURATION, saturation);
+    };
+
+    getBreath() {
+        return this.getAttribute(AttributeIds.BREATH);
+    };
+
+    setBreath(breath) {
+        this.setAttribute(AttributeIds.BREATH, breath);
     };
 
     getInventories() {
@@ -70,8 +170,18 @@ export class S_Player extends S_BodyEntity {
         return this.playerInventory.contents[this.handIndex];
     };
 
+    getHandItemId() {
+        const item = this.getHandItem();
+        return item ? item.id : 0;
+    };
+
+    getHandItemMeta() {
+        const item = this.getHandItem();
+        return item ? item.meta : 0;
+    };
+
     getBlockReach() {
-        return this.attributes.gamemode % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
+        return this.getGamemode() % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
     };
 
     canReachBlock(x, y) {
@@ -115,11 +225,11 @@ export class S_Player extends S_BodyEntity {
         this.session.sendPosition();
     };
 
-    setGamemode(mode) {
-        this.attributes.gamemode = mode;
-        this.attributes.canFly = mode % 2 === 1;
-        if (!this.attributes.canFly) this.attributes.isFlying = false;
-        this.session.sendAttributes();
+    update(dt) {
+        if (this.getHealth() <= 0) {
+            this.remove(true);
+        }
+        return super.update(dt);
     };
 
     kill() {
@@ -153,17 +263,38 @@ export class S_Player extends S_BodyEntity {
         }
     };
 
-    remove() {
-        for (const item of this.craftInventory.contents) this.holdOrDrop(item);
-        this.craftInventory.clear();
-        for (const item of this.cursorInventory.contents) this.holdOrDrop(item);
-        this.cursorInventory.clear();
+    getSpawnPoint() {
+        return this.world.getSafeSpawnLocation();
+    };
+
+    respawn() {
+        const spawn = this.getSpawnPoint();
+        this.teleport(spawn.x, spawn.y);
+    };
+
+    remove(kill = true) {
         const ext = this.externalInventory;
         if (ext && [ContainerIds.CRAFTING_TABLE].includes(ext.extra.containerId)) {
-            for (let i = 0; i < ext.size - 1; i++) { // -1 is for not giving the resulted item to the player
-                this.holdOrDrop(ext.contents[i]);
-            }
+            for (let i = 0; i < ext.size - 1; i++) this.holdOrDrop(ext.contents[i]);
             ext.clear();
+        }
+        this.holdOrDrop(this.cursorInventory.contents[0]);
+        this.cursorInventory.clear();
+        if (kill) {
+            const xp = this.getXP();
+            if (xp > 0) this.world.dropXP(this.x, this.y, xp);
+            this.setXP(0);
+            for (const item of this.craftInventory.contents) this.holdOrDrop(item);
+            this.craftInventory.clear();
+            for (const item of this.cursorInventory.contents) this.holdOrDrop(item);
+            this.cursorInventory.clear();
+            const ext = this.externalInventory;
+            if (ext && [ContainerIds.CRAFTING_TABLE].includes(ext.extra.containerId)) {
+                for (let i = 0; i < ext.size - 1; i++) { // -1 is for not giving the resulted item to the player
+                    this.holdOrDrop(ext.contents[i]);
+                }
+                ext.clear();
+            }
         }
         super.remove();
     };

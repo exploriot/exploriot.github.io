@@ -1,6 +1,6 @@
 import {PacketIds} from "../common/metadata/PacketIds.js";
 import {makeSubChunk} from "../common/world/World.js";
-import {EntityIds} from "../common/metadata/Entities.js";
+import {AttributeIds, EntityIds} from "../common/metadata/Entities.js";
 import {C_Player} from "../entity/Player.js";
 import {CServer} from "../main/Game.js";
 import {C_FallingBlockEntity} from "../entity/FallingBlockEntity.js";
@@ -12,14 +12,14 @@ import {
     closeDoubleChestUI,
     openChestUI,
     openCraftingTableUI,
-    openFurnaceUI,
-    updateStateUI
+    openFurnaceUI
 } from "../ui/ContainerUI.js";
 import {C_TNTEntity} from "../entity/TNTEntity.js";
 import {colorizeTextHTML} from "../common/Utils.js";
 import {SoundIds} from "../common/metadata/Sounds.js";
 import {ClientSession} from "./ClientSession.js";
 import {dropHands} from "../ui/MainUI.js";
+import {C_XPOrbEntity} from "../entity/XPOrbEntity.js";
 
 const EntityCreator = {
     [EntityIds.PLAYER]: data => new C_Player(
@@ -39,6 +39,10 @@ const EntityCreator = {
         Item.deserialize(data.item)
     ),
     [EntityIds.TNT]: data => new C_TNTEntity(
+        data.id,
+        CServer.world
+    ),
+    [EntityIds.XP_ORB]: data => new C_XPOrbEntity(
         data.id,
         CServer.world
     ),
@@ -190,7 +194,8 @@ export function C_handleSendMessagePacket(pk) {
 }
 
 export function C_handleSetAttributesPacket(pk) {
-    if (pk.attributes.isFlying !== undefined && pk.attributes.isFlying !== CServer.attributes.isFlying) {
+    const isF = pk.attributes[AttributeIds.IS_FLYING];
+    if (isF !== undefined && isF !== CServer.attributes[AttributeIds.IS_FLYING]) {
         CServer.player.vx = 0;
         CServer.player.vy = 0;
     }
@@ -234,6 +239,7 @@ export function C_handleCloseContainerPacket() {
         dropHands();
     }
     CServer.externalInventory = null;
+    CServer.containerState = null;
 }
 
 export function C_handlePlaySoundPacket(pk) {
@@ -247,7 +253,17 @@ export function C_handleStopSoundPacket(pk) {
 
 export function C_handleContainerStatePacket(pk) {
     CServer.containerState = pk.state;
-    updateStateUI();
+    CServer.containerState.__time = Date.now();
+}
+
+export function C_handleUpdatePlayerListPacket(pk) {
+    const div = document.querySelector(".player-list");
+    let pingRate = 5;
+    if (pk.ping < 3000) pingRate = 1;
+    if (pk.ping > 1000) pingRate = 2;
+    if (pk.ping > 500) pingRate = 3;
+    if (pk.ping > 250) pingRate = 4;
+    div.innerHTML = pk.list.map(i => `<div class="player"><div class="name">${i.username}</div><div class="connection" style="background-image: url('../assets/gui/connection/connection_${pingRate}.png')"></div></div>`).join("");
 }
 
 const PacketMap = {
@@ -272,7 +288,8 @@ const PacketMap = {
     [PacketIds.SERVER_CLOSE_CONTAINER]: C_handleCloseContainerPacket,
     [PacketIds.SERVER_PLAY_SOUND]: C_handlePlaySoundPacket,
     [PacketIds.SERVER_STOP_SOUND]: C_handleStopSoundPacket,
-    [PacketIds.SERVER_CONTAINER_STATE]: C_handleContainerStatePacket
+    [PacketIds.SERVER_CONTAINER_STATE]: C_handleContainerStatePacket,
+    [PacketIds.SERVER_UPDATE_PLAYER_LIST]: C_handleUpdatePlayerListPacket
 };
 
 export function C_handlePacket(pk) {

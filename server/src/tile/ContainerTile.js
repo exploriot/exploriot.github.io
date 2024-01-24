@@ -72,4 +72,10 @@ export class ContainerTile extends Tile {
             ...super.serialize(), contents: this.container.serialize()
         };
     };
+
+    remove() {
+        for (const item of this.container.contents) this.world.dropItem(this.x, this.y, item);
+        this.container.clear();
+        super.remove();
+    };
 }

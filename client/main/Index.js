@@ -2,8 +2,10 @@ const serversBtn = document.getElementById("servers-btn");
 const optionsBtn = document.getElementById("options-btn");
 const addServerBtn = document.getElementById("add-server-btn");
 const addServerMenuBtn = document.getElementById("add-server-menu-btn");
+const editServerBtn = document.getElementById("edit-server-btn");
 const serversMenu = document.getElementById("servers-menu");
 const serverAddMenu = document.getElementById("server-add-menu");
+const serverEditMenu = document.getElementById("server-edit-menu");
 const optionsMenu = document.getElementById("options-menu");
 const messageMenu = document.getElementById("message-menu");
 const bg = document.getElementById("bg");
@@ -12,6 +14,7 @@ const usernameInp = document.getElementById("username");
 const serversD = document.querySelector(".servers");
 let lastSearch = "";
 let lastUsername = localStorage.getItem("__block__game__username__") || "Steve";
+let editingServer = null;
 
 usernameInp.value = lastUsername;
 
@@ -27,10 +30,12 @@ optionsBtn.addEventListener("click", () => {
 });
 
 function closeUI() {
+    editingServer = null;
     serversMenu.classList.add("gone");
     serverAddMenu.classList.add("gone");
     optionsMenu.classList.add("gone");
     messageMenu.classList.add("gone");
+    serverEditMenu.classList.add("gone");
     bg.classList.add("gone");
     document.querySelector(".error").innerHTML = "";
 }
@@ -49,21 +54,41 @@ addServerMenuBtn.addEventListener("click", () => {
     document.getElementById("create-port").value = "1881";
 });
 
+function checkServerProps(name, ip, port) {
+    if (!name) return "The name of the server cannot be empty.";
+    if (!ip) return "The IP of the server cannot be empty.";
+    if (!port) return "The port of the server cannot be empty.";
+    if (!/^[\da-zA-Z.\-]+$/.test(ip)) return "Invalid IP address.";
+    const portN = Number(port);
+    if (!port || isNaN(portN) || portN < 0 || portN > 65535 || portN !== Math.floor(portN)) return "Invalid port.";
+}
+
+editServerBtn.addEventListener("click", () => {
+    if (!editingServer) return closeUI();
+    const name = document.getElementById("edit-name").value;
+    const ip = document.getElementById("edit-ip").value;
+    const port = document.getElementById("edit-port").value;
+    const res = checkServerProps(name, ip, port);
+    if (res) return document.querySelector("#edit-error").innerText = res;
+    editingServer.name = name;
+    editingServer.ip = ip;
+    editingServer.port = port;
+    renderServers();
+    serversMenu.classList.remove("gone");
+    serverEditMenu.classList.add("gone");
+    localStorage.setItem("server-list", JSON.stringify(servers));
+});
+
 addServerBtn.addEventListener("click", () => {
-    const name = document.getElementById("create-name");
-    const ip = document.getElementById("create-ip");
-    const port = document.getElementById("create-port");
-    const er = e => document.querySelector(".error").innerText = e;
-    if (!name.value) return er("The name of the server cannot be empty.");
-    if (!ip.value) return er("The IP of the server cannot be empty.");
-    if (!port.value) return er("The port of the server cannot be empty.");
-    if (!/^[\da-zA-Z.\-]+$/.test(ip.value)) return er("Invalid IP address.");
-    const portN = Number(port.value);
-    if (!port.value || isNaN(portN) || portN < 0 || portN > 65535 || portN !== Math.floor(portN)) return er("Invalid port.");
+    const name = document.getElementById("create-name").value;
+    const ip = document.getElementById("create-ip").value;
+    const port = document.getElementById("create-port").value;
+    const res = checkServerProps(name, ip, port);
+    if (res) return document.querySelector("#add-error").innerText = res;
     servers.splice(0, 0, {
-        name: name.value,
-        ip: ip.value,
-        port: portN,
+        name: name,
+        ip: ip,
+        port: port * 1,
         createdTimestamp: Date.now(),
         joinedTimestamp: Date.now()
     });
@@ -83,19 +108,31 @@ function renderServers() {
         const nameD = document.createElement("div");
         const ipD = document.createElement("div");
         const removeD = document.createElement("div");
+        const editD = document.createElement("div");
         nameD.innerText = server.name;
         ipD.innerText = server.ip + ":" + server.port;
         removeD.innerText = "Delete";
+        editD.innerText = "Edit";
         nameD.classList.add("name");
         ipD.classList.add("ip");
         removeD.classList.add("remove");
+        editD.classList.add("edit");
         div.appendChild(nameD);
         div.appendChild(ipD);
         div.appendChild(removeD);
+        div.appendChild(editD);
         removeD.addEventListener("click", () => {
             servers.splice(servers.indexOf(server), 1);
             renderServers();
             localStorage.setItem("server-list", JSON.stringify(servers));
+        });
+        editD.addEventListener("click", () => {
+            closeUI();
+            editingServer = server;
+            serverEditMenu.classList.remove("gone");
+            document.getElementById("edit-name").value = server.name;
+            document.getElementById("edit-ip").value = server.ip;
+            document.getElementById("edit-port").value = server.port;
         });
         div.addEventListener("click", async e => {
             if (e.target !== div) return;
