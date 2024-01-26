@@ -13,6 +13,7 @@ import {
 import {ClientSession} from "../network/ClientSession.js";
 import {InventoryIds} from "../common/item/Inventory.js";
 import {colorizeTextHTML, getLevelFromXP} from "../common/Utils.js";
+import {Metadata} from "../common/metadata/Metadata.js";
 
 const escMenu = document.querySelector(".esc-menu");
 const pauseBtn = document.querySelector(".pause");
@@ -53,17 +54,8 @@ export function isAnyUIOn() {
     return isEscMenuOn() || isAnyContainerOn() || isTypingToInput();
 }
 
-pauseBtn.addEventListener("click", toggleEscMenu);
-
 const chatHistory = [];
 let chatHistoryIndex = 0;
-
-// ["hi", "hii"]
-// 2
-
-window.AAA = n => {
-    ClientSession.sendDropItemPacket(InventoryIds.CRAFT, 4, n);
-};
 
 export function dropHands() {
     const cursorItem = CServer.cursorInventory.contents[0];
@@ -112,6 +104,8 @@ function toolStackRender(value, maxValue, div, cb) {
     }
 }
 
+let heartsBlink = 0;
+
 export function renderHealthBar() {
     if (CServer.getGamemode() % 2 === 1) {
         healthDiv.hidden = true;
@@ -120,11 +114,19 @@ export function renderHealthBar() {
     healthDiv.hidden = false;
     const maxHealth = Math.floor(CServer.getMaxHealth());
     const health = Math.min(Math.floor(CServer.getHealth()), maxHealth);
-    if (lastHealth === health && lastMaxHealth === maxHealth) return;
+    if (
+        lastHealth === health
+        && lastMaxHealth === maxHealth
+        && (heartsBlink === 0 || Date.now() - heartsBlink < 250)
+    ) return;
+
+    if (lastHealth > health) heartsBlink = Date.now();
+    else if (Date.now() - heartsBlink >= 250) heartsBlink = 0;
+
     lastHealth = health;
     lastMaxHealth = maxHealth;
 
-    toolStackRender(health, maxHealth, healthDiv, t => `url("../assets/gui/heart/heart_${t}.png")`);
+    toolStackRender(health, maxHealth, healthDiv, t => `url("../assets/gui/heart/heart_${t}${Date.now() - heartsBlink < 250 ? "_blink" : ""}.png")`);
 }
 
 export function renderFoodBar() {
@@ -166,7 +168,11 @@ export function renderArmorBar() {
         return;
     }
     armorDiv.hidden = false;
-    const armor = 0;
+    let armor = 0;
+    CServer.armorInventory.contents.forEach(item => {
+        if (!item) return;
+        armor += Metadata.armorPoints[item.id] ?? 0;
+    });
     if (lastArmor === armor) return;
     lastArmor = armor;
 
@@ -175,7 +181,7 @@ export function renderArmorBar() {
         return;
     }
 
-    toolStackRender(armor * 2, 20, armorDiv, t => `url("../assets/gui/armor/armor_${t}.png")`);
+    toolStackRender(armor, 20, armorDiv, t => `url("../assets/gui/armor/armor_${t}.png")`);
 }
 
 export function renderXPBar() {
@@ -229,92 +235,95 @@ function resetInput() {
     });
 }
 
-addEventListener("keydown", e => {
-    const key = e.key.toLowerCase();
-    if (key === "escape") {
-        if (isTypingToInput()) document.activeElement.blur();
-        else if (isInventoryUIOn()) closeInventoryUI();
-        else if (isCraftingTableUIOn()) ClientSession.sendCloseContainerPacket();
-        else toggleEscMenu();
-    }
-    if (key === "e" && !isEscMenuOn()) {
-        if (isAnyUIOn()) {
-            if (isInventoryUIOn()) {
-                dropHands();
-                closeInventoryUI();
-            } else if (isFurnaceUIOn() || isCraftingTableUIOn() || isChestUIOn() || isDoubleChestUIOn()) ClientSession.sendCloseContainerPacket();
-        } else openInventoryUI();
-    }
-    if (isAnyContainerOn() && !isNaN(key * 1) && MouseContainerPosition) {
-        const {inv: inv1, index: index1} = MouseContainerPosition;
-        const index2 = key * 1 - 1;
-        const inv2 = CServer.playerInventory;
-        if (index1 === index2 && inv1 === inv2) return;
-        const item1 = inv1.contents[index1];
-        const item2 = inv2.contents[index2];
-        if (!item1 && !item2) return;
-        if (!item2) ClientSession.sendInventoryTransactionPacket(
-            inv1.type, inv2.type,
-            index1, index2,
-            item1.count
-        ); else ClientSession.sendInventoryTransactionPacket(
-            inv2.type, inv1.type,
-            index2, index1,
-            item2.count
-        );
-    }
-    if (key === "t" && !isAnyUIOn()) setTimeout(() => chatInput.focus());
-    if (!isAnyUIOn()) {
-        if (key * 1) CServer.handIndex = key * 1 - 1;
-        if (key === "f3") C_OPTIONS.isDebugMode = !C_OPTIONS.isDebugMode;
-        e.preventDefault();
-    }
-    const input = document.activeElement;
-
-    if (input && input.tagName === "INPUT") {
-        if (key === "enter") {
-            ClientSession.sendMessagePacket(input.value);
-            chatHistory.push(input.value);
-            chatHistoryIndex++;
-            chatHistory.splice(chatHistoryIndex, chatHistory.length - chatHistoryIndex);
-            input.value = "";
-        } else if (key === "arrowup") {
-            e.preventDefault();
-            if (chatHistoryIndex <= 0) return;
-            chatHistoryIndex--;
-            resetInput();
-        } else if (key === "arrowdown") {
-            e.preventDefault();
-            if (chatHistoryIndex >= chatHistory.length) return;
-            chatHistoryIndex++;
-            resetInput();
+export function initMainUI() {
+    pauseBtn.addEventListener("click", toggleEscMenu);
+    addEventListener("keydown", e => {
+        const key = e.key.toLowerCase();
+        if (key === "escape") {
+            if (isTypingToInput()) document.activeElement.blur();
+            else if (isInventoryUIOn()) closeInventoryUI();
+            else if (isCraftingTableUIOn()) ClientSession.sendCloseContainerPacket();
+            else toggleEscMenu();
         }
-    }
-});
+        if (key === "e" && !isEscMenuOn()) {
+            if (isAnyUIOn()) {
+                if (isInventoryUIOn()) {
+                    dropHands();
+                    closeInventoryUI();
+                } else if (isFurnaceUIOn() || isCraftingTableUIOn() || isChestUIOn() || isDoubleChestUIOn()) ClientSession.sendCloseContainerPacket();
+            } else openInventoryUI();
+        }
+        if (isAnyContainerOn() && !isNaN(key * 1) && MouseContainerPosition) {
+            const {inv: inv1, index: index1} = MouseContainerPosition;
+            const index2 = key * 1 - 1;
+            const inv2 = CServer.playerInventory;
+            if (index1 === index2 && inv1 === inv2) return;
+            const item1 = inv1.contents[index1];
+            const item2 = inv2.contents[index2];
+            if (!item1 && !item2) return;
+            if (!item2) ClientSession.sendInventoryTransactionPacket(
+                inv1.type, inv2.type,
+                index1, index2,
+                item1.count
+            ); else ClientSession.sendInventoryTransactionPacket(
+                inv2.type, inv1.type,
+                index2, index1,
+                item2.count
+            );
+        }
+        if (key === "t" && !isAnyUIOn()) setTimeout(() => chatInput.focus());
+        if (!isAnyUIOn()) {
+            if (key * 1) CServer.handIndex = key * 1 - 1;
+            if (key === "f3") C_OPTIONS.isDebugMode = !C_OPTIONS.isDebugMode;
+            e.preventDefault();
+        }
+        const input = document.activeElement;
 
-document.getElementById("back-btn").addEventListener("click", closeEscMenu);
+        if (input && input.tagName === "INPUT") {
+            if (key === "enter") {
+                ClientSession.sendMessagePacket(input.value);
+                chatHistory.push(input.value);
+                chatHistoryIndex++;
+                chatHistory.splice(chatHistoryIndex, chatHistory.length - chatHistoryIndex);
+                input.value = "";
+            } else if (key === "arrowup") {
+                e.preventDefault();
+                if (chatHistoryIndex <= 0) return;
+                chatHistoryIndex--;
+                resetInput();
+            } else if (key === "arrowdown") {
+                e.preventDefault();
+                if (chatHistoryIndex >= chatHistory.length) return;
+                chatHistoryIndex++;
+                resetInput();
+            }
+        }
+    });
 
-document.getElementById("disconnect-btn").addEventListener("click", () => {
-    location.href = "./";
-});
+    document.getElementById("back-btn").addEventListener("click", closeEscMenu);
 
-document.getElementById("reconnect-btn").addEventListener("click", () => {
-    location.reload();
-});
+    document.getElementById("disconnect-btn").addEventListener("click", () => {
+        location.href = "./";
+    });
 
-document.getElementById("leave-btn").addEventListener("click", () => {
-    location.href = "./";
-});
+    document.getElementById("reconnect-btn").addEventListener("click", () => {
+        location.reload();
+    });
 
-document.getElementById("rejoin-btn").addEventListener("click", () => {
-    location.reload();
-});
+    document.getElementById("leave-btn").addEventListener("click", () => {
+        location.href = "./";
+    });
 
-addEventListener("wheel", e => {
-    if (Math.abs(e.deltaY) < 5) return;
-    CServer.handIndex = (CServer.handIndex + Math.sign(e.deltaY) + 9) % 9;
-});
+    document.getElementById("rejoin-btn").addEventListener("click", () => {
+        location.reload();
+    });
+
+    addEventListener("wheel", e => {
+        if (Math.abs(e.deltaY) < 5) return;
+        CServer.handIndex = (CServer.handIndex + Math.sign(e.deltaY) + 9) % 9;
+    });
 
 // addEventListener("blur", () => openEscMenu());
 
-addEventListener("contextmenu", e => e.preventDefault());
+    addEventListener("contextmenu", e => e.preventDefault());
+}

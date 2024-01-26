@@ -1,9 +1,9 @@
 import {C_Entity} from "./Entity.js";
 import {EntityIds, XP_ORB_BB} from "../common/metadata/Entities.js";
-import {getCanvasPosition} from "../Utils.js";
+import {BASE_BLOCK_SIZE, getCanvasPosition} from "../Utils.js";
 import {Texture} from "../loader/Texture.js";
 
-export const XP_ORB_TEXTURE_PATH = "./assets/entities/xp_orb.png";
+export const XP_ORB_TEXTURE_PATH = "assets/entities/xp_orb.png";
 
 export class C_XPOrbEntity extends C_Entity {
     constructor(id, world, size) {
@@ -11,9 +11,9 @@ export class C_XPOrbEntity extends C_Entity {
         this.size = size;
     };
 
-    render(ctx, size) {
-        const pos = getCanvasPosition(this.x, this.y, size);
-        ctx.drawImage(Texture.get(XP_ORB_TEXTURE_PATH).image, pos.x, pos.y, size * 0.2, size * 0.2);
+    render(ctx) {
+        const pos = getCanvasPosition(this.x, this.y);
+        ctx.drawImage(Texture.get(XP_ORB_TEXTURE_PATH).image, pos.x, pos.y, BASE_BLOCK_SIZE * 0.2, BASE_BLOCK_SIZE * 0.2);
     };
 
     update(dt) {

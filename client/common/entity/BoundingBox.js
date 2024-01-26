@@ -7,7 +7,7 @@ export class BoundingBox {
     };
 
     isCollidingWith(bb) {
-        if (Array.isArray(bb)) return bb.some(b => this.isCollidingWith(b, x, y));
+        if (Array.isArray(bb)) return bb.some(b => this.isCollidingWith(b));
         return bb.x2 >= this.x1 && bb.x1 <= this.x2 && bb.y1 <= this.y2 && bb.y2 >= this.y1;
     };
 

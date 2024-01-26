@@ -11,6 +11,11 @@
     <div class="btn" id="servers-btn">Multiplayer</div>
     <div class="btn" id="options-btn">Options</div>
 </div>
+<div class="player">
+    <canvas></canvas>
+</div>
+<div class="upload-skin btn">Upload skin</div>
+<div class="reset-skin btn">Reset skin</div>
 <div class="bg gone" id="bg"></div>
 <div id="servers-menu" class="menu gone">
     <div class="close" onclick="closeUI()">x</div>
@@ -32,7 +37,10 @@
     <input spellcheck="false" placeholder="Server name..." maxlength="32" id="create-name">
     <input spellcheck="false" placeholder="Server IP..." id="create-ip">
     <input spellcheck="false" placeholder="Server port..." id="create-port">
-    <div class="btn" id="add-server-btn">Add server</div>
+    <div class="flex">
+        <div class="btn" id="add-server-cancel-btn">Cancel</div>
+        <div class="btn" id="add-server-btn">Add server</div>
+    </div>
 </div>
 <div id="server-edit-menu" class="menu gone">
     <div class="close" onclick="closeUI()">x</div>
@@ -40,7 +48,10 @@
     <input spellcheck="false" placeholder="Server name..." maxlength="32" id="edit-name">
     <input spellcheck="false" placeholder="Server IP..." id="edit-ip">
     <input spellcheck="false" placeholder="Server port..." id="edit-port">
-    <div class="btn" id="edit-server-btn">Edit server</div>
+    <div class="flex">
+        <div class="btn" id="edit-server-cancel-btn">Cancel</div>
+        <div class="btn" id="edit-server-btn">Edit server</div>
+    </div>
 </div>
 <div id="options-menu" class="menu gone">
     <div class="close" onclick="closeUI()">x</div>
@@ -50,4 +61,8 @@
 <script>
     addEventListener("keydown", e => e.key === "F5" && location.reload());
 </script>
-<script type="module" src="./main/Index.js"></script>
+<script type="module">
+    import {initIndex} from "./main/Index.js";
+
+    initIndex();
+</script>

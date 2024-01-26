@@ -29,7 +29,7 @@
         </div>
     </div>
 </div>
-<div class="player-list"></div>
+<div class="player-list" style="opacity: 0"></div>
 <div class="pause">=</div>
 <div class="chat">
     <input>
@@ -41,31 +41,26 @@
         <div
                 class="armor-inventory"
                 data-inv="armor"
-                data-inv-dep="player-inventory"
                 data-inv-index="0,3"
         ></div>
         <div
                 class="player-inventory"
                 data-inv="player"
-                data-inv-dep="player-inventory"
                 data-inv-index="9,35"
         ></div>
         <div
                 class="hotbar-inventory"
                 data-inv="player"
-                data-inv-dep="player-inventory"
                 data-inv-index="0,8"
         ></div>
         <div
                 class="craft-inventory-in"
                 data-inv="craft"
-                data-inv-dep="player-inventory"
                 data-inv-index="0,3"
         ></div>
         <div
                 class="craft-inventory-out"
                 data-inv="craft"
-                data-inv-dep="player-inventory"
                 data-inv-index="4,4"
         ></div>
     </div>
@@ -75,25 +70,21 @@
         <div
                 class="player-inventory"
                 data-inv="player"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="9,35"
         ></div>
         <div
                 class="hotbar-inventory"
                 data-inv="player"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="0,8"
         ></div>
         <div
                 class="crafting-inventory-in"
                 data-inv="external"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="0,8"
         ></div>
         <div
                 class="crafting-inventory-out"
                 data-inv="external"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="9,9"
         ></div>
     </div>
@@ -103,25 +94,21 @@
         <div
                 class="player-inventory"
                 data-inv="player"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="9,35"
         ></div>
         <div
                 class="hotbar-inventory"
                 data-inv="player"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="0,8"
         ></div>
         <div
                 class="furnace-in"
                 data-inv="external"
-                data-inv-dep="furnace-inventory"
                 data-inv-index="0,1"
         ></div>
         <div
                 class="furnace-out"
                 data-inv="external"
-                data-inv-dep="furnace-inventory"
                 data-inv-index="2,2"
         ></div>
         <div id="furnace-arrow"></div>
@@ -133,19 +120,16 @@
         <div
                 class="player-inventory"
                 data-inv="player"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="9,35"
         ></div>
         <div
                 class="hotbar-inventory"
                 data-inv="player"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="0,8"
         ></div>
         <div
                 class="chest-inventory"
                 data-inv="external"
-                data-inv-dep="furnace-inventory"
                 data-inv-index="0,26"
         ></div>
     </div>
@@ -155,19 +139,16 @@
         <div
                 class="player-inventory"
                 data-inv="player"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="9,35"
         ></div>
         <div
                 class="hotbar-inventory"
                 data-inv="player"
-                data-inv-dep="crafting-inventory"
                 data-inv-index="0,8"
         ></div>
         <div
                 class="chest-inventory"
                 data-inv="external"
-                data-inv-dep="furnace-inventory"
                 data-inv-index="0,53"
         ></div>
     </div>
@@ -186,15 +167,17 @@
         <div class="btn" id="disconnect-btn">Disconnect</div>
     </div>
 </div>
-<div class="disconnect-menu gone">
+<div class="connection-menu">
     <div class="bg"></div>
     <div class="container">
         <div class="text"></div>
-        <div class="btn" id="rejoin-btn">Rejoin</div>
+        <div class="btn gone" id="rejoin-btn">Rejoin</div>
         <div class="btn" id="leave-btn">Leave</div>
     </div>
 </div>
 </body>
 <script type="module">
-    import "./main/Game.js";
+    import {initGame} from "./main/Game.js";
+
+    initGame();
 </script>

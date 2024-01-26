@@ -25,7 +25,8 @@ const EntityCreator = {
     [EntityIds.PLAYER]: data => new C_Player(
         data.id,
         CServer.world,
-        data.username
+        data.username,
+        data.skinData
     ),
     [EntityIds.FALLING_BLOCK]: data => new C_FallingBlockEntity(
         data.id,
@@ -109,7 +110,10 @@ export function C_handleWelcomePacket(pk) {
 }
 
 export function C_handleSubChunkPacket(pk) {
-    CServer.hasAnyChunks = true;
+    if (!CServer.loadedChunks.size) {
+        document.querySelector(".connection-menu").classList.add("gone");
+    }
+    CServer.loadedChunks.add(pk.x);
     const chunk = CServer.world.getChunk(pk.x);
     const subChunk = chunk[pk.y] ??= makeSubChunk();
     subChunk.set(pk.blocks);
@@ -130,6 +134,13 @@ export function C_handleEntityMovementPacket(pk) {
     if (!entity) return;
     entity.x = pk.x;
     entity.y = pk.y;
+    entity.handleMovement();
+}
+
+export function C_handleEntityRotationPacket(pk) {
+    const entity = CServer.world.entityMap[pk.id];
+    if (!entity) return;
+    entity.rotation = pk.rotation;
     entity.handleMovement();
 }
 
@@ -273,6 +284,7 @@ const PacketMap = {
     [PacketIds.SERVER_SUB_CHUNK]: C_handleSubChunkPacket,
     [PacketIds.SERVER_ENTITY_UPDATE]: C_handleEntityUpdatePacket,
     [PacketIds.SERVER_ENTITY_MOVEMENT]: C_handleEntityMovementPacket,
+    [PacketIds.SERVER_ENTITY_ROTATE]: C_handleEntityRotationPacket,
     [PacketIds.SERVER_ENTITY_REMOVE]: C_handleEntityRemovePacket,
     [PacketIds.SERVER_BLOCK_UPDATE]: C_handleBlockUpdatePacket,
     [PacketIds.SERVER_BLOCK_BREAKING_UPDATE]: C_handleBlockBreakingUpdatePacket,

@@ -10,11 +10,13 @@ import {getBlockHardness, isBlockItem} from "../common/metadata/Blocks.js";
 import {InventoryIds} from "../common/item/Inventory.js";
 import {ClientSession} from "../network/ClientSession.js";
 import {Item} from "../common/item/Item.js";
+import {Metadata} from "../common/metadata/Metadata.js";
 
 let lastMouseX = 0;
 let lastMouseY = 0;
 let lastPlace = 0;
 let lastMiddle = 0;
+let lastConsume = 0;
 let lastDrop = 0;
 let jumpT = 0;
 let isPressingSpace = false;
@@ -23,6 +25,8 @@ let lastSpace = 0;
 export class C_World extends World {
     breakChunks = {};
     lastUpdate = Date.now() - 1;
+    /*** @type {Record<number, C_Entity[]>} */
+    chunkEntities = {};
 
     update() {
         setTimeout(() => this.update());
@@ -30,10 +34,13 @@ export class C_World extends World {
         const dt = Math.min(adt, 0.1);
         this.lastUpdate = Date.now();
         ClientSession.cleanPackets();
-        if (!CServer.isWelcome || !CServer.hasAnyChunks) return;
+        if (!CServer.isWelcome || !CServer.loadedChunks.has(CServer.player.x >> 4)) return;
         const isFlying = CServer.isFlying();
         const isSpectator = CServer.getGamemode() === 3;
         const onGround = CServer.player._onGround;
+        if (onGround && CServer.player.y * 2 - Math.floor(CServer.player.y * 2) < 0.001) {
+            CServer.player.y = Math.floor(CServer.player.y * 2) / 2 + 0.000000001;
+        }
         if (!isAnyUIOn()) {
             const speedBoost = isFlying ? 2 : 1;
             if (isSpectator) {
@@ -102,25 +109,33 @@ export class C_World extends World {
                 resetBlockBreaking();
             }
         }
-        if (!Mouse.rightDown) lastPlace = 0;
+        if (!Mouse.rightDown) {
+            lastPlace = 0;
+            lastConsume = 0;
+        }
         if (
             !isAnyUIOn()
-            && Date.now() - lastPlace > (CServer.getGamemode() % 2 === 0 ? 300 : 0)
             && Mouse.rightDown
         ) {
-            if (this.canPlaceBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), CServer.getHandItem())) {
-                lastPlace = Date.now();
-                const handItem = CServer.getHandItem();
-                if (handItem && isBlockItem(handItem.id)) {
-                    this.setBlock(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
-                    ClientSession.sendBlockPlacePacket(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
+            if (Date.now() - lastPlace > (CServer.getGamemode() % 2 === 0 ? 300 : 0)) {
+                if (this.canPlaceBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), CServer.getHandItem())) {
+                    lastPlace = Date.now();
+                    const handItem = CServer.getHandItem();
+                    if (handItem && isBlockItem(handItem.id)) {
+                        this.setBlock(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
+                        ClientSession.sendBlockPlacePacket(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
+                    }
+                } else if (
+                    this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode())
+                    && Date.now() - lastPlace > 300
+                ) {
+                    lastPlace = Date.now();
+                    ClientSession.sendInteractBlockPacket(Mouse.rx, Mouse.ry);
                 }
-            } else if (
-                this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode())
-                && Date.now() - lastPlace > 300
-            ) {
-                lastPlace = Date.now();
-                ClientSession.sendInteractBlockPacket(Mouse.rx, Mouse.ry);
+            }
+            if (!Metadata.block.includes(handItemId) && Date.now() - lastConsume > 300) {
+                lastConsume = Date.now();
+                ClientSession.sendConsumeItemPacket();
             }
         }
 
@@ -179,5 +194,6 @@ export class C_World extends World {
             ClientSession.sendHandIndex();
             CServer.lastHandIndex = CServer.handIndex;
         }
-    };
+    }
+    ;
 }

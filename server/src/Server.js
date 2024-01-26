@@ -4,6 +4,10 @@ import {startCommandReader, Terminal} from "./terminal/Terminal.js";
 import {ConsoleCommandSender} from "./command/ConsoleCommandSender.js";
 import {SERVER_BEGIN_TIME} from "./Main.js";
 import {S_Player} from "./entity/Player.js";
+import {initCommands} from "./command/CommandManager.js";
+import {initBlocks} from "../../client/common/metadata/Blocks.js";
+import {initCrafts} from "../../client/common/metadata/Crafts.js";
+import {initItems} from "../../client/common/metadata/Items.js";
 
 export const S_Server = {
     /*** @type {Set<S_Player>} */
@@ -15,6 +19,11 @@ export const S_Server = {
     chunkDistance: 3,
 
     init() {
+        initCommands();
+        initItems();
+        initBlocks();
+        initCrafts();
+
         if (this.ops.size === 1 && !Array.from(this.ops)[0]) this.ops.clear();
 
         const overworld = new S_World(0, "overworld", {
@@ -27,6 +36,9 @@ export const S_Server = {
         for (let x = -this.chunkDistance - 1; x <= this.chunkDistance + 1; x++) {
             overworld.loadChunk(x);
         }
+
+        Terminal.info("Server has been loaded in " + (Date.now() - SERVER_BEGIN_TIME) / 1000 + "s. Type 'help' to see the command list.");
+        startCommandReader();
     },
     getDefaultWorld() {
         return this.defaultWorld;
@@ -80,10 +92,6 @@ export const S_Server = {
             if (player.username.toLowerCase().startsWith(prefix)) return player;
         }
         return null;
-    },
-    onLoad() {
-        Terminal.info("Server has been loaded in " + (Date.now() - SERVER_BEGIN_TIME) / 1000 + "s. Type 'help' to see the command list.");
-        startCommandReader();
     },
     stop() {
         Terminal.warn("Stopping the server...");

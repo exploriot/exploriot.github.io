@@ -1,4 +1,11 @@
 * {
+    image-rendering: optimizeSpeed;
+    image-rendering: -moz-crisp-edges;
+    /*noinspection CssInvalidPropertyValue*/
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: -o-crisp-edges;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
     font-family: Minecraft, serif;
     color: white;
     user-select: none;
@@ -47,12 +54,16 @@ body {
 }
 
 .btn {
-    padding: 10px;
+    padding: 15px 10px 10px;
     margin: 10px;
     border-radius: 10px;
     background: rgba(0, 0, 0, 0.5);
     cursor: pointer;
     transition: scale .1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: nowrap;
 }
 
 .btn:hover {
@@ -66,6 +77,10 @@ input {
     border-radius: 10px;
     background: none;
     color: white;
+}
+
+.flex {
+    display: flex;
 }
 
 input::placeholder {
@@ -203,4 +218,30 @@ input::placeholder {
     margin-right: 5%;
     width: 50%;
     float: right;
+}
+
+.player {
+    position: absolute;
+    width: 100px;
+    max-width: 100px;
+    aspect-ratio: 1 / 4;
+    right: 20%;
+    bottom: 15%;
+}
+
+.player > canvas {
+    width: 100%;
+    height: 100%;
+}
+
+.upload-skin {
+    position: absolute;
+    right: calc(20% - 15px);
+    bottom: 15%;
+}
+
+.reset-skin {
+    position: absolute;
+    right: calc(20% - 12px);
+    bottom: calc(15% - 50px);
 }

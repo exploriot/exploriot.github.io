@@ -44,8 +44,7 @@ export class FurnaceTile extends ContainerTile {
     smeltItem() {
         const item = this.container.contents[0];
         item.count--;
-        if (item.count <= 0) this.container.removeIndex(0);
-        else this.container.updateIndex(0);
+        this.container.updateIndex(0);
         const result = Metadata.smeltsTo[item.id]?.evaluate();
         this.holdingXP += Metadata.smeltXP[item.id] ?? 0;
         const currentResult = this.container.contents[2];
@@ -96,8 +95,7 @@ export class FurnaceTile extends ContainerTile {
             const fuelItem = this.container.contents[1];
             if (fuelItem && this.canSmeltItem()) {
                 fuelItem.count--;
-                if (fuelItem.count <= 0) this.container.removeIndex(1);
-                else this.container.updateIndex(1);
+                this.container.updateIndex(1);
                 this.fuel = this.maxFuel = (Metadata.fuel[fuelItem.id] ?? 0) * 10;
                 this.world.setBlock(this.x, this.y, Ids.FURNACE, 1);
                 this.broadcastState();

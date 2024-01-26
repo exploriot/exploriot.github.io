@@ -79,26 +79,40 @@ const EMOTE_REGEX = /(:[a-z_]+:)/;
 const EMOTE_LIST = ["skull", "eyes", "slight_smile", "nerd"];
 
 export function splitColors(text) {
-    return text.split(/(§[a-f\d])/);
+    return text.split(/(§[a-f\dsuil])/);
 }
 
 export function clearColors(text) {
-    return text.replaceAll(/§[a-f\d]/g, "");
+    return text.replaceAll(/§[a-f\dsuil]/g, "");
 }
 
 export function colorizeTextHTML(text) {
     const spl = splitColors(text);
-    let style = {color: ""};
+    let style = {color: "", italic: false, bold: false, underline: false, strikethrough: false};
     let result = "";
     for (let i = 0; i < spl.length; i++) {
         const sp = spl[i];
-        if (sp[0] === "§" && sp[1] in ColorsHex) {
-            style.color = ColorsHex[sp[1]];
-            continue;
+        if (sp[0] === "§") {
+            if (sp[1] in ColorsHex) {
+                style.color = ColorsHex[sp[1]];
+                continue;
+            } else if (sp[1] === "s") {
+                style.strikethrough = true;
+                continue;
+            } else if (sp[1] === "u") {
+                style.underline = true;
+                continue;
+            } else if (sp[1] === "i") {
+                style.italic = true;
+                continue;
+            } else if (sp[1] === "l") {
+                style.bold = true;
+                continue;
+            }
         }
         const emo = sp.split(EMOTE_REGEX);
         const data = emo.map(i => {
-            if (EMOTE_REGEX.test(i) && EMOTE_LIST.includes(i.slice(1, -1))) return `<img src="./assets/emotes/${i.slice(1, -1)}.png" width="16">`;
+            if (EMOTE_REGEX.test(i) && EMOTE_LIST.includes(i.slice(1, -1))) return `<img src="assets/emotes/${i.slice(1, -1)}.png" width="16">`;
             return document.createTextNode(i).data;
         }).join("");
         if (!style.color) {
@@ -115,10 +129,24 @@ export function colorizeTextTerminal(text) {
     let result = "";
     for (let i = 0; i < spl.length; i++) {
         const sp = spl[i];
-        if (sp[0] === "§" && sp[1] in ColorsRGB) {
-            const [r, g, b] = ColorsRGB[sp[1]];
-            result += `\x1B[38;2;${r};${g};${b}m`;
-            continue;
+        if (sp[0] === "§") {
+            if (sp[1] in ColorsRGB) {
+                const [r, g, b] = ColorsRGB[sp[1]];
+                result += `\x1B[38;2;${r};${g};${b}m`;
+                continue;
+            } else if (sp[1] === "s") {
+                result += `\x1B[38;2;${r};${g};${b}m`;
+                continue;
+            } else if (sp[1] === "u") {
+                result += `\x1B[38;2;${r};${g};${b}m`;
+                continue;
+            } else if (sp[1] === "i") {
+                result += `\x1B[38;2;${r};${g};${b}m`;
+                continue;
+            } else if (sp[1] === "l") {
+                result += `\x1B[38;2;${r};${g};${b}m`;
+                continue;
+            }
         }
         result += sp;
     }

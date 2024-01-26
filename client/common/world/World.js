@@ -150,8 +150,10 @@ export class World {
             || !this.isInWorld(x, y)
             || !player.canReachBlock(x, y)
             || !Metadata.replaceable.includes(this.getBlock(x, y)[0])
+            || !item
+            || !Metadata.block.includes(item.id)
             || (
-                !Metadata.phaseable.includes(item ? item.id : 0)
+                !Metadata.phaseable.includes(item.id)
                 && (bb2 = getBoundingBoxesOf(item.id, item.meta))
                 && (
                     player.bb.isCollidingWithTranslated(bb2, x, y) || (

@@ -98,7 +98,11 @@ export function generateSeed() {
 export class S_World extends World {
     dirtyChunks = new Set;
     gameRules = {
-        tntExplodes: true
+        tntExplodes: true,
+        fallDamage: true,
+        naturalRegeneration: true,
+        starveDamage: true,
+        drowningDamage: true
     };
     _info = {};
     dirtyUpdateBlocks = new Set;
@@ -134,7 +138,7 @@ export class S_World extends World {
         } else {
             this._info = JSON.parse(readFileSync(this.path + "/world.json", "utf8"));
         }
-        this.gameRules = this._info.gameRules;
+        Object.assign(this.gameRules, this._info.gameRules);
         this.generator = new (Generators[this.getGeneratorType()])(this, this.getGeneratorOptions());
     };
 

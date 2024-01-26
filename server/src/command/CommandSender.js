@@ -28,7 +28,7 @@ export class CommandSender {
         const result = command.permission && !isOp ? Command.ERR_PERMISSION : command.execute(this, args);
         switch (result) {
             case Command.ERR_USAGE:
-                this.sendMessage(command.usageMessage);
+                this.sendMessage("§cInvalid usage!\n" + command.usageMessage.split("\n").map(i => `§c${i}`).join("\n"));
                 break;
             case Command.ERR_PERMISSION:
                 this.sendMessage("You don't have permission to run this command!");

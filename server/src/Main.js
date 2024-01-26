@@ -9,7 +9,7 @@ import "../../client/common/metadata/Items.js";
 import {appendFileSync, existsSync, mkdirSync, readFileSync} from "fs";
 import {Item} from "../../client/common/item/Item.js";
 import {PacketIds} from "../../client/common/metadata/PacketIds.js";
-import {_T} from "../../client/common/Utils.js";
+import {_TA} from "../../client/common/Utils.js";
 import {DisconnectPacket} from "./packet/DisconnectPacket.js";
 
 export const SERVER_BEGIN_TIME = Date.now();
@@ -43,6 +43,7 @@ if (!existsSync("./logs")) mkdirSync("./logs");
 
 // todo: check out multiplayer interpolation (smoothed the movement, kinda)
 // todo: water is broken
+// todo: when teleporting to someone/somewhere, it doesn't load the surrounding entities, sometimes
 
 const wss = new WebSocketServer({server});
 
@@ -52,8 +53,6 @@ process.on("SIGINT", () => {
 });
 
 let lastUpdate = Date.now() - 1;
-
-Server.init();
 
 /*world.generator = new CustomGenerator(world,
     `${Ids.BEDROCK};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.DIRT};${Ids.DIRT};${Ids.DIRT};${Ids.GRASS_BLOCK}`
@@ -72,7 +71,7 @@ wss.on("connection", (ws, req) => {
         if (!ws.active) return;
         ws.active = false;
         if (!player) return;
-        Terminal.info(`§7[${player.username} ${ws.ipAddress} disconnected for ${JSON.stringify(ws.disconnectReason ?? "client disconnect")}§7]`);
+        Terminal.info(`§7[${player.username} ${ws.ipAddress} disconnected for "${ws.disconnectReason ?? "client disconnect"}§7"]`);
         lastBroadcastPlayerList = Date.now();
         Server.broadcastPlayerList();
         Server.broadcastMessage(`§e${player.username} left the server.`);
@@ -110,11 +109,14 @@ wss.on("connection", (ws, req) => {
             if (player) appendFileSync("./logs/" + player.username + "-" + T + ".txt", "\n" + JSON.stringify(pk));
             if (!hasAuth) {
                 if (pk.type !== PacketIds.CLIENT_AUTH) return kick("Expected an auth packet.");
-                _T(pk.username, "string");
+                _TA(
+                    pk.username, "string",
+                    pk.skinData, "string"
+                );
                 if (!/^[a-zA-Z\d]{1,16}$/.test(pk.username)) return kick("Invalid username.");
                 if (Array.from(Server.getPlayers()).some(i => i.username === pk.username)) return kick("You are already in the server.");
                 hasAuth = true;
-                ws.player = player = new S_Player(ws, Server.getDefaultWorld(), pk.username);
+                ws.player = player = new S_Player(ws, Server.getDefaultWorld(), pk.username, pk.skinData);
                 Terminal.info(`§7[${pk.username} ${ws.ipAddress} connected]`);
                 Server.getPlayers().add(player);
                 if (existsSync("./players/" + pk.username + ".json")) {
@@ -150,8 +152,8 @@ wss.on("connection", (ws, req) => {
             player.session.handlePacket(pk);
         } catch (e) {
             Terminal.error(e);
-            if (player) player.kick("Internal server error.");
-            else kick("Invalid auth packet.");
+            if (player) player.kick("§cInternal server error.");
+            else kick("§cInvalid authentication packet.");
         }
     });
 });
@@ -197,4 +199,4 @@ update();
 
 server.listen(1881);
 
-Server.onLoad();
+Server.init();

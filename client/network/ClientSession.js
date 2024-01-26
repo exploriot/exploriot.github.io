@@ -19,9 +19,12 @@ import {AnimatorFrame} from "../ui/Animator.js";
 import {colorizeTextHTML, roundToPrecision} from "../common/Utils.js";
 import {PacketIds} from "../common/metadata/PacketIds.js";
 import {ObtainItemPacket} from "../packet/ObtainItemPacket.js";
+import {ConsumeItemPacket} from "../packet/ConsumeItemPacket.js";
+import {UpdateRotationPacket} from "../packet/UpdateRotationPacket.js";
 
-const disconnectDiv = document.querySelector(".disconnect-menu");
-const disconnectText = document.querySelector(".disconnect-menu > .container > .text");
+const connectionDiv = document.querySelector(".connection-menu");
+const connectionText = document.querySelector(".connection-menu > .container > .text");
+const rejoinBtn = document.querySelector("#rejoin-btn");
 const query = new URLSearchParams(location.search);
 const ip = query.get("ip");
 const port = query.get("port");
@@ -52,8 +55,9 @@ export const ClientSession = {
         function onClose() {
             connected = false;
             console.log("Disconnected.");
-            disconnectText.innerHTML = document.createTextNode(colorizeTextHTML(ClientSession.kickReason ?? "Disconnected from the server.")).data;
-            disconnectDiv.classList.remove("gone");
+            connectionText.innerHTML = document.createTextNode(colorizeTextHTML(ClientSession.kickReason ?? "§cDisconnected from the server.")).data;
+            connectionDiv.classList.remove("gone");
+            rejoinBtn.classList.remove("gone");
             cancelAnimationFrame(AnimatorFrame);
         }
 
@@ -98,6 +102,10 @@ export const ClientSession = {
         ));
     },
 
+    sendRotation() {
+        this.sendPacket(UpdateRotationPacket(roundToPrecision(CServer.player.rotation, 3)));
+    },
+
     sendBlockPlacePacket(x, y, id, meta) {
         this.sendPacket(BlockPlacePacket(x, y, id, meta));
     },
@@ -123,7 +131,7 @@ export const ClientSession = {
     },
 
     sendAuthPacket() {
-        this.sendPacket(AuthPacket(CServer.username), true);
+        this.sendPacket(AuthPacket(CServer.username, CServer.skinData), true);
     },
 
     sendDropItemPacket(id, index, count) {
@@ -151,6 +159,10 @@ export const ClientSession = {
         this.sendPacket(ObtainItemPacket(item.serialize(), invId, invIndex));
     },
 
+    sendConsumeItemPacket() {
+        this.sendPacket(ConsumeItemPacket());
+    },
+
     handlePacket(pk) {
         C_handlePacket(pk);
     },
@@ -165,5 +177,3 @@ export const ClientSession = {
         this.worker.postMessage("!");
     }
 };
-
-ClientSession.__init__();

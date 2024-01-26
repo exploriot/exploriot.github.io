@@ -51,177 +51,243 @@ export function findCrafting(map) {
     });
 }
 
-for (let meta = 0; meta <= 5; meta++) {
+export function initCrafts() {
+    for (let meta = 0; meta <= 5; meta++) {
+        registerCraft(
+            [
+                "0"
+            ],
+            [new ItemDescriptor(Ids.LOG, meta)],
+            new ItemDescriptor(Ids.PLANKS, meta, 4)
+        );
+        registerCraft(
+            [
+                "000"
+            ],
+            [new ItemDescriptor(Ids.PLANKS, meta)],
+            new ItemDescriptor(Ids.WOODEN_SLAB, meta, 6)
+        );
+        registerCraft(
+            [
+                "  0",
+                " 00",
+                "000"
+            ],
+            [new ItemDescriptor(Ids.PLANKS, meta)],
+            new ItemDescriptor(Ids.WOODEN_STAIRS, meta, 4)
+        );
+    }
+
     registerCraft(
         [
+            "0",
             "0"
         ],
-        [new ItemDescriptor(Ids.LOG, meta)],
-        new ItemDescriptor(Ids.PLANKS, meta, 4)
+        [new ItemDescriptor(Ids.PLANKS)],
+        new ItemDescriptor(Ids.STICK, null, 4)
     );
+
     registerCraft(
         [
-            "000"
+            "00",
+            "00"
         ],
-        [new ItemDescriptor(Ids.PLANKS, meta)],
-        new ItemDescriptor(Ids.WOODEN_SLAB, meta, 6)
+        [new ItemDescriptor(Ids.PLANKS)],
+        new ItemDescriptor(Ids.CRAFTING_TABLE)
     );
-    registerCraft(
+
+    for (const o of [
+        [Ids.PLANKS, Ids.WOODEN_SWORD],
+        [Ids.COBBLESTONE, Ids.STONE_SWORD],
+        [Ids.IRON_INGOT, Ids.IRON_SWORD],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_SWORD],
+        [Ids.DIAMOND, Ids.DIAMOND_SWORD]
+    ]) registerCraft(
         [
-            "  0",
-            " 00",
-            "000"
+            "0",
+            "0",
+            "1"
         ],
-        [new ItemDescriptor(Ids.PLANKS, meta)],
-        new ItemDescriptor(Ids.WOODEN_STAIRS, meta, 4)
-    );
-}
-
-registerCraft(
-    [
-        "0",
-        "0"
-    ],
-    [new ItemDescriptor(Ids.PLANKS)],
-    new ItemDescriptor(Ids.STICK, null, 4)
-);
-
-registerCraft(
-    [
-        "00",
-        "00"
-    ],
-    [new ItemDescriptor(Ids.PLANKS)],
-    new ItemDescriptor(Ids.CRAFTING_TABLE)
-);
-
-for (const o of [
-    [Ids.PLANKS, Ids.WOODEN_SWORD],
-    [Ids.COBBLESTONE, Ids.STONE_SWORD],
-    [Ids.GOLD_INGOT, Ids.GOLDEN_SWORD]
-]) registerCraft(
-    [
-        "0",
-        "0",
-        "1"
-    ],
-    [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-    new ItemDescriptor(o[1])
-);
-
-for (const o of [
-    [Ids.PLANKS, Ids.WOODEN_AXE],
-    [Ids.COBBLESTONE, Ids.STONE_AXE],
-    [Ids.GOLD_INGOT, Ids.GOLDEN_AXE]
-]) registerCraft(
-    [
-        "00",
-        "01",
-        " 1"
-    ],
-    [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-    new ItemDescriptor(o[1])
-);
-
-for (const o of [
-    [Ids.PLANKS, Ids.WOODEN_PICKAXE],
-    [Ids.COBBLESTONE, Ids.STONE_PICKAXE],
-    [Ids.GOLD_INGOT, Ids.GOLDEN_PICKAXE]
-]) registerCraft(
-    [
-        "000",
-        " 1",
-        " 1"
-    ],
-    [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-    new ItemDescriptor(o[1])
-);
-
-for (const o of [
-    [Ids.PLANKS, Ids.WOODEN_SHOVEL],
-    [Ids.COBBLESTONE, Ids.STONE_SHOVEL],
-    [Ids.GOLD_INGOT, Ids.GOLDEN_SHOVEL]
-]) registerCraft(
-    [
-        "0",
-        "1",
-        "1"
-    ],
-    [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-    new ItemDescriptor(o[1])
-);
-
-for (const o of [
-    [Ids.PLANKS, Ids.WOODEN_HOE],
-    [Ids.COBBLESTONE, Ids.STONE_HOE],
-    [Ids.GOLD_INGOT, Ids.GOLDEN_HOE]
-]) registerCraft(
-    [
-        "00",
-        " 1",
-        " 1"
-    ],
-    [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-    new ItemDescriptor(o[1])
-);
-
-registerCraft(
-    [
-        "000",
-        "0 0",
-        "000"
-    ],
-    [new ItemDescriptor(Ids.PLANKS)],
-    new ItemDescriptor(Ids.CHEST)
-);
-
-registerCraft(
-    [
-        "000",
-        "0 0",
-        "000"
-    ],
-    [new ItemDescriptor(Ids.COBBLESTONE)],
-    new ItemDescriptor(Ids.FURNACE)
-);
-
-registerCraft(
-    [
-        "000",
-        "000",
-        "000"
-    ],
-    [new ItemDescriptor(Ids.IRON_NUGGET)],
-    new ItemDescriptor(Ids.IRON_INGOT)
-);
-
-registerCraft(
-    [
-        "000",
-        "000",
-        "000"
-    ],
-    [new ItemDescriptor(Ids.GOLDEN_NUGGET)],
-    new ItemDescriptor(Ids.GOLD_INGOT)
-);
-
-for (const o of [
-    [Ids.STONE, Ids.STONE_SLAB, Ids.STONE_STAIRS],
-    [Ids.DIRT, Ids.DIRT_SLAB, Ids.DIRT_STAIRS],
-    [Ids.COBBLESTONE, Ids.COBBLESTONE_SLAB, Ids.COBBLESTONE_STAIRS]
-]) {
-    registerCraft(
-        [
-            "000"
-        ], [new ItemDescriptor(o[0])],
+        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
         new ItemDescriptor(o[1])
     );
+
+    for (const o of [
+        [Ids.PLANKS, Ids.WOODEN_AXE],
+        [Ids.COBBLESTONE, Ids.STONE_AXE],
+        [Ids.IRON_INGOT, Ids.IRON_AXE],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_AXE],
+        [Ids.DIAMOND, Ids.DIAMOND_AXE]
+    ]) registerCraft(
+        [
+            "00",
+            "01",
+            " 1"
+        ],
+        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
+        new ItemDescriptor(o[1])
+    );
+
+    for (const o of [
+        [Ids.PLANKS, Ids.WOODEN_PICKAXE],
+        [Ids.COBBLESTONE, Ids.STONE_PICKAXE],
+        [Ids.IRON_INGOT, Ids.IRON_PICKAXE],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_PICKAXE],
+        [Ids.DIAMOND, Ids.DIAMOND_PICKAXE]
+    ]) registerCraft(
+        [
+            "000",
+            " 1",
+            " 1"
+        ],
+        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
+        new ItemDescriptor(o[1])
+    );
+
+    for (const o of [
+        [Ids.PLANKS, Ids.WOODEN_SHOVEL],
+        [Ids.COBBLESTONE, Ids.STONE_SHOVEL],
+        [Ids.IRON_INGOT, Ids.IRON_SHOVEL],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_SHOVEL],
+        [Ids.DIAMOND, Ids.DIAMOND_SHOVEL]
+    ]) registerCraft(
+        [
+            "0",
+            "1",
+            "1"
+        ],
+        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
+        new ItemDescriptor(o[1])
+    );
+
+    for (const o of [
+        [Ids.PLANKS, Ids.WOODEN_HOE],
+        [Ids.COBBLESTONE, Ids.STONE_HOE],
+        [Ids.IRON_INGOT, Ids.IRON_HOE],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_HOE],
+        [Ids.DIAMOND, Ids.DIAMOND_HOE]
+    ]) registerCraft(
+        [
+            "00",
+            " 1",
+            " 1"
+        ],
+        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
+        new ItemDescriptor(o[1])
+    );
+
+    for (const o of [
+        [Ids.IRON_INGOT, Ids.IRON_HELMET],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_HELMET],
+        [Ids.DIAMOND, Ids.DIAMOND_HELMET]
+    ]) registerCraft(
+        [
+            "000",
+            "0 0"
+        ],
+        [new ItemDescriptor(o[0])],
+        new ItemDescriptor(o[1])
+    );
+
+    for (const o of [
+        [Ids.IRON_INGOT, Ids.IRON_CHESTPLATE],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_CHESTPLATE],
+        [Ids.DIAMOND, Ids.DIAMOND_CHESTPLATE]
+    ]) registerCraft(
+        [
+            "0 0",
+            "000",
+            "000"
+        ],
+        [new ItemDescriptor(o[0])],
+        new ItemDescriptor(o[1])
+    );
+
+    for (const o of [
+        [Ids.IRON_INGOT, Ids.IRON_LEGGINGS],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_LEGGINGS],
+        [Ids.DIAMOND, Ids.DIAMOND_LEGGINGS]
+    ]) registerCraft(
+        [
+            "000",
+            "0 0",
+            "0 0"
+        ],
+        [new ItemDescriptor(o[0])],
+        new ItemDescriptor(o[1])
+    );
+
+    for (const o of [
+        [Ids.IRON_INGOT, Ids.IRON_BOOTS],
+        [Ids.GOLD_INGOT, Ids.GOLDEN_BOOTS],
+        [Ids.DIAMOND, Ids.DIAMOND_BOOTS]
+    ]) registerCraft(
+        [
+            "0 0",
+            "0 0"
+        ],
+        [new ItemDescriptor(o[0])],
+        new ItemDescriptor(o[1])
+    );
+
     registerCraft(
         [
-            "  0",
-            " 00",
+            "000",
+            "0 0",
             "000"
-        ], [new ItemDescriptor(o[0])],
-        new ItemDescriptor(o[2])
+        ],
+        [new ItemDescriptor(Ids.PLANKS)],
+        new ItemDescriptor(Ids.CHEST)
     );
+
+    registerCraft(
+        [
+            "000",
+            "0 0",
+            "000"
+        ],
+        [new ItemDescriptor(Ids.COBBLESTONE)],
+        new ItemDescriptor(Ids.FURNACE)
+    );
+
+    registerCraft(
+        [
+            "000",
+            "000",
+            "000"
+        ],
+        [new ItemDescriptor(Ids.IRON_NUGGET)],
+        new ItemDescriptor(Ids.IRON_INGOT)
+    );
+
+    registerCraft(
+        [
+            "000",
+            "000",
+            "000"
+        ],
+        [new ItemDescriptor(Ids.GOLDEN_NUGGET)],
+        new ItemDescriptor(Ids.GOLD_INGOT)
+    );
+
+    for (const o of [
+        [Ids.STONE, Ids.STONE_SLAB, Ids.STONE_STAIRS],
+        [Ids.DIRT, Ids.DIRT_SLAB, Ids.DIRT_STAIRS],
+        [Ids.COBBLESTONE, Ids.COBBLESTONE_SLAB, Ids.COBBLESTONE_STAIRS]
+    ]) {
+        registerCraft(
+            [
+                "000"
+            ], [new ItemDescriptor(o[0])],
+            new ItemDescriptor(o[1])
+        );
+        registerCraft(
+            [
+                "  0",
+                " 00",
+                "000"
+            ], [new ItemDescriptor(o[0])],
+            new ItemDescriptor(o[2])
+        );
+    }
 }

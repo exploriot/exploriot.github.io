@@ -34,20 +34,22 @@ export function registerCommands(...commands) {
     }
 }
 
-registerCommands(
-    new HelpCommand,
-    new TeleportCommand,
-    new GiveCommand,
-    new OpCommand,
-    new DeopCommand,
-    new StopCommand,
-    new GamemodeCommand,
-    new ClearCommand,
-    new KickCommand,
-    new ListCommand,
-    new SayCommand,
-    new SetBlockCommand,
-    new PingCommand,
-    new FillCommand,
-    new KillCommand
-);
+export function initCommands() {
+    registerCommands(
+        new HelpCommand,
+        new TeleportCommand,
+        new GiveCommand,
+        new OpCommand,
+        new DeopCommand,
+        new StopCommand,
+        new GamemodeCommand,
+        new ClearCommand,
+        new KickCommand,
+        new ListCommand,
+        new SayCommand,
+        new SetBlockCommand,
+        new PingCommand,
+        new FillCommand,
+        new KillCommand
+    );
+}
