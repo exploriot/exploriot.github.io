@@ -27,9 +27,9 @@ function initContainers() {
         const index = mainDiv.getAttribute("data-inv-index").split(",").map(Number);
         const h = {
             type: mainDiv.getAttribute("data-inv"),
-            dep: (mainDiv.getAttribute("data-inv-dep") ?? "").split(","),
+            dep: mainDiv.parentElement.parentElement,
             divs: [],
-            index,
+            index
         };
         if (isDown) {
             downMain = h;
@@ -38,7 +38,7 @@ function initContainers() {
             const hotbarDiv = document.createElement("div");
             hotbarDiv.classList.add(...classes);
             const img = document.createElement("img");
-            img.src = "./assets/1px.png";
+            img.src = "assets/1px.png";
             const count = document.createElement("div");
             count.classList.add("count");
             const damage = document.createElement("div");
@@ -214,28 +214,7 @@ function onAnyClick(ev) {
     }
 }
 
-addEventListener("click", onAnyClick);
-addEventListener("contextmenu", onAnyClick);
-
 export let MouseContainerPosition = null;
-
-addEventListener("mousemove", e => {
-    if (!e.target.classList.contains("item")) return MouseContainerPosition = null;
-    const parent = e.target.parentNode;
-    const viewIndex = Array.from(parent.childNodes).indexOf(e.target);
-    const invName = parent.getAttribute("data-inv");
-    const invIndex = parent.getAttribute("data-inv-index").split(",")[0] * 1;
-    const index = viewIndex + invIndex;
-    const inv = getInventoryByName(invName);
-    MouseContainerPosition = {inv, index};
-
-    const item = inv.contents[index];
-
-    if (item && !CServer.cursorInventory.contents[0]) {
-        invInfoText.innerText = getItemName(item.id, item.meta);
-        invInfoText.style.opacity = "1";
-    } else invInfoText.style.opacity = "0";
-});
 
 export function renderContainerStates() {
     if (!CServer.externalInventory || !CServer.containerState) return;
@@ -270,6 +249,7 @@ export function renderHotbarPosition() {
 
 export function renderInventories() {
     for (const h of uiView) {
+        if (h.dep.classList.contains("gone")) continue;
         const inv = getInventoryByName(h.type);
         if (!inv) continue;
         for (let i = 0; i < h.index[1] - h.index[0] + 1; i++) {
@@ -278,7 +258,7 @@ export function renderInventories() {
             const hasItemChanged = (o.last && !item) || (o.last && !item.equals(o.last)) || (!o.last && item);
             if (!hasItemChanged) continue;
             o.last = item ? item.serialize() : null;
-            o.img.src = item ? "./" + getItemTexture(item.id, item.meta) : "./assets/1px.png";
+            o.img.src = item ? "./" + getItemTexture(item.id, item.meta) : "assets/1px.png";
             o.count.innerText = item && item.count !== 1 ? item.count : "";
             const durability = item ? Metadata.durabilities[item.id] : 0;
             o.damage.style.width = durability ? (
@@ -395,4 +375,32 @@ export function toggleDoubleChestUI() {
 
 export function isDoubleChestUIOn() {
     return !doubleChestUI.classList.contains("gone");
+}
+
+export function initContainerUI() {
+
+
+    addEventListener("click", onAnyClick);
+    addEventListener("contextmenu", onAnyClick);
+
+    addEventListener("mousemove", e => {
+        if (!e.target.classList.contains("item")) {
+            invInfoText.style.opacity = "0";
+            return MouseContainerPosition = null;
+        }
+        const parent = e.target.parentNode;
+        const viewIndex = Array.from(parent.childNodes).indexOf(e.target);
+        const invName = parent.getAttribute("data-inv");
+        const invIndex = parent.getAttribute("data-inv-index").split(",")[0] * 1;
+        const index = viewIndex + invIndex;
+        const inv = getInventoryByName(invName);
+        MouseContainerPosition = {inv, index};
+
+        const item = inv.contents[index];
+
+        if (item && !CServer.cursorInventory.contents[0]) {
+            invInfoText.innerText = getItemName(item.id, item.meta);
+            invInfoText.style.opacity = "1";
+        } else invInfoText.style.opacity = "0";
+    });
 }

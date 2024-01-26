@@ -56,6 +56,9 @@ img {
     background: rgba(0, 0, 0, 0.5);
     cursor: pointer;
     transition: scale .1s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .btn:hover {
@@ -334,7 +337,7 @@ img {
     border: none;
     outline: none;
     background: rgba(0, 0, 0, 0.5);
-    font-size: 20px;
+    font-size: 16px;
     font-family: Minecraft, serif;
 }
 
@@ -376,7 +379,7 @@ img {
     height: 100%;
 }
 
-.disconnect-menu {
+.connection-menu {
     position: fixed;
     left: 0;
     top: 0;
@@ -384,29 +387,29 @@ img {
     height: 100%;
 }
 
-.disconnect-menu > .container {
+.connection-menu > .container {
     width: 70%;
 }
 
-.disconnect-menu > .container > .text {
+.connection-menu > .container > .text {
     font-size: 25px;
     margin-bottom: 50px;
     text-align: center;
     word-wrap: anywhere;
 }
 
-.disconnect-menu > .container {
+.connection-menu > .container {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
 }
 
-.disconnect-menu > .container > .btn {
+.connection-menu > .container > .btn {
     width: 10vw;
 }
 
-.disconnect-menu > .bg {
+.connection-menu > .bg {
     position: fixed;
     left: 0;
     top: 0;
@@ -556,6 +559,10 @@ img {
     display: flex;
 }
 
+.food-attribute {
+    transform: scaleX(-1);
+}
+
 .health-attribute > div > div {
     background-repeat: no-repeat;
     background-size: 90%;
@@ -568,6 +575,7 @@ img {
     background-size: 90%;
     aspect-ratio: 9 / 9;
     width: 10%;
+    transform: scaleX(-1);
 }
 
 .breath-attribute > div > div {
@@ -633,10 +641,10 @@ img {
 
 .player-list > .player > .connection {
     position: absolute;
-    right: 0;
+    right: -5%;
     top: 0;
     translate: 100%;
-    height: 100%;
+    height: 80%;
     aspect-ratio: 10 / 7;
     background-repeat: no-repeat;
     background-size: 100%;

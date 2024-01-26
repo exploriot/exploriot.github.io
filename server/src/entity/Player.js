@@ -8,13 +8,13 @@ import {
 import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
 import {NetworkSession} from "../network/NetworkSession.js";
 import {HandItemPacket} from "../packet/HandItemPacket.js";
-import {S_BodyEntity} from "./BodyEntity.js";
 import {CommandSender} from "../command/CommandSender.js";
 import {extendClass} from "../Utils.js";
 import {writeFileSync} from "fs";
+import {S_Entity} from "./Entity.js";
 
 /*** @extends CommandSender */
-export class S_Player extends S_BodyEntity {
+export class S_Player extends S_Entity {
     attributes = {
         [AttributeIds.GAMEMODE]: 0,
         [AttributeIds.IS_FLYING]: false,
@@ -38,17 +38,26 @@ export class S_Player extends S_BodyEntity {
     armorInventory = new Inventory(4, InventoryIds.ARMOR);
     dirtyAttributes = new Set;
     fallY = null;
+    naturalRegenTimer = 0;
+    starveTimer = 0;
+    rotation = 0;
 
     /**
      * @param ws
      * @param {S_World} world
-     * @param username
+     * @param {string} username
+     * @param {string} skinData
      */
-    constructor(ws, world, username) {
+    constructor(ws, world, username, skinData) {
         super(EntityIds.PLAYER, world, PLAYER_BB);
         this.ws = ws;
         this.username = username;
         this.session = new NetworkSession(this, ws);
+        this.skinData = skinData;
+    };
+
+    updateHandItem() {
+        this.playerInventory.updateIndex(this.handIndex);
     };
 
     getAttribute(name) {
@@ -223,21 +232,61 @@ export class S_Player extends S_BodyEntity {
 
     teleport(x, y) {
         super.teleport(x, y);
+        this.fallY = y;
         this.session.sendPosition();
     };
 
     update(dt) {
         const isOnGround = this.isOnGround();
+        const isFlying = this.isFlying();
         if (isOnGround) {
             this.onFall(this.fallY - this.y);
             this.fallY = this.y;
+        } else if (isFlying) {
+            this.fallY = this.y;
+        } else {
+            if (this.y > this.fallY) this.fallY = this.y;
         }
 
-        if (this.getHealth() <= 0) {
+        const saturation = this.getSaturation();
+        const health = this.getHealth();
+
+        if (health <= 0) {
             this.remove(true);
             return false;
         }
+
+        const maxHealth = this.getMaxHealth();
+        const food = this.getFood();
+        const maxFood = this.getMaxFood();
+
+        if (
+            food > 17
+            && health < maxHealth
+            && !this.world.gameRules.naturalRegeneration
+            && (this.naturalRegenTimer += dt) > (food >= maxFood ? 1 : 4)
+        ) {
+            this.naturalRegenTimer = 0;
+            const heal = Math.min(maxHealth - health, 1);
+            this.setHealth(health + heal);
+            this.setSaturation(Math.max(0, saturation - health));
+        }
+        if (saturation <= 0 && food <= 0 && (this.starveTimer += dt) > 4) {
+            this.starveTimer = 0;
+            this.damage(1);
+        }
         return super.update(dt);
+    };
+
+    useSaturation(amount) {
+        const saturation = this.getSaturation();
+        if (saturation > 0) {
+            this.setSaturation(Math.max(0, saturation - amount));
+            return;
+        }
+        const food = this.getFood();
+        if (food <= 0) return;
+        this.setFood(Math.max(0, food - amount));
     };
 
     damage(hp) {
@@ -247,7 +296,7 @@ export class S_Player extends S_BodyEntity {
     };
 
     onFall(fallDistance) {
-        if (fallDistance < 3) return;
+        if (fallDistance < 3 || !this.world.gameRules.fallDamage) return;
         this.damage(fallDistance - 3);
     };
 
@@ -282,6 +331,7 @@ export class S_Player extends S_BodyEntity {
         this.setHealth(this.getMaxHealth());
         this.setXP(0);
         this.setFood(this.getMaxFood());
+        this.setSaturation(20);
         this.setBreath(10);
         const spawn = this.getSpawnPoint();
         this.teleport(spawn.x, spawn.y);
@@ -304,10 +354,7 @@ export class S_Player extends S_BodyEntity {
             const xp = this.getXP();
             if (xp > 0) this.world.dropXP(this.x, this.y, xp);
             this.setXP(0);
-            for (const item of this.playerInventory.contents) this.world.dropItem(this.x, this.y, item);
-            for (const item of this.armorInventory.contents) this.world.dropItem(this.x, this.y, item);
-            this.playerInventory.clear();
-            this.armorInventory.clear();
+            this.dropAllInventories();
             this.respawn();
             return;
         }
@@ -319,6 +366,8 @@ export class S_Player extends S_BodyEntity {
             id: this.id,
             type: this.type,
             username: this.username,
+            skinData: this.skinData,
+            rotation: this.rotation,
             x: this.x,
             y: this.y
         };

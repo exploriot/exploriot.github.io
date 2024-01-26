@@ -1,4 +1,4 @@
-import {getBaseBlockSize, getCanvasPosition} from "../Utils.js";
+import {BASE_BLOCK_SIZE, getCanvasPosition} from "../Utils.js";
 import {Mouse, recalculateMouse} from "../input/Mouse.js";
 import {Ids} from "../common/metadata/Ids.js";
 import {BlockTextures, getBlockHardness, getBlockTexture} from "../common/metadata/Blocks.js";
@@ -18,6 +18,7 @@ import {C_OPTIONS, CServer, ctx} from "../main/Game.js";
 import {getItemName} from "../common/metadata/Items.js";
 import {Metadata} from "../common/metadata/Metadata.js";
 import {Keyboard} from "../input/Keyboard.js";
+import {ClientSession} from "../network/ClientSession.js";
 
 const playerListDiv = document.querySelector(".player-list");
 let lastRender = Date.now() - 1;
@@ -25,17 +26,42 @@ let _fps = [];
 
 export let AnimatorFrame = 0;
 let lastHandIndex = 0;
+let lastHandItemId = 0;
+let lastHandItemMeta = 0;
 
 let dg = 0;
+
+function renderMouseBlockAround() {
+    ctx.strokeStyle = "white";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    const pos = getCanvasPosition(Mouse.rx - 0.5, Mouse.ry + 0.5);
+    ctx.strokeRect(pos.x, pos.y, BASE_BLOCK_SIZE, BASE_BLOCK_SIZE);
+}
+
+function renderBlockAt(x, y, id, meta) {
+    const pos = getCanvasPosition(x - 0.5, y + 0.5);
+    const texture = Texture.get(getBlockTexture(id, meta));
+    const raw = BlockTextures[id];
+    let img = texture.image;
+    if (typeof raw === "object" && meta >= raw.__MOD && (Metadata.slab.includes(id[0]) || Metadata.stairs.includes(id[0]))) {
+        img = texture.rotate(Math.floor(id[1] / raw.__MOD) * 90);
+    }
+    ctx.drawImage(img, pos.x - 0.5, pos.y - 0.5, BASE_BLOCK_SIZE + 1, BASE_BLOCK_SIZE + 1);
+}
+
+addEventListener("keydown", e => {
+    if (e.key === "p") animate();
+});
 
 export function animate() {
     AnimatorFrame = requestAnimationFrame(animate);
     const dt = (Date.now() - lastRender) / 1000;
     dg += dt * 100;
     lastRender = Date.now();
-    const size = getBaseBlockSize();
     _fps.push(Date.now());
     _fps = _fps.filter(i => i + 1000 > Date.now());
+
     recalculateMouse();
 
     ctx.clearRect(0, 0, innerWidth, innerHeight);
@@ -50,18 +76,12 @@ export function animate() {
             const ry = fy + y;
             const id = CServer.world.getBlock(rx, ry);
             if (id[0] === Ids.AIR) continue;
-            const pos = getCanvasPosition(rx - 0.5, ry + 0.5, size);
             if (!C_OPTIONS.showCoveredBlocks && CServer.world.isBlockCovered(rx, ry)) {
+                const pos = getCanvasPosition(rx - 0.5, ry + 0.5);
                 ctx.fillStyle = "black";
-                ctx.fillRect(pos.x - 0.5, pos.y - 0.5, size + 1, size + 1);
+                ctx.fillRect(pos.x - 0.5, pos.y - 0.5, BASE_BLOCK_SIZE + 1, BASE_BLOCK_SIZE + 1);
             } else {
-                const texture = Texture.get(getBlockTexture(id[0], id[1]));
-                const raw = BlockTextures[id[0]];
-                let img = texture.image;
-                if (typeof raw === "object" && id[1] >= raw.__MOD && (Metadata.slab.includes(id[0]) || Metadata.stairs.includes(id[0]))) {
-                    img = texture.rotate(Math.floor(id[1] / raw.__MOD) * 90);
-                }
-                ctx.drawImage(img, pos.x - 0.5, pos.y - 0.5, size + 1, size + 1);
+                renderBlockAt(rx, ry, id[0], id[1]);
             }
         }
     }
@@ -72,6 +92,7 @@ export function animate() {
     const renderChunkMaxX = playerChunkX + renderDistChunks;
     const handItem = CServer.getHandItem();
     const handItemId = handItem ? handItem.id : 0;
+    const handItemMeta = handItem ? handItem.meta : 0;
     for (let x = renderChunkMinX; x <= renderChunkMaxX; x++) {
         const entities = CServer.world.chunkEntities[x];
         if (entities) for (const entity of entities) {
@@ -79,8 +100,8 @@ export function animate() {
                 Math.abs(entity.x - CServer.player.x) < C_OPTIONS.renderDistance + 4 &&
                 Math.abs(entity.y - CServer.player.y) < C_OPTIONS.renderDistance + 4
             ) {
-                entity.render(ctx, size);
-                if (C_OPTIONS.showBoundingBoxes) entity.renderBoundingBox(ctx, size);
+                entity.render(ctx);
+                if (C_OPTIONS.showBoundingBoxes) entity.renderBoundingBox(ctx);
             }
         }
         const breaks = CServer.world.breakChunks[x];
@@ -96,38 +117,51 @@ export function animate() {
                     continue;
                 }
             }
-            const pos = getCanvasPosition(entity.breaking.x - 0.5, entity.breaking.y + 0.5, size);
+            const pos = getCanvasPosition(entity.breaking.x - 0.5, entity.breaking.y + 0.5);
             const stage = Math.floor(entity.breakingTime / hardness * 10);
-            ctx.drawImage(Texture.get("./assets/destroy/" + stage + ".png").image, pos.x, pos.y, size, size);
+            ctx.drawImage(Texture.get("assets/destroy/" + stage + ".png").image, pos.x, pos.y, BASE_BLOCK_SIZE, BASE_BLOCK_SIZE);
         }
     }
 
-    if (
-        !isAnyUIOn() && (
-            CServer.world.canBreakBlockAt(
-                CServer.player,
-                Mouse.rx, Mouse.ry,
-                CServer.getGamemode(), CServer.getHandItem()
-            ) || CServer.world.canPlaceBlockAt(
-                CServer.player,
-                Mouse.rx, Mouse.ry,
-                CServer.getGamemode(), CServer.getHandItem()
-            ) || CServer.world.canInteractBlockAt(
-                CServer.player,
-                Mouse.rx, Mouse.ry,
-                CServer.getGamemode()
-            )
-        )
-    ) {
-        ctx.strokeStyle = "white";
-        ctx.lineWidth = 4;
-        ctx.lineCap = "round";
-        const pos = getCanvasPosition(Mouse.rx - 0.5, Mouse.ry + 0.5, size);
-        ctx.strokeRect(pos.x, pos.y, size, size);
+    if (!isAnyUIOn()) {
+        const place = CServer.world.canPlaceBlockAt(
+            CServer.player,
+            Mouse.rx, Mouse.ry,
+            CServer.getGamemode(), handItem
+        );
+        if (!place && (CServer.world.canBreakBlockAt(
+            CServer.player,
+            Mouse.rx, Mouse.ry,
+            CServer.getGamemode(), handItem
+        ) || CServer.world.canInteractBlockAt(
+            CServer.player,
+            Mouse.rx, Mouse.ry,
+            CServer.getGamemode()
+        ))) renderMouseBlockAround();
+        if (place) {
+            ctx.save();
+            // f(x: 0-500) = x/500
+            // f(x: 500-1000) = 1-x/500
+            // f(0) = 0
+            // f(500) = 0.5
+            // f(1000) = 0
+            // 0.5 - abs((500 - x)/1000)
+            const t = performance.now() % 1000;
+            ctx.globalAlpha = 0.5 - Math.abs((500 - t) / 1000);
+            renderBlockAt(Mouse.rx, Mouse.ry, handItemId, handItemMeta);
+            ctx.restore();
+        }
     }
 
-    CServer.player.render(ctx, size);
-    if (C_OPTIONS.showBoundingBoxes) CServer.player.renderBoundingBox(ctx, size);
+    if (CServer.canUpdateRotation) {
+        const headY = CServer.player.y + 1.250;
+        CServer.player.rotation = -Math.atan2(Mouse.y - headY, Mouse.x - CServer.player.x) / Math.PI * 180;
+        ClientSession.sendRotation();
+    }
+    CServer.canUpdateRotation = false;
+
+    CServer.player.render(ctx);
+    if (C_OPTIONS.showBoundingBoxes) CServer.player.renderBoundingBox(ctx);
 
     document.documentElement.style.setProperty("--mouse-x", Mouse.pageX + "px");
     document.documentElement.style.setProperty("--mouse-y", Mouse.pageY + "px");
@@ -140,10 +174,11 @@ export function animate() {
     renderBreathBar();
     renderArmorBar();
     renderXPBar();
-    if (lastHandIndex !== CServer.handIndex) {
+    if (lastHandIndex !== CServer.handIndex || lastHandItemId !== handItemId || lastHandItemMeta !== handItemMeta) {
         lastHandIndex = CServer.handIndex;
-        const item = CServer.getHandItem();
-        if (item) showActionbar(getItemName(item.id, item.meta));
+        lastHandItemId = handItemId;
+        lastHandItemMeta = handItemMeta;
+        if (handItem) showActionbar(getItemName(handItemId, handItemMeta));
     }
     playerListDiv.style.opacity = Keyboard["tab"] ? "1" : "0";
 
@@ -151,5 +186,5 @@ export function animate() {
     document.querySelector(".info").innerHTML = C_OPTIONS.isDebugMode ? `X: ${CServer.player.x}<br>
 Y: ${CServer.player.y}<br>
 FPS: ${_fps.length}<br>
-Chunk entities: ${CServer.world.chunkEntities[CServer.player.x >> 4].length}` : "";
+Chunk entities: ${(CServer.world.chunkEntities[CServer.player.x >> 4] ?? []).length}` : "";
 }

@@ -9,9 +9,9 @@ export class C_ItemEntity extends C_Entity {
         this.item = item;
     };
 
-    render(ctx, size) {
+    render(ctx) {
         const texture = getItemTexture(this.item.id, this.item.meta);
-        this.renderImage(Texture.get(texture).image, ctx, size);
+        this.renderImage(Texture.get(texture).image, ctx);
     };
 
     update(dt) {

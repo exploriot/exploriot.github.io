@@ -157,6 +157,8 @@ export class Inventory {
     };
 
     updateIndex(index) {
+        const item = this.contents[index];
+        if (item && item.count <= 0) this.contents[index] = null;
         this.dirtyIndexes.add(index);
     };
 

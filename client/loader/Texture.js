@@ -1,4 +1,29 @@
+import {BASE_BLOCK_SIZE} from "../Utils.js";
+
 const imagePlaceholder = document.createElement("canvas");
+
+// BASED ON 64x64
+const SKIN_PARTS = [
+    ["head", [0, 8, 8, 8], [16, 8, 8, 8]],
+    ["head_topping", [32, 8, 8, 8], [48, 8, 8, 8]],
+
+    ["body", [16, 20, 4, 12], [28, 20, 4, 12]],
+
+    ["front_arm", [40, 20, 4, 12], [40, 52, 4, 12]],
+    ["back_arm", [32, 52, 4, 12], [48, 20, 4, 12]],
+
+    ["front_leg", [0, 20, 4, 12], [24, 52, 4, 12]],
+    ["back_leg", [16, 52, 4, 12], [8, 20, 4, 12]]
+];
+
+function cropImage(image, x, y, width, height) {
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = width;
+    canvas.height = height;
+    ctx.drawImage(image, x, y, width, height, 0, 0, width, height);
+    return canvas;
+}
 
 export class Texture {
     static EXTENSIONS = [
@@ -13,6 +38,7 @@ export class Texture {
     image = imagePlaceholder;
     _flipped = [null, null];
     _rotated = {};
+    _skin = null;
 
     /**
      * @param {Promise<Image>} promise
@@ -22,6 +48,14 @@ export class Texture {
         this._promise = promise;
         promise.then(image => this.image = image);
         this.actualSrc = actualSrc;
+    };
+
+    destroy() {
+        delete Texture.textures[this.actualSrc];
+        delete this._flipped;
+        delete this.image;
+        delete this._rotated;
+        delete this._skin;
     };
 
     get loaded() {
@@ -55,6 +89,25 @@ export class Texture {
         return canvas;
     };
 
+    static readSkin(image) {
+        const dim = image.width / 64;
+        const sides = [{}, {}];
+        for (const part of SKIN_PARTS) {
+            let d = false;
+            for (let i = 0; i < 2; i++) {
+                let p = part[i + 1];
+                if ((p[0] + p[2] > image.width || p[1] + p[2] > image.height)) {
+                    if (i === 0) d = true;
+                    else sides[i][part[0]] = sides[0][part[0]];
+                    continue;
+                }
+                sides[i][part[0]] = cropImage(image, p[0] * dim, p[1] * dim, p[2] * dim, p[3] * dim);
+                if (d) sides[1 - i][part[0]] = sides[i][part[0]];
+            }
+        }
+        return sides;
+    };
+
     static get(src) {
         if (!src) return texturePlaceholder;
         if (Texture.textures[src]) return Texture.textures[src];
@@ -74,15 +127,15 @@ export class Texture {
         return Texture.textures[src] = new Texture(prom, src);
     };
 
-    static shadow(opacity, size) {
-        if (Texture.shadows[opacity + ";" + size]) return Texture.shadows[opacity + ";" + size];
+    static shadow(opacity) {
+        if (Texture.shadows[opacity + ";" + BASE_BLOCK_SIZE]) return Texture.shadows[opacity + ";" + BASE_BLOCK_SIZE];
         const cnv = document.createElement("canvas");
         const ct = cnv.getContext("2d");
-        cnv.width = size;
-        cnv.height = size;
+        cnv.width = BASE_BLOCK_SIZE;
+        cnv.height = BASE_BLOCK_SIZE;
         ct.globalAlpha = opacity;
-        ct.fillRect(0, 0, size, size);
-        return Texture.shadows[opacity + ";" + size] = cnv;
+        ct.fillRect(0, 0, BASE_BLOCK_SIZE, BASE_BLOCK_SIZE);
+        return Texture.shadows[opacity + ";" + BASE_BLOCK_SIZE] = cnv;
     };
 
     flip(way = 1) {
@@ -93,6 +146,14 @@ export class Texture {
     rotate(degrees = 90) {
         if (!this.loaded) return imagePlaceholder;
         return this._rotated[degrees] ??= Texture.rotateImage(this.image, degrees);
+    };
+
+    /**
+     * @return {{head, head_topping, body, front_arm, back_arm, front_leg, back_leg}[] | null}
+     */
+    skin() {
+        if (!this.loaded) return null;
+        return this._skin ??= Texture.readSkin(this.image);
     };
 
     async wait() {

@@ -22,7 +22,8 @@ export class HelpCommand extends AdvancedCommand {
             sender.sendMessage("§bName: §a" + cmd.name);
             sender.sendMessage("§bDescription: §a" + cmd.description);
             sender.sendMessage("§bAliases: §a" + cmd.aliases.join(", "));
-            sender.sendMessage("§bUsage: §a" + cmd.usage);
+            sender.sendMessage("§bUsage:");
+            sender.sendMessage(cmd.usageMessage.split("\n").map(i => `§a${i}`).join("\n"));
         }
     };
 }

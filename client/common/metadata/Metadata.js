@@ -15,12 +15,13 @@ export const PreloadTextures = [
 ];
 
 export const TOOL_TYPES = {
-    SWORD: 0,
-    AXE: 1,
-    PICKAXE: 2,
-    SHOVEL: 3,
-    HOE: 4,
-    SHEARS: 5
+    NONE: 0,
+    SWORD: 1,
+    AXE: 2,
+    PICKAXE: 3,
+    SHOVEL: 4,
+    HOE: 5,
+    SHEARS: 6
 };
 export const TOOL_LEVEL = {
     NONE: 0,
@@ -30,6 +31,22 @@ export const TOOL_LEVEL = {
     GOLDEN: 4,
     DIAMOND: 5,
     NETHERITE: 6
+};
+export const ARMOR_TYPES = {
+    NONE: 0,
+    HELMET: 1,
+    CHESTPLATE: 2,
+    LEGGINGS: 3,
+    BOOTS: 4,
+    SECONDARY: 5
+};
+export const ARMOR_LEVEL = {
+    NONE: 0,
+    LEATHER: 1,
+    IRON: 2,
+    GOLDEN: 3,
+    DIAMOND: 4,
+    NETHERITE: 5
 };
 export const TOOL_MULTIPLIERS = {
     [TOOL_LEVEL.NONE]: 1,
@@ -79,5 +96,8 @@ export const Metadata = {
     smeltsTo: {},
     smeltXP: {},
     slab: [],
-    stairs: []
+    stairs: [],
+    armorLevels: {},
+    armorTypes: {},
+    armorPoints: {}
 };

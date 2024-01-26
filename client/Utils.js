@@ -12,10 +12,13 @@ export function getBaseBlockSize() {
     return Math.ceil(getDominantSize() / C_OPTIONS.renderDistance);
 }
 
-function onResize() {
+export let BASE_BLOCK_SIZE = 0;
+
+export function onResize() {
     canvas.width = innerWidth;
     canvas.height = innerHeight;
     ctx.imageSmoothingEnabled = false;
+    BASE_BLOCK_SIZE = getBaseBlockSize();
 }
 
 export function resetBlockBreaking() {
@@ -27,17 +30,15 @@ export function resetBlockBreaking() {
     }
 }
 
-addEventListener("resize", onResize);
-
-setTimeout(onResize);
-
-export function getCanvasPosition(x, y, size) {
+export function getCanvasPosition(x, y) {
     return {
-        x: innerWidth / 2 + (x - CServer.player.x) * size,
-        y: innerHeight / 2 + (-y + CServer.player.y + CServer.player.baseBB.y2 - CServer.player.baseBB.y1 - 0.5) * size
+        x: innerWidth / 2 + (x - CServer.player.x) * BASE_BLOCK_SIZE,
+        y: innerHeight / 2 + (-y + CServer.player.y + CServer.player.baseBB.y2 - CServer.player.baseBB.y1 - 0.5) * BASE_BLOCK_SIZE
     };
 }
 
-for (const texture of PreloadTextures) {
-    Texture.get("./assets/" + texture);
+export function initTextures() {
+    for (const texture of PreloadTextures) {
+        Texture.get("assets/" + texture);
+    }
 }

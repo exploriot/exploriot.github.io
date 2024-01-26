@@ -1,3 +1,6 @@
+import {Texture} from "../loader/Texture.js";
+import DefaultSkin from "./DefaultSkin.js";
+
 const serversBtn = document.getElementById("servers-btn");
 const optionsBtn = document.getElementById("options-btn");
 const addServerBtn = document.getElementById("add-server-btn");
@@ -8,26 +11,24 @@ const serverAddMenu = document.getElementById("server-add-menu");
 const serverEditMenu = document.getElementById("server-edit-menu");
 const optionsMenu = document.getElementById("options-menu");
 const messageMenu = document.getElementById("message-menu");
+const uploadSkinBtn = document.querySelector(".upload-skin");
+const resetSkinBtn = document.querySelector(".reset-skin");
+const cancel0Btn = document.getElementById("add-server-cancel-btn");
+const cancel1Btn = document.getElementById("edit-server-cancel-btn");
 const bg = document.getElementById("bg");
 const searchInp = document.getElementById("search");
 const usernameInp = document.getElementById("username");
 const serversD = document.querySelector(".servers");
 let lastSearch = "";
 let lastUsername = localStorage.getItem("__block__game__username__") || "Steve";
+let lastSkinData = localStorage.getItem("__block__game__skin__") || DefaultSkin;
+let skinTexture = Texture.get(lastSkinData);
 let editingServer = null;
-
-usernameInp.value = lastUsername;
-
-serversBtn.addEventListener("click", () => {
-    bg.classList.remove("gone");
-    serversMenu.classList.remove("gone");
-    searchInp.value = "";
-});
-
-optionsBtn.addEventListener("click", () => {
-    bg.classList.remove("gone");
-    optionsMenu.classList.remove("gone");
-});
+const canvas = document.querySelector("canvas");
+const ctx = canvas.getContext("2d");
+const playerDiv = document.querySelector(".player");
+let mouseX = 0;
+let mouseY = 0;
 
 function closeUI() {
     editingServer = null;
@@ -40,20 +41,6 @@ function closeUI() {
     document.querySelector(".error").innerHTML = "";
 }
 
-window.closeUI = closeUI;
-
-addEventListener("keydown", e => {
-    if (e.key === "Escape") closeUI();
-});
-
-addServerMenuBtn.addEventListener("click", () => {
-    serversMenu.classList.add("gone");
-    serverAddMenu.classList.remove("gone");
-    document.getElementById("create-name").value = "My server";
-    document.getElementById("create-ip").value = "";
-    document.getElementById("create-port").value = "1881";
-});
-
 function checkServerProps(name, ip, port) {
     if (!name) return "The name of the server cannot be empty.";
     if (!ip) return "The IP of the server cannot be empty.";
@@ -62,41 +49,6 @@ function checkServerProps(name, ip, port) {
     const portN = Number(port);
     if (!port || isNaN(portN) || portN < 0 || portN > 65535 || portN !== Math.floor(portN)) return "Invalid port.";
 }
-
-editServerBtn.addEventListener("click", () => {
-    if (!editingServer) return closeUI();
-    const name = document.getElementById("edit-name").value;
-    const ip = document.getElementById("edit-ip").value;
-    const port = document.getElementById("edit-port").value;
-    const res = checkServerProps(name, ip, port);
-    if (res) return document.querySelector("#edit-error").innerText = res;
-    editingServer.name = name;
-    editingServer.ip = ip;
-    editingServer.port = port;
-    renderServers();
-    serversMenu.classList.remove("gone");
-    serverEditMenu.classList.add("gone");
-    localStorage.setItem("server-list", JSON.stringify(servers));
-});
-
-addServerBtn.addEventListener("click", () => {
-    const name = document.getElementById("create-name").value;
-    const ip = document.getElementById("create-ip").value;
-    const port = document.getElementById("create-port").value;
-    const res = checkServerProps(name, ip, port);
-    if (res) return document.querySelector("#add-error").innerText = res;
-    servers.splice(0, 0, {
-        name: name,
-        ip: ip,
-        port: port * 1,
-        createdTimestamp: Date.now(),
-        joinedTimestamp: Date.now()
-    });
-    renderServers();
-    serversMenu.classList.remove("gone");
-    serverAddMenu.classList.add("gone");
-    localStorage.setItem("server-list", JSON.stringify(servers));
-});
 
 const servers = JSON.parse(localStorage.getItem("server-list") ?? "[]").sort((a, b) => b.joinedTimestamp - a.joinedTimestamp);
 
@@ -127,8 +79,8 @@ function renderServers() {
             localStorage.setItem("server-list", JSON.stringify(servers));
         });
         editD.addEventListener("click", () => {
-            closeUI();
             editingServer = server;
+            serversMenu.classList.add("gone");
             serverEditMenu.classList.remove("gone");
             document.getElementById("edit-name").value = server.name;
             document.getElementById("edit-ip").value = server.ip;
@@ -136,7 +88,7 @@ function renderServers() {
         });
         div.addEventListener("click", async e => {
             if (e.target !== div) return;
-            closeUI();
+            serversMenu.classList.add("gone");
             messageMenu.innerHTML = `<div class="text">Joining the server...</div>`;
             messageMenu.classList.remove("gone");
             bg.classList.remove("gone");
@@ -161,15 +113,193 @@ function renderServers() {
     }
 }
 
-renderServers();
+function onResize() {
+    const box = playerDiv.getBoundingClientRect();
+    canvas.width = box.width;
+    canvas.height = box.height;
+    ctx.imageSmoothingEnabled = false;
+}
 
-setInterval(() => {
-    if (searchInp.value !== lastSearch) {
-        lastSearch = searchInp.value;
+function animate() {
+    requestAnimationFrame(animate);
+    const skin = skinTexture.skin();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (!skin) return;
+    const box = playerDiv.getBoundingClientRect();
+    const w = canvas.width * .64;
+    const h = canvas.height * .64;
+    const tx = (canvas.width - w) / 2;
+    const ty = (canvas.height - h) / 2;
+    const headX = box.x + tx + w / 2;
+    const headY = box.y + ty + w / 2;
+    const side = skin[mouseX > headX ? 0 : 1];
+    let angle = Math.atan2(mouseY - headY, mouseX - headX);
+    if (mouseX < headX) {
+        angle += Math.PI;
+    }
+    const armBody = [
+        tx + w / 2 - 0.25 * w, tx + w + 0.8 * w,
+        w * 0.5, w * 1.5
+    ];
+
+    ctx.drawImage(side.back_arm, ...armBody);
+    ctx.drawImage(side.body, ...armBody);
+    ctx.drawImage(side.front_arm, ...armBody);
+
+    const leg = [
+        tx + w / 2 - 0.25 * w, tx + w + 2.3 * w,
+        w * 0.5, w * 1.5
+    ];
+
+    ctx.drawImage(side.back_leg, ...leg);
+    ctx.drawImage(side.front_leg, ...leg);
+
+    ctx.save();
+    ctx.translate(tx + w / 2, ty + w / 2);
+    ctx.rotate(angle);
+    ctx.drawImage(side.head, -w / 2, -w / 2, w, w);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(tx + w / 2 - w * 0.015, ty + w / 2 - w * 0.015);
+    ctx.rotate(angle);
+    ctx.drawImage(side.head_topping, -w / 2 - w * 0.015, -w / 2 - w * 0.015, w * 1.03, w * 1.03);
+    ctx.restore();
+}
+
+export function initIndex() {
+    usernameInp.value = lastUsername;
+
+    addEventListener("mousemove", e => {
+        if (!bg.classList.contains("gone")) return;
+        mouseX = e.pageX;
+        mouseY = e.pageY;
+    });
+
+    serversBtn.addEventListener("click", () => {
+        bg.classList.remove("gone");
+        serversMenu.classList.remove("gone");
+        searchInp.value = "";
+    });
+
+    optionsBtn.addEventListener("click", () => {
+        bg.classList.remove("gone");
+        optionsMenu.classList.remove("gone");
+    });
+
+    window.closeUI = closeUI;
+
+    addEventListener("keydown", e => {
+        if (e.key === "Escape") closeUI();
+    });
+
+    addServerMenuBtn.addEventListener("click", () => {
+        serversMenu.classList.add("gone");
+        serverAddMenu.classList.remove("gone");
+        document.getElementById("create-name").value = "My server";
+        document.getElementById("create-ip").value = "";
+        document.getElementById("create-port").value = "1881";
+    });
+
+    editServerBtn.addEventListener("click", () => {
+        if (!editingServer) return closeUI();
+        const name = document.getElementById("edit-name").value;
+        const ip = document.getElementById("edit-ip").value;
+        const port = document.getElementById("edit-port").value;
+        const res = checkServerProps(name, ip, port);
+        if (res) return document.querySelector("#edit-error").innerText = res;
+        editingServer.name = name;
+        editingServer.ip = ip;
+        editingServer.port = port;
         renderServers();
-    }
-    if (usernameInp.value !== lastUsername) {
-        lastUsername = usernameInp.value;
-        localStorage.setItem("__block__game__username__", lastUsername);
-    }
-});
+        serversMenu.classList.remove("gone");
+        serverEditMenu.classList.add("gone");
+        localStorage.setItem("server-list", JSON.stringify(servers));
+    });
+
+    addServerBtn.addEventListener("click", () => {
+        const name = document.getElementById("create-name").value;
+        const ip = document.getElementById("create-ip").value;
+        const port = document.getElementById("create-port").value;
+        const res = checkServerProps(name, ip, port);
+        if (res) return document.querySelector("#add-error").innerText = res;
+        servers.splice(0, 0, {
+            name: name,
+            ip: ip,
+            port: port * 1,
+            createdTimestamp: Date.now(),
+            joinedTimestamp: Date.now()
+        });
+        renderServers();
+        serversMenu.classList.remove("gone");
+        serverAddMenu.classList.add("gone");
+        localStorage.setItem("server-list", JSON.stringify(servers));
+    });
+
+    uploadSkinBtn.addEventListener("click", async () => {
+        try {
+            const [fileHandle] = await showOpenFilePicker({
+                types: [
+                    {
+                        description: "Images",
+                        accept: {
+                            "image/*": [".jpg", ".jpeg", ".png"],
+                        }
+                    }
+                ]
+            });
+            const file = await fileHandle.getFile();
+            const ext = file.name.split(".").at(-1);
+            const reader = new FileReader();
+            reader.onload = async event => {
+                /*** @type {ArrayBuffer} */
+                const buffer = event.target.result;
+                const uint8Array = new Uint8Array(buffer);
+                const base64String = btoa(String.fromCharCode.apply(null, uint8Array));
+                lastSkinData = "data:image/" + ext + ";base64," + base64String;
+                skinTexture.destroy();
+                skinTexture = Texture.get(lastSkinData);
+                localStorage.setItem("__block__game__skin__", lastSkinData);
+            };
+            reader.readAsArrayBuffer(file);
+        } catch (error) {
+            console.error(error);
+        }
+    });
+
+    resetSkinBtn.addEventListener("click", async () => {
+        lastSkinData = DefaultSkin;
+        skinTexture.destroy();
+        skinTexture = Texture.get(lastSkinData);
+        localStorage.setItem("__block__game__skin__", lastSkinData);
+    });
+
+    cancel0Btn.addEventListener("click", () => {
+        serverAddMenu.classList.add("gone");
+        serversMenu.classList.remove("gone");
+    });
+
+    cancel1Btn.addEventListener("click", () => {
+        serverEditMenu.classList.add("gone");
+        serversMenu.classList.remove("gone");
+    });
+
+    renderServers();
+
+    setInterval(() => {
+        if (searchInp.value !== lastSearch) {
+            lastSearch = searchInp.value;
+            renderServers();
+        }
+        if (usernameInp.value !== lastUsername) {
+            lastUsername = usernameInp.value;
+            localStorage.setItem("__block__game__username__", lastUsername);
+        }
+    });
+
+    addEventListener("resize", onResize);
+
+    onResize();
+
+    animate();
+}

@@ -28,6 +28,7 @@ import {ContainerStatePacket} from "../packet/ContainerStatePacket.js";
 import {Item} from "../../../client/common/item/Item.js";
 import {FurnaceTile} from "../tile/FurnaceTile.js";
 import {UpdatePlayerListPacket} from "../packet/UpdatePlayerListPacket.js";
+import {EntityRotatePacket} from "../packet/EntityRotatePacket.js";
 
 const PacketMap = {
     [PacketIds.BATCH]: "handleBatchPacket",
@@ -45,6 +46,8 @@ const PacketMap = {
     [PacketIds.CLIENT_TOGGLE_FLIGHT]: "handleToggleFlightPacket",
     [PacketIds.CLIENT_ITEM_TRANSFER]: "handleItemTransferPacket",
     [PacketIds.CLIENT_OBTAIN_ITEM]: "handleObtainItemPacket",
+    [PacketIds.CLIENT_CONSUME_ITEM]: "handleConsumeItemPacket",
+    [PacketIds.CLIENT_UPDATE_ROTATION]: "handleUpdateRotationPacket"
 };
 
 const PING_INTERVAL = 2000; // the time it takes the server to send the new ping
@@ -222,12 +225,15 @@ export class NetworkSession {
 
         if (this.player.x === pk.x && this.player.y === pk.y) return;
         if (this.player.externalInventory) this.forceCloseContainer();
-        if (Math.abs(this.player.x - pk.x) + Math.abs(this.player.y - pk.y) > 2 * Math.max(50, this.ping) / 100) {
+        const dist = this.player.distance(pk.x, pk.y);
+        if (dist > 1.5 * Math.max(100, this.ping) / 100) {
             this.sendPosition();
             return;
         }
+        const dx = Math.abs(this.player.x - pk.x);
+        this.player.useSaturation(dx / 60);
         this.player.x = pk.x;
-        this.player.y = pk.y;
+        this.player.y = pk.y + 0.000000001;
         this.player.handleMovement();
         this.player.broadcastMovement();
     };
@@ -249,7 +255,7 @@ export class NetworkSession {
         if (this.player.getGamemode() !== 1) {
             if (baseHardness !== 0) {
                 if (!this.player.breaking) return this.sendBlock(x, y);
-                if (this.player.breakingEndAt - Date.now() > 250 * Math.max(50, this.ping) / 100) return this.sendBlock(x, y);
+                if (this.player.breakingEndAt - Date.now() > 200 * Math.max(100, this.ping) / 100) return this.sendBlock(x, y);
             }
             if (handItem && handItem.id in Metadata.durabilities) {
                 const durability = Metadata.durabilities[handItem.id];
@@ -283,8 +289,7 @@ export class NetworkSession {
 
         if (this.player.getGamemode() !== 1) {
             handItem.count--;
-            if (handItem.count <= 0) this.player.playerInventory.removeIndex(this.player.handIndex);
-            else this.player.playerInventory.updateIndex(this.player.handIndex);
+            this.player.updateHandItem();
         }
 
         this.player.world.setBlock(x, y, handItem.id, handItem.meta);
@@ -467,7 +472,10 @@ export class NetworkSession {
 
         if (
             id2 === InventoryIds.ARMOR
-            && !(item1.id in Metadata.armors)
+            && (
+                !(item1.id in Metadata.armorLevels)
+                || Metadata.armorTypes[item1.id] - 1 !== index2
+            )
         ) return cancel();
 
         // things we know from here:
@@ -544,11 +552,21 @@ export class NetworkSession {
             return false;
         };
 
-        if (!inv1 || !inv2 || index1 >= inv1.size) return cancel();
+        if (
+            !inv1 || !inv2 || index1 >= inv1.size
+            || ((id1 === InventoryIds.EXTERNAL || id2 === InventoryIds.EXTERNAL) && !this.player.externalInventory)
+        ) return cancel();
 
         const oItem = inv1.contents[index1];
 
         if (!oItem || oItem.count < count) return cancel();
+
+        if (
+            (id1 === InventoryIds.CRAFT && index1 === 4)
+            || (id1 === InventoryIds.EXTERNAL && this.player.externalInventory.extra.containerId === ContainerIds.CRAFTING_TABLE && index1 === 9)
+        ) {
+            return;
+        }
 
         const targetCount = oItem.count - count;
         if (inv1.type === inv2.type && index1 < inv1.size / 2) for (let i = inv2.size - 1; i >= 0; i--) {
@@ -716,6 +734,37 @@ export class NetworkSession {
         this.player.playerInventory.setIndex(this.player.handIndex, item);
 
         this.player.playerInventory.add(handItem); // add it back
+    };
+
+    handleConsumeItemPacket() {
+        const item = this.player.getHandItem();
+        if (!item) return;
+        const food = Metadata.edible[item.id];
+        if (food) {
+            const currentFood = this.player.getFood();
+            const maxFood = this.player.getMaxFood();
+            if (currentFood >= maxFood) return;
+            this.player.setFood(Math.min(maxFood, currentFood + food))
+            this.player.setSaturation(this.player.getSaturation() + Math.ceil(food * 1.5));
+            item.count--;
+            this.player.updateHandItem();
+            return;
+        }
+        const armor = Metadata.armorTypes[item.id];
+        if (armor) {
+            this.computeItemTransaction(InventoryIds.PLAYER, InventoryIds.ARMOR, this.player.handIndex, armor - 1, 1);
+            return;
+        }
+    };
+
+    handleUpdateRotationPacket(pk) {
+        _T(pk.rotation, "number");
+
+        this.player.rotation = pk.rotation;
+
+        for (const viewer of this.player.currentViewers) {
+            viewer.session.sendPacket(EntityRotatePacket(this.player.id, pk.rotation));
+        }
     };
 
     handlePacket(pk) {
