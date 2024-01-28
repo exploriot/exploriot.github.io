@@ -312,4 +312,4 @@ export function initIndex() {
     animate();
 }
 
-if (["/", "/index.html", "/index"].includes(location.pathname)) initIndex();
+if (["", "index.html", "index"].includes(location.pathname.split("/").at(-1))) initIndex();

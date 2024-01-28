@@ -125,4 +125,4 @@ export function initGame() {
     connectionText.appendChild(colorizeTextHTML("§aConnecting..."));
 }
 
-if (["/game", "/game.html"].includes(location.pathname)) initGame();
+if (["game", "game.html"].includes(location.pathname.split("/").at(-1))) initGame();
