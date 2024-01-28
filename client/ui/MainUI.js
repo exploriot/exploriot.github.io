@@ -161,7 +161,7 @@ export function renderBreathBar() {
         return;
     }
 
-    toolStackRender(breath * 2, 20, breathDiv, t => `url("../assets/gui/breath/breath_${t}.png")`);
+    toolStackRender(breath * 2, 20, breathDiv, t => `url("../assets/${t === "empty" ? "1px.png" : `gui/breath/breath_${t}.png`}")`);
 }
 
 export function renderArmorBar() {
