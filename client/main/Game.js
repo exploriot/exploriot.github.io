@@ -6,11 +6,10 @@ import {animate} from "../ui/Animator.js";
 import {C_Player} from "../entity/Player.js";
 import "../common/metadata/Crafts.js";
 import {AttributeIds} from "../common/metadata/Entities.js";
-import {colorizeTextHTML} from "../common/Utils.js";
 import {initBlocks} from "../common/metadata/Blocks.js";
 import {initCrafts} from "../common/metadata/Crafts.js";
 import {initItems} from "../common/metadata/Items.js";
-import {initTextures, onResize} from "../Utils.js";
+import {clearDiv, colorizeTextHTML, initTextures, onResize} from "../Utils.js";
 import {initMainUI} from "../ui/MainUI.js";
 import {ClientSession} from "../network/ClientSession.js";
 import {initContainerUI} from "../ui/ContainerUI.js";
@@ -31,7 +30,7 @@ export function initGame() {
         username: localStorage.getItem("__block__game__username__") || "Steve",
         skinData: localStorage.getItem("__block__game__skin__") || DefaultSkin,
         renderDistance: 20,
-        showCoveredBlocks: false,
+        showCoveredBlocks: true,
         showBoundingBoxes: false,
         showHitBoxes: false,
         isDebugMode: false
@@ -122,5 +121,8 @@ export function initGame() {
 
     addEventListener("resize", onResize);
 
-    connectionText.innerHTML = colorizeTextHTML("§aConnecting...");
+    clearDiv(connectionText);
+    connectionText.appendChild(colorizeTextHTML("§aConnecting..."));
 }
+
+if (["/game", "/game.html"].includes(location.pathname)) initGame();

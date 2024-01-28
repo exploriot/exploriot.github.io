@@ -12,8 +12,10 @@ import {
 } from "./ContainerUI.js";
 import {ClientSession} from "../network/ClientSession.js";
 import {InventoryIds} from "../common/item/Inventory.js";
-import {colorizeTextHTML, getLevelFromXP} from "../common/Utils.js";
+import {getLevelFromXP} from "../common/Utils.js";
 import {Metadata} from "../common/metadata/Metadata.js";
+import {Keyboard} from "../input/Keyboard.js";
+import {clearDiv, colorizeTextHTML} from "../Utils.js";
 
 const escMenu = document.querySelector(".esc-menu");
 const pauseBtn = document.querySelector(".pause");
@@ -81,7 +83,7 @@ function toolStackRender(value, maxValue, div, cb) {
     const emptyAmount = totalAmount - fullAmount - halfAmount;
     const lineAmount = Math.ceil(totalAmount / 10);
 
-    div.innerHTML = "";
+    clearDiv(div);
 
     let emptyRemaining = emptyAmount;
     let halfRemaining = halfAmount;
@@ -155,7 +157,7 @@ export function renderBreathBar() {
     lastBreath = breath;
 
     if (breath >= 10) {
-        breathDiv.innerHTML = "";
+        clearDiv(breathDiv);
         return;
     }
 
@@ -177,7 +179,7 @@ export function renderArmorBar() {
     lastArmor = armor;
 
     if (armor <= 0) {
-        armorDiv.innerHTML = "";
+        clearDiv(armorDiv);
         return;
     }
 
@@ -211,7 +213,8 @@ export function showActionbar(text) {
     clearTimeout(actionbarTimeout1);
     if (actionbarAnimation) actionbarAnimation.cancel();
     actionbar.style.opacity = "1";
-    actionbar.innerHTML = colorizeTextHTML(text);
+    clearDiv(actionbar);
+    actionbar.appendChild(colorizeTextHTML(text));
     actionbarTimeout0 = setTimeout(() => actionbarAnimation = actionbar.animate(
         {opacity: [1, 0]},
         {
@@ -222,7 +225,7 @@ export function showActionbar(text) {
     ), 3000);
     actionbarTimeout1 = setTimeout(() => {
         actionbar.style.opacity = "0";
-        actionbar.innerHTML = "";
+        clearDiv(actionbar);
     }, 5000);
 }
 
@@ -275,7 +278,11 @@ export function initMainUI() {
         if (!isAnyUIOn()) {
             if (key * 1) CServer.handIndex = key * 1 - 1;
             if (key === "f3") C_OPTIONS.isDebugMode = !C_OPTIONS.isDebugMode;
-            e.preventDefault();
+            if (key === "b" && Keyboard["f3"]) {
+                C_OPTIONS.showBoundingBoxes = !C_OPTIONS.showBoundingBoxes;
+                C_OPTIONS.showHitBoxes = !C_OPTIONS.showHitBoxes;
+            }
+            if (["f3", "tab"].includes(key)) e.preventDefault();
         }
         const input = document.activeElement;
 
@@ -319,7 +326,7 @@ export function initMainUI() {
     });
 
     addEventListener("wheel", e => {
-        if (Math.abs(e.deltaY) < 5) return;
+        if (isAnyUIOn() || Math.abs(e.deltaY) < 5) return;
         CServer.handIndex = (CServer.handIndex + Math.sign(e.deltaY) + 9) % 9;
     });
 

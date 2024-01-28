@@ -8,13 +8,13 @@ export const BlockTextures = {};
 
 export const BLOCK_BB = new BoundingBox(-0.5, -0.5, 0.5, 0.5);
 
-export const LEFT_HALF_BB = new BoundingBox(0, -0.5, 0.5, 0.5);
-export const RIGHT_HALF_BB = new BoundingBox(-0.5, -0.5, 0, 0.5);
+export const LEFT_HALF_BB = new BoundingBox(-0.5, -0.5, 0, 0.5);
+export const RIGHT_HALF_BB = new BoundingBox(0, -0.5, 0.5, 0.5);
 
 export const TOP_HALF_BB = new BoundingBox(-0.5, 0, 0.5, 0.5);
 export const BOTTOM_HALF_BB = new BoundingBox(-0.5, -0.5, 0.5, 0);
 
-export const LEFT_TOP_HALF_BB = new BoundingBox(0, 0, 0.5, 0.5);
+export const LEFT_TOP_HALF_BB = new BoundingBox(-0.5, 0, 0, 0.5);
 export const RIGHT_TOP_HALF_BB = new BoundingBox(0, 0, 0.5, 0.5);
 
 export const LEFT_BOTTOM_HALF_BB = new BoundingBox(-0.5, -0.5, 0, 0);
@@ -33,31 +33,29 @@ export const STAIRS_BB = [
     [RIGHT_BOTTOM_HALF_BB, TOP_HALF_BB]
 ];
 
-
 export function getBlockTexture(id, meta) {
-    let texture = BlockTextures[id];
-    if (typeof texture === "object") return texture[meta % texture.__MOD];
+    const texture = BlockTextures[id];
+    if (typeof texture === "object") return texture[meta % texture.length];
     return texture;
 }
 
 export function getBlockDrops(id, meta, handItem) {
-    const itemToolType = Metadata.toolTypeItems[handItem ? handItem.id : 0] ?? -1;
+    const itemToolType = Metadata.toolTypeItems[handItem ? handItem.id : 0] ?? TOOL_TYPES.NONE;
     const itemToolLevel = Metadata.toolLevelItems[handItem ? handItem.id : 0] ?? TOOL_LEVEL.NONE;
-    const blockToolType = Metadata.toolType[id];
-    const blockToolLevel = Metadata.toolLevel[id];
-    const isCorrectTool = itemToolType !== -1 && itemToolType === blockToolType;
+    const blockToolType = Metadata.toolType[id] ?? TOOL_TYPES.NONE;
+    const blockToolLevel = Metadata.toolLevel[id] ?? TOOL_LEVEL.NONE;
+    const isCorrectTool = itemToolType !== TOOL_TYPES.NONE && itemToolType === blockToolType;
     const isCorrectLevel = !blockToolLevel || blockToolLevel <= itemToolLevel;
     if (blockToolLevel && (!isCorrectTool || !isCorrectLevel)) return [];
 
     let drops = Metadata.blockDrops[id];
     if (!drops) {
-        const texture = BlockTextures[id];
         return [new Item(
             id,
-            typeof texture === "object" ? meta % BlockTextures[id].__MOD : meta
+            meta % getBlockMetaMod(id)
         )];
     }
-    if (!Array.isArray(drops)) drops = drops[meta % drops.__MOD];
+    if (!Array.isArray(drops)) drops = drops[meta % drops.length];
     return drops.map(i => i.evaluate()).filter(Boolean);
 }
 
@@ -65,11 +63,15 @@ export function isBlockItem(id) {
     return Metadata.block.includes(id);
 }
 
+export function getBlockMetaMod(id) {
+    const t = BlockTextures[id];
+    if (typeof t !== "object") return 1;
+    return t.length;
+}
+
 export function getBoundingBoxesOf(id, meta) {
     if (Metadata.slab.includes(id) || Metadata.stairs.includes(id)) {
-        const texture = BlockTextures[id];
-        const div = typeof texture === "object" ? texture.__MOD : 1;
-        const rotation = Math.floor(meta / div);
+        const rotation = Math.floor(meta / getBlockMetaMod(id));
         return (Metadata.slab.includes(id) ? SLAB_BB : STAIRS_BB)[rotation];
     } else return BLOCK_BB;
 }
@@ -190,11 +192,11 @@ export const FlowerIds = [
     Ids.PAEONIA, Ids.PINK_TULIP, Ids.RED_TULIP, Ids.ROSE, Ids.WHITE_TULIP
 ];
 
-export function initBlocks() {
-    const blockOpts = {
-        hardness: 0, canPlaceBlockOnIt: true, isExplodeable: true, canStayOnPhaseables: true
-    };
+const blockOpts = {
+    hardness: 0, canPlaceBlockOnIt: true, isExplodeable: true, canStayOnPhaseables: true
+};
 
+export function initBlocks() {
     registerBlock(Ids.AIR, {
         isTransparent: true, isReplaceable: true, isPhaseable: true, drops: [], canStayOnPhaseables: true,
         neverBreakable: true
@@ -203,16 +205,18 @@ export function initBlocks() {
         drops: [], canStayOnPhaseables: true, canPlaceBlockOnIt: true
     });
     registerBlock(Ids.COAL_ORE, {
-        ...blockOpts, hardness: 3, drops: [new ID(Ids.DIAMOND)], step: STEPS.STONE, dig: DIGS.STONE,
+        ...blockOpts, hardness: 3, drops: [new ID(Ids.COAL)], step: STEPS.STONE, dig: DIGS.STONE,
         toolType: TOOL_TYPES.PICKAXE, toolLevel: TOOL_LEVEL.WOODEN, smeltsTo: new ID(Ids.COAL), xpDrops: [0, 2],
         smeltXP: 0.1
     });
 
     const cobbOpts = {
         ...blockOpts, hardness: 2, step: STEPS.STONE, dig: DIGS.STONE, toolType: TOOL_TYPES.PICKAXE,
-        toolLevel: TOOL_LEVEL.WOODEN, smeltsTo: new ID(Ids.STONE), smeltXP: 0.1
+        toolLevel: TOOL_LEVEL.WOODEN
     };
-    registerBlock(Ids.COBBLESTONE, cobbOpts);
+    registerBlock(Ids.COBBLESTONE, {
+        ...cobbOpts, smeltsTo: new ID(Ids.STONE), smeltXP: 0.1
+    });
     registerBlock(Ids.COBBLESTONE_SLAB, {
         ...cobbOpts, slab: true, isTransparent: true
     });
@@ -222,18 +226,32 @@ export function initBlocks() {
 
     registerBlock(Ids.DIAMOND_ORE, {
         ...blockOpts, drops: [new ID(Ids.DIAMOND)], hardness: 5, step: STEPS.STONE, dig: DIGS.STONE,
-        toolType: TOOL_TYPES.PICKAXE, toolLevel: TOOL_LEVEL.WOODEN, smeltsTo: new ID(Ids.DIAMOND), smeltXP: 1
+        toolType: TOOL_TYPES.PICKAXE, toolLevel: TOOL_LEVEL.IRON, smeltsTo: new ID(Ids.DIAMOND), smeltXP: 1
     });
     registerBlock(Ids.DIRT, {
         ...blockOpts, hardness: 0.5, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.SHOVEL
     });
+    registerBlock(Ids.DIRT_SLAB, {
+        ...blockOpts, hardness: 0.5, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.SHOVEL, slab: true
+    });
+    registerBlock(Ids.DIRT_STAIRS, {
+        ...blockOpts, hardness: 0.5, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.SHOVEL, stairs: true
+    });
     registerBlock(Ids.GOLD_ORE, {
         ...blockOpts, hardness: 5, step: STEPS.STONE, dig: DIGS.STONE, toolType: TOOL_TYPES.PICKAXE,
-        toolLevel: TOOL_LEVEL.WOODEN, smeltsTo: new ID(Ids.GOLD_INGOT), smeltXP: 1
+        toolLevel: TOOL_LEVEL.IRON, smeltsTo: new ID(Ids.GOLD_INGOT), smeltXP: 1
     });
     registerBlock(Ids.GRASS_BLOCK, {
         ...blockOpts, drops: [new ID(Ids.DIRT)], hardness: 0.6, step: STEPS.GRASS, dig: DIGS.GRASS,
         toolType: TOOL_TYPES.SHOVEL
+    });
+    registerBlock(Ids.GRASS_BLOCK_SLAB, {
+        ...blockOpts, drops: [new ID(Ids.DIRT_SLAB)], hardness: 0.6, step: STEPS.GRASS, dig: DIGS.GRASS,
+        toolType: TOOL_TYPES.SHOVEL, slab: true
+    });
+    registerBlock(Ids.GRASS_BLOCK_STAIRS, {
+        ...blockOpts, drops: [new ID(Ids.DIRT_STAIRS)], hardness: 0.6, step: STEPS.GRASS, dig: DIGS.GRASS,
+        toolType: TOOL_TYPES.SHOVEL, stairs: true
     });
     registerBlock(Ids.SNOWY_GRASS_BLOCK, {
         ...blockOpts, drops: [new ID(Ids.DIRT)], hardness: 0.6, step: STEPS.GRASS, dig: DIGS.GRASS
@@ -252,6 +270,7 @@ export function initBlocks() {
     });
     registerBlock(Ids.IRON_ORE, {
         ...blockOpts, hardness: 3, step: STEPS.STONE, dig: DIGS.STONE, toolType: TOOL_TYPES.PICKAXE,
+        toolLevel: TOOL_LEVEL.STONE,
         smeltsTo: new ID(Ids.IRON_INGOT), smeltXP: 0.7
     });
     registerBlock(Ids.SAND, {
@@ -276,7 +295,7 @@ export function initBlocks() {
     });
 
     registerBlock(Ids.TNT, {
-        ...blockOpts, step: STEPS.GRASS, dig: DIGS.GRASS, name: "TNT"
+        ...blockOpts, step: STEPS.GRASS, dig: DIGS.GRASS, name: "TNT", interactable: true
     });
     registerBlock(Ids.FIRE, {
         ...blockOpts, isTransparent: true, canStayOnPhaseables: false, drops: [], isPhaseable: true
@@ -285,84 +304,77 @@ export function initBlocks() {
     const logOptions = {
         ...blockOpts, hardness: 2, step: STEPS.WOOD, dig: DIGS.WOOD, toolType: TOOL_TYPES.AXE,
         fuel: 1.5, smeltXP: 0.15, smeltsTo: new ID(Ids.CHARCOAL),
-        texture: {
-            0: "assets/blocks/log_oak.png",
-            1: "assets/blocks/log_big_oak.png",
-            2: "assets/blocks/log_birch.png",
-            3: "assets/blocks/log_jungle.png",
-            4: "assets/blocks/log_spruce.png",
-            5: "assets/blocks/log_acacia.png",
-            __MOD: 6
-        },
-        name: {
-            0: "Oak Log",
-            1: "Dark Oak Log",
-            2: "Birch Log",
-            3: "Jungle Log",
-            4: "Spruce Log",
-            5: "Acacia Log",
-            __MOD: 6
-        }
+        texture: [
+            "assets/blocks/log_oak.png",
+            "assets/blocks/log_big_oak.png",
+            "assets/blocks/log_birch.png",
+            "assets/blocks/log_jungle.png",
+            "assets/blocks/log_spruce.png",
+            "assets/blocks/log_acacia.png"
+        ],
+        name: [
+            "Oak Log",
+            "Dark Oak Log",
+            "Birch Log",
+            "Jungle Log",
+            "Spruce Log",
+            "Acacia Log"
+        ]
     };
 
     registerBlock(Ids.LOG, {
         ...logOptions
     });
     registerBlock(Ids.NATURAL_LOG, {
-        ...logOptions, isPhaseable: true, isTransparent: true, drops: {
-            0: [new ID(Ids.LOG, 0)],
-            1: [new ID(Ids.LOG, 1)],
-            2: [new ID(Ids.LOG, 2)],
-            3: [new ID(Ids.LOG, 3)],
-            4: [new ID(Ids.LOG, 4)],
-            5: [new ID(Ids.LOG, 5)],
-            __MOD: 6
-        }
+        ...logOptions, isPhaseable: true, isTransparent: true, drops: [
+            [new ID(Ids.LOG, 0)],
+            [new ID(Ids.LOG, 1)],
+            [new ID(Ids.LOG, 2)],
+            [new ID(Ids.LOG, 3)],
+            [new ID(Ids.LOG, 4)],
+            [new ID(Ids.LOG, 5)]
+        ]
     });
 
     registerBlock(Ids.WOODEN_SLAB, {
         ...blockOpts, hardness: 2, step: STEPS.WOOD, dig: DIGS.WOOD, toolType: TOOL_TYPES.AXE,
         fuel: 1.5, slab: true, isTransparent: true,
-        texture: {
-            0: "assets/blocks/planks_oak_slab.png",
-            1: "assets/blocks/planks_big_oak_slab.png",
-            2: "assets/blocks/planks_birch_slab.png",
-            3: "assets/blocks/planks_jungle_slab.png",
-            4: "assets/blocks/planks_spruce_slab.png",
-            5: "assets/blocks/planks_acacia_slab.png",
-            __MOD: 6
-        },
-        name: {
-            0: "Oak Slab",
-            1: "Dark Oak Slab",
-            2: "Birch Slab",
-            3: "Jungle Slab",
-            4: "Spruce Slab",
-            5: "Acacia Slab",
-            __MOD: 6
-        }
+        texture: [
+            "assets/blocks/planks_oak_slab.png",
+            "assets/blocks/planks_big_oak_slab.png",
+            "assets/blocks/planks_birch_slab.png",
+            "assets/blocks/planks_jungle_slab.png",
+            "assets/blocks/planks_spruce_slab.png",
+            "assets/blocks/planks_acacia_slab.png"
+        ],
+        name: [
+            "Oak Slab",
+            "Dark Oak Slab",
+            "Birch Slab",
+            "Jungle Slab",
+            "Spruce Slab",
+            "Acacia Slab"
+        ]
     });
     registerBlock(Ids.WOODEN_STAIRS, {
         ...blockOpts, hardness: 2, step: STEPS.WOOD, dig: DIGS.WOOD, toolType: TOOL_TYPES.AXE,
         fuel: 1.5, stairs: true, isTransparent: true,
-        texture: {
-            0: "assets/blocks/planks_oak_stairs.png",
-            1: "assets/blocks/planks_big_oak_stairs.png",
-            2: "assets/blocks/planks_birch_stairs.png",
-            3: "assets/blocks/planks_jungle_stairs.png",
-            4: "assets/blocks/planks_spruce_stairs.png",
-            5: "assets/blocks/planks_acacia_stairs.png",
-            __MOD: 6
-        },
-        name: {
-            0: "Oak Stairs",
-            1: "Dark Oak Stairs",
-            2: "Birch Stairs",
-            3: "Jungle Stairs",
-            4: "Spruce Stairs",
-            5: "Acacia Stairs",
-            __MOD: 6
-        }
+        texture: [
+            "assets/blocks/planks_oak_stairs.png",
+            "assets/blocks/planks_big_oak_stairs.png",
+            "assets/blocks/planks_birch_stairs.png",
+            "assets/blocks/planks_jungle_stairs.png",
+            "assets/blocks/planks_spruce_stairs.png",
+            "assets/blocks/planks_acacia_stairs.png"
+        ],
+        name: [
+            "Oak Stairs",
+            "Dark Oak Stairs",
+            "Birch Stairs",
+            "Jungle Stairs",
+            "Spruce Stairs",
+            "Acacia Stairs"
+        ]
     });
 
     registerBlock(Ids.LEAVES, {
@@ -374,47 +386,43 @@ export function initBlocks() {
         toolType: TOOL_TYPES.SHEARS,
         fuel: 0.2,
         drops: [new ID(Ids.APPLE).setChance(0.05)],
-        texture: {
-            0: "assets/blocks/leaves_oak.png",
-            1: "assets/blocks/leaves_dark_oak.png",
-            2: "assets/blocks/leaves_birch.png",
-            3: "assets/blocks/leaves_jungle.png",
-            4: "assets/blocks/leaves_spruce.png",
-            5: "assets/blocks/leaves_acacia.png",
-            __MOD: 6
-        },
-        name: {
-            0: "Oak Leaves",
-            1: "Dark Oak Leaves",
-            2: "Birch Leaves",
-            3: "Jungle Leaves",
-            4: "Spruce Leaves",
-            5: "Acacia Leaves",
-            __MOD: 6
-        }
+        texture: [
+            "assets/blocks/leaves_oak.png",
+            "assets/blocks/leaves_dark_oak.png",
+            "assets/blocks/leaves_birch.png",
+            "assets/blocks/leaves_jungle.png",
+            "assets/blocks/leaves_spruce.png",
+            "assets/blocks/leaves_acacia.png"
+        ],
+        name: [
+            "Oak Leaves",
+            "Dark Oak Leaves",
+            "Birch Leaves",
+            "Jungle Leaves",
+            "Spruce Leaves",
+            "Acacia Leaves"
+        ]
     });
 
     registerBlock(Ids.PLANKS, {
         ...blockOpts, hardness: 2, step: STEPS.WOOD, dig: DIGS.WOOD, toolType: TOOL_TYPES.AXE,
         fuel: 1.5,
-        texture: {
-            0: "assets/blocks/planks_oak.png",
-            1: "assets/blocks/planks_big_oak.png",
-            2: "assets/blocks/planks_birch.png",
-            3: "assets/blocks/planks_jungle.png",
-            4: "assets/blocks/planks_spruce.png",
-            5: "assets/blocks/planks_acacia.png",
-            __MOD: 6
-        },
-        name: {
-            0: "Oak Planks",
-            1: "Dark Oak Planks",
-            2: "Birch Planks",
-            3: "Jungle Planks",
-            4: "Spruce Planks",
-            5: "Acacia Planks",
-            __MOD: 6
-        }
+        texture: [
+            "assets/blocks/planks_oak.png",
+            "assets/blocks/planks_big_oak.png",
+            "assets/blocks/planks_birch.png",
+            "assets/blocks/planks_jungle.png",
+            "assets/blocks/planks_spruce.png",
+            "assets/blocks/planks_acacia.png"
+        ],
+        name: [
+            "Oak Planks",
+            "Dark Oak Planks",
+            "Birch Planks",
+            "Jungle Planks",
+            "Spruce Planks",
+            "Acacia Planks"
+        ]
     });
     registerBlock(Ids.SPONGE, {
         ...blockOpts, hardness: 0.6, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.HOE
@@ -441,52 +449,74 @@ export function initBlocks() {
     };
     registerBlock(Ids.WATER, {
         ...LiquidOpts,
-        texture: {
-            0: "assets/blocks/water_8.png",
-            1: "assets/blocks/water_7.png",
-            2: "assets/blocks/water_6.png",
-            3: "assets/blocks/water_5.png",
-            4: "assets/blocks/water_4.png",
-            5: "assets/blocks/water_3.png",
-            6: "assets/blocks/water_2.png",
-            7: "assets/blocks/water_1.png",
-            8: "assets/blocks/water_8.png",
-            __MOD: 9
-        },
+        texture: [
+            "assets/blocks/water_8.png",
+            "assets/blocks/water_7.png",
+            "assets/blocks/water_6.png",
+            "assets/blocks/water_5.png",
+            "assets/blocks/water_4.png",
+            "assets/blocks/water_3.png",
+            "assets/blocks/water_2.png",
+            "assets/blocks/water_1.png",
+            "assets/blocks/water_8.png"
+        ],
         neverBreakable: true
     });
     registerBlock(Ids.LAVA, {
         ...LiquidOpts,
-        texture: {
-            0: "assets/blocks/lava_4.png",
-            1: "assets/blocks/lava_3.png",
-            2: "assets/blocks/lava_2.png",
-            3: "assets/blocks/lava_1.png",
-            4: "assets/blocks/lava_4.png",
-            __MOD: 5
-        },
+        texture: [
+            "assets/blocks/lava_4.png",
+            "assets/blocks/lava_3.png",
+            "assets/blocks/lava_2.png",
+            "assets/blocks/lava_1.png",
+            "assets/blocks/lava_4.png"
+        ],
         neverBreakable: true
     });
     registerBlock(Ids.CRAFTING_TABLE, {
         ...blockOpts, hardness: 2.5, step: STEPS.WOOD, dig: DIGS.WOOD, toolType: TOOL_TYPES.AXE,
-        fuel: 1.5
+        fuel: 1.5, interactable: true
     });
     registerBlock(Ids.CHEST, {
         ...blockOpts, hardness: 2.5, step: STEPS.WOOD, dig: DIGS.WOOD, toolType: TOOL_TYPES.AXE,
-        fuel: 1.5,
-        texture: {
-            0: "assets/blocks/chest.png",
-            1: "assets/blocks/chest_left.png",
-            2: "assets/blocks/chest_right.png",
-            __MOD: 3
-        }
+        fuel: 1.5, interactable: true,
+        texture: [
+            "assets/blocks/chest.png",
+            "assets/blocks/chest_left.png",
+            "assets/blocks/chest_right.png"
+        ]
     });
     registerBlock(Ids.FURNACE, {
         ...blockOpts, hardness: 4, step: STEPS.STONE, dig: DIGS.STONE, toolType: TOOL_TYPES.PICKAXE,
-        texture: {
-            0: "assets/blocks/furnace.png",
-            1: "assets/blocks/furnace_on.png",
-            __MOD: 3
-        },
+        toolLevel: TOOL_LEVEL.WOODEN, interactable: true,
+        texture: [
+            "assets/blocks/furnace.png",
+            "assets/blocks/furnace_on.png"
+        ]
     });
+    registerBlock(Ids.ANVIL, {
+        ...blockOpts, hardness: 5, step: STEPS.STONE, dig: DIGS.STONE, toolType: TOOL_TYPES.PICKAXE,
+        toolLevel: TOOL_LEVEL.WOODEN, isTransparent: true, interactable: true,
+        name: [
+            "Anvil",
+            "Chipped Anvil",
+            "Damaged Anvil"
+        ],
+        texture: [
+            "assets/blocks/anvil.png",
+            "assets/blocks/anvil_damaged1.png",
+            "assets/blocks/anvil_damaged2.png"
+        ]
+    });
+    const oreOptions = {
+        ...blockOpts,
+        step: STEPS.STONE,
+        dig: DIGS.STONE,
+        toolType: TOOL_TYPES.PICKAXE,
+        toolLevel: TOOL_LEVEL.WOODEN
+    };
+    registerBlock(Ids.COAL_BLOCK, {...oreOptions, hardness: 5});
+    registerBlock(Ids.IRON_BLOCK, {...oreOptions, hardness: 5});
+    registerBlock(Ids.GOLD_BLOCK, {...oreOptions, hardness: 3});
+    registerBlock(Ids.DIAMOND_BLOCK, {...oreOptions, hardness: 5});
 }

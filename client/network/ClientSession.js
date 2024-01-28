@@ -16,11 +16,12 @@ import {C_handleCloseContainerPacket, C_handlePacket} from "./ClientPacketHandle
 import {PingPacket} from "../packet/PingPacket.js";
 import {ItemTransferPacket} from "../packet/ItemTransferPacket.js";
 import {AnimatorFrame} from "../ui/Animator.js";
-import {colorizeTextHTML, roundToPrecision} from "../common/Utils.js";
+import {roundToPrecision} from "../common/Utils.js";
 import {PacketIds} from "../common/metadata/PacketIds.js";
 import {ObtainItemPacket} from "../packet/ObtainItemPacket.js";
 import {ConsumeItemPacket} from "../packet/ConsumeItemPacket.js";
 import {UpdateRotationPacket} from "../packet/UpdateRotationPacket.js";
+import {clearDiv, colorizeTextHTML} from "../Utils.js";
 
 const connectionDiv = document.querySelector(".connection-menu");
 const connectionText = document.querySelector(".connection-menu > .container > .text");
@@ -55,7 +56,8 @@ export const ClientSession = {
         function onClose() {
             connected = false;
             console.log("Disconnected.");
-            connectionText.innerHTML = document.createTextNode(colorizeTextHTML(ClientSession.kickReason ?? "§cDisconnected from the server.")).data;
+            clearDiv(connectionText);
+            connectionText.appendChild(colorizeTextHTML(ClientSession.kickReason ?? "§cDisconnected from the server."));
             connectionDiv.classList.remove("gone");
             rejoinBtn.classList.remove("gone");
             cancelAnimationFrame(AnimatorFrame);
@@ -87,6 +89,8 @@ export const ClientSession = {
     },
 
     sendPackets(packets, immediate = false) {
+        if (packets.length === 0) return;
+        if (packets.length === 1) return this.sendPacket(packets[0], immediate);
         if (immediate && connected) {
             this.sendPacket(BatchPacket(packets), true);
         } else this.queuedPackets.push(...packets);
@@ -106,8 +110,8 @@ export const ClientSession = {
         this.sendPacket(UpdateRotationPacket(roundToPrecision(CServer.player.rotation, 3)));
     },
 
-    sendBlockPlacePacket(x, y, id, meta) {
-        this.sendPacket(BlockPlacePacket(x, y, id, meta));
+    sendBlockPlacePacket(x, y, rotation) {
+        this.sendPacket(BlockPlacePacket(x, y, rotation));
     },
 
     sendBlockBreakPacket(x, y) {

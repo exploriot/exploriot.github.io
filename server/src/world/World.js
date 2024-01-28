@@ -14,6 +14,7 @@ import {FurnaceTile} from "../tile/FurnaceTile.js";
 import {ChestTile} from "../tile/ChestTile.js";
 import {S_XPOrbEntity} from "../entity/XPOrbEntity.js";
 import {S_TNTEntity} from "../entity/TNTEntity.js";
+import {GameRules} from "../../../client/common/metadata/GameRules.js";
 
 const BlockUpdater = {
     [Ids.SAND](world, x, y, self) {
@@ -89,7 +90,7 @@ const BlockUpdater = {
     }
 };
 
-BlockUpdater[Ids.GRAVEL] = BlockUpdater[Ids.SAND];
+BlockUpdater[Ids.GRAVEL] = BlockUpdater[Ids.ANVIL] = BlockUpdater[Ids.SAND];
 
 export function generateSeed() {
     return Math.floor(Math.random() * 9999999999999);
@@ -97,14 +98,7 @@ export function generateSeed() {
 
 export class S_World extends World {
     dirtyChunks = new Set;
-    gameRules = {
-        tntExplodes: true,
-        fallDamage: true,
-        naturalRegeneration: true,
-        starveDamage: true,
-        drowningDamage: true
-    };
-    _info = {};
+    data = {};
     dirtyUpdateBlocks = new Set;
 
     // worldX, worldY
@@ -132,14 +126,29 @@ export class S_World extends World {
                 generator: "default",
                 generatorOptions: "",
                 seed: generateSeed(),
-                gameRules: this.gameRules
+                gameRules: {},
+                playerSpawnPoints: {}
             }, this._info);
+            this._info.gameRules = Object.assign({
+                [GameRules.TNT_EXPLODES]: true,
+                [GameRules.FALL_DAMAGE]: true,
+                [GameRules.NATURAL_REGENERATION]: true,
+                [GameRules.STARVE_DAMAGE]: true,
+                [GameRules.DROWNING_DAMAGE]: true
+            }, this._info.gameRules);
             writeFileSync(this.path + "/world.json", JSON.stringify(this._info));
         } else {
             this._info = JSON.parse(readFileSync(this.path + "/world.json", "utf8"));
         }
-        Object.assign(this.gameRules, this._info.gameRules);
         this.generator = new (Generators[this.getGeneratorType()])(this, this.getGeneratorOptions());
+    };
+
+    getGameRule(id) {
+        return this._info.gameRules[id];
+    };
+
+    setGameRule(id, value) {
+        this._info.gameRules[id] = value;
     };
 
     breakBlock(x, y, breakItem = null, instant = false) {
@@ -154,6 +163,14 @@ export class S_World extends World {
         for (const item of drops) {
             this.dropItem(x, y, item);
         }
+    };
+
+    getPlayerSpawnLocation(name) {
+        return this._info.playerSpawnPoints[name] ?? this.getSafeSpawnLocation();
+    };
+
+    setPlayerSpawnLocation(name, x, y) {
+        this._info.playerSpawnPoints[name] = {x, y};
     };
 
     getSpawnLocation() {
@@ -333,6 +350,7 @@ export class S_World extends World {
             this.saveChunk(x);
         });
         this.dirtyChunks.clear();
+        writeFileSync(this.path + "/world.json", JSON.stringify(this._info));
     };
 
     update() {

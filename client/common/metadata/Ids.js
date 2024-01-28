@@ -10,6 +10,8 @@ export const Ids = {
     DIRT: _(),
     GOLD_ORE: _(),
     GRASS_BLOCK: _(),
+    GRASS_BLOCK_SLAB: _(),
+    GRASS_BLOCK_STAIRS: _(),
     GRAVEL: _(),
     ICE: _(),
     IRON_ORE: _(),
@@ -55,6 +57,7 @@ export const Ids = {
     IRON_BLOCK: _(),
     GOLD_BLOCK: _(),
     DIAMOND_BLOCK: _(),
+    ANVIL: _(),
 
     APPLE: _(),
     COAL: _(),

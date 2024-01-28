@@ -1,5 +1,5 @@
 import {Ids} from "./Ids.js";
-import {ItemDescriptor} from "../item/Item.js";
+import {ItemDescriptor as ID} from "../item/Item.js";
 import {Metadata} from "./Metadata.js";
 
 export function trimCraftingMap(map) {
@@ -57,15 +57,15 @@ export function initCrafts() {
             [
                 "0"
             ],
-            [new ItemDescriptor(Ids.LOG, meta)],
-            new ItemDescriptor(Ids.PLANKS, meta, 4)
+            [new ID(Ids.LOG, meta)],
+            new ID(Ids.PLANKS, meta, 4)
         );
         registerCraft(
             [
                 "000"
             ],
-            [new ItemDescriptor(Ids.PLANKS, meta)],
-            new ItemDescriptor(Ids.WOODEN_SLAB, meta, 6)
+            [new ID(Ids.PLANKS, meta)],
+            new ID(Ids.WOODEN_SLAB, meta, 6)
         );
         registerCraft(
             [
@@ -73,8 +73,8 @@ export function initCrafts() {
                 " 00",
                 "000"
             ],
-            [new ItemDescriptor(Ids.PLANKS, meta)],
-            new ItemDescriptor(Ids.WOODEN_STAIRS, meta, 4)
+            [new ID(Ids.PLANKS, meta)],
+            new ID(Ids.WOODEN_STAIRS, meta, 4)
         );
     }
 
@@ -83,8 +83,8 @@ export function initCrafts() {
             "0",
             "0"
         ],
-        [new ItemDescriptor(Ids.PLANKS)],
-        new ItemDescriptor(Ids.STICK, null, 4)
+        [new ID(Ids.PLANKS)],
+        new ID(Ids.STICK, null, 4)
     );
 
     registerCraft(
@@ -92,8 +92,8 @@ export function initCrafts() {
             "00",
             "00"
         ],
-        [new ItemDescriptor(Ids.PLANKS)],
-        new ItemDescriptor(Ids.CRAFTING_TABLE)
+        [new ID(Ids.PLANKS)],
+        new ID(Ids.CRAFTING_TABLE)
     );
 
     for (const o of [
@@ -108,8 +108,8 @@ export function initCrafts() {
             "0",
             "1"
         ],
-        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-        new ItemDescriptor(o[1])
+        [new ID(o[0]), new ID(Ids.STICK)],
+        new ID(o[1])
     );
 
     for (const o of [
@@ -124,8 +124,8 @@ export function initCrafts() {
             "01",
             " 1"
         ],
-        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-        new ItemDescriptor(o[1])
+        [new ID(o[0]), new ID(Ids.STICK)],
+        new ID(o[1])
     );
 
     for (const o of [
@@ -140,8 +140,8 @@ export function initCrafts() {
             " 1",
             " 1"
         ],
-        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-        new ItemDescriptor(o[1])
+        [new ID(o[0]), new ID(Ids.STICK)],
+        new ID(o[1])
     );
 
     for (const o of [
@@ -156,8 +156,8 @@ export function initCrafts() {
             "1",
             "1"
         ],
-        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-        new ItemDescriptor(o[1])
+        [new ID(o[0]), new ID(Ids.STICK)],
+        new ID(o[1])
     );
 
     for (const o of [
@@ -172,8 +172,8 @@ export function initCrafts() {
             " 1",
             " 1"
         ],
-        [new ItemDescriptor(o[0]), new ItemDescriptor(Ids.STICK)],
-        new ItemDescriptor(o[1])
+        [new ID(o[0]), new ID(Ids.STICK)],
+        new ID(o[1])
     );
 
     for (const o of [
@@ -185,8 +185,8 @@ export function initCrafts() {
             "000",
             "0 0"
         ],
-        [new ItemDescriptor(o[0])],
-        new ItemDescriptor(o[1])
+        [new ID(o[0])],
+        new ID(o[1])
     );
 
     for (const o of [
@@ -199,8 +199,8 @@ export function initCrafts() {
             "000",
             "000"
         ],
-        [new ItemDescriptor(o[0])],
-        new ItemDescriptor(o[1])
+        [new ID(o[0])],
+        new ID(o[1])
     );
 
     for (const o of [
@@ -213,8 +213,8 @@ export function initCrafts() {
             "0 0",
             "0 0"
         ],
-        [new ItemDescriptor(o[0])],
-        new ItemDescriptor(o[1])
+        [new ID(o[0])],
+        new ID(o[1])
     );
 
     for (const o of [
@@ -226,8 +226,8 @@ export function initCrafts() {
             "0 0",
             "0 0"
         ],
-        [new ItemDescriptor(o[0])],
-        new ItemDescriptor(o[1])
+        [new ID(o[0])],
+        new ID(o[1])
     );
 
     registerCraft(
@@ -236,8 +236,8 @@ export function initCrafts() {
             "0 0",
             "000"
         ],
-        [new ItemDescriptor(Ids.PLANKS)],
-        new ItemDescriptor(Ids.CHEST)
+        [new ID(Ids.PLANKS)],
+        new ID(Ids.CHEST)
     );
 
     registerCraft(
@@ -246,8 +246,8 @@ export function initCrafts() {
             "0 0",
             "000"
         ],
-        [new ItemDescriptor(Ids.COBBLESTONE)],
-        new ItemDescriptor(Ids.FURNACE)
+        [new ID(Ids.COBBLESTONE)],
+        new ID(Ids.FURNACE)
     );
 
     registerCraft(
@@ -256,8 +256,8 @@ export function initCrafts() {
             "000",
             "000"
         ],
-        [new ItemDescriptor(Ids.IRON_NUGGET)],
-        new ItemDescriptor(Ids.IRON_INGOT)
+        [new ID(Ids.IRON_NUGGET)],
+        new ID(Ids.IRON_INGOT)
     );
 
     registerCraft(
@@ -266,8 +266,8 @@ export function initCrafts() {
             "000",
             "000"
         ],
-        [new ItemDescriptor(Ids.GOLDEN_NUGGET)],
-        new ItemDescriptor(Ids.GOLD_INGOT)
+        [new ID(Ids.GOLDEN_NUGGET)],
+        new ID(Ids.GOLD_INGOT)
     );
 
     for (const o of [
@@ -278,16 +278,39 @@ export function initCrafts() {
         registerCraft(
             [
                 "000"
-            ], [new ItemDescriptor(o[0])],
-            new ItemDescriptor(o[1])
+            ], [new ID(o[0])],
+            new ID(o[1])
         );
         registerCraft(
             [
                 "  0",
                 " 00",
                 "000"
-            ], [new ItemDescriptor(o[0])],
-            new ItemDescriptor(o[2])
+            ], [new ID(o[0])],
+            new ID(o[2])
         );
     }
+
+    for (const o of [
+        [Ids.COAL, Ids.COAL_BLOCK],
+        [Ids.IRON_INGOT, Ids.IRON_BLOCK],
+        [Ids.GOLD_INGOT, Ids.GOLD_BLOCK],
+        [Ids.DIAMOND, Ids.DIAMOND_BLOCK]
+    ]) registerCraft(
+        [
+            "000",
+            "000",
+            "000"
+        ], [new ID(o[0])], new ID(o[1])
+    );
+
+    registerCraft(
+        [
+            "000",
+            " 1 ",
+            "111"
+        ],
+        [new ID(Ids.IRON_BLOCK), new ID(Ids.IRON_INGOT)],
+        new ID(Ids.ANVIL)
+    );
 }

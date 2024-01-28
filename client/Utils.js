@@ -3,6 +3,7 @@ import {PreloadTextures} from "./common/metadata/Metadata.js";
 import {Texture} from "./loader/Texture.js";
 import {Mouse} from "./input/Mouse.js";
 import {ClientSession} from "./network/ClientSession.js";
+import {ColorsHex, EMOTE_LIST, EMOTE_REGEX, splitColors} from "./common/Utils.js";
 
 export function getDominantSize() {
     return Math.max(innerWidth, innerHeight);
@@ -41,4 +42,50 @@ export function initTextures() {
     for (const texture of PreloadTextures) {
         Texture.get("assets/" + texture);
     }
+}
+
+export function colorizeTextHTML(text) {
+    const spl = splitColors(text);
+    let style = {color: "", italic: false, bold: false, underline: false, strikethrough: false};
+    const result = document.createElement("div");
+    for (let i = 0; i < spl.length; i++) {
+        const sp = spl[i];
+        if (sp[0] === "§") {
+            if (sp[1] in ColorsHex) {
+                style.color = ColorsHex[sp[1]];
+                continue;
+            } else if (sp[1] === "s") {
+                style.strikethrough = true;
+                continue;
+            } else if (sp[1] === "u") {
+                style.underline = true;
+                continue;
+            } else if (sp[1] === "i") {
+                style.italic = true;
+                continue;
+            } else if (sp[1] === "l") {
+                style.bold = true;
+                continue;
+            }
+        }
+        /*** @type {string[]} */
+        const emo = sp.split(EMOTE_REGEX);
+        const data = emo.map(i => {
+            if (EMOTE_REGEX.test(i) && EMOTE_LIST.includes(i.slice(1, -1))) return `<img src="assets/emotes/${i.slice(1, -1)}.png" width="16">`;
+            return document.createTextNode(i).data;
+        }).join("");
+        if (!style.color) {
+            result.innerText += data;
+            continue;
+        }
+        const span = document.createElement("span");
+        span.style.color = style.color;
+        span.innerText = data;
+        result.appendChild(span);
+    }
+    return result;
+}
+
+export function clearDiv(div) {
+    for (const c of div.childNodes) c.remove();
 }

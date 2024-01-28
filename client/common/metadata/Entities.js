@@ -11,24 +11,26 @@ export const XP_ORB_BB = new BoundingBox(-0.15, -0.15, 0.15, 0.15);
 export const SURVIVAL_REACH = 5;
 export const CREATIVE_REACH = 10;
 
+let __id = 0;
+const _ = () => __id++;
+
 export const AttributeIds = {
-    GAMEMODE: 0,
-    IS_FLYING: 1,
-    CAN_FLY: 2,
-    HEALTH: 3,
-    MAX_HEALTH: 4,
-    FOOD: 5,
-    MAX_FOOD: 6,
-    SATURATION: 7,
-    BREATH: 8,
-    XP: 9
+    GAMEMODE: _(),
+    IS_FLYING: _(),
+    CAN_FLY: _(),
+    HEALTH: _(),
+    MAX_HEALTH: _(),
+    FOOD: _(),
+    MAX_FOOD: _(),
+    SATURATION: _(),
+    BREATH: _(),
+    XP: _()
 };
 
 export const EntityIds = {
-    PLAYER: 0,
-    COW: 1,
-    TNT: 2,
-    ITEM: 3,
-    FALLING_BLOCK: 4,
-    XP_ORB: 5
+    PLAYER: _(),
+    TNT: _(),
+    ITEM: _(),
+    FALLING_BLOCK: _(),
+    XP_ORB: _()
 };

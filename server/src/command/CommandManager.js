@@ -4,7 +4,7 @@ import {GiveCommand} from "./list/GiveCommand.js";
 import {OpCommand} from "./list/OpCommand.js";
 import {DeopCommand} from "./list/DeopCommand.js";
 import {StopCommand} from "./list/StopCommand.js";
-import {GamemodeCommand} from "./list/GamemodeCommand.js";
+import {GameModeCommand} from "./list/GameModeCommand.js";
 import {ClearCommand} from "./list/ClearCommand.js";
 import {KickCommand} from "./list/KickCommand.js";
 import {ListCommand} from "./list/ListCommand.js";
@@ -13,6 +13,8 @@ import {SetBlockCommand} from "./list/SetBlockCommand.js";
 import {PingCommand} from "./list/PingCommand.js";
 import {FillCommand} from "./list/FillCommand.js";
 import {KillCommand} from "./list/KillCommand.js";
+import {CloneCommand} from "./list/CloneCommand.js";
+import {GameRuleCommand} from "./list/GameRuleCommand.js";
 
 export const CommandLabels = {};
 export const Commands = new Set;
@@ -42,7 +44,7 @@ export function initCommands() {
         new OpCommand,
         new DeopCommand,
         new StopCommand,
-        new GamemodeCommand,
+        new GameModeCommand,
         new ClearCommand,
         new KickCommand,
         new ListCommand,
@@ -50,6 +52,8 @@ export function initCommands() {
         new SetBlockCommand,
         new PingCommand,
         new FillCommand,
-        new KillCommand
+        new CloneCommand,
+        new KillCommand,
+        new GameRuleCommand
     );
 }

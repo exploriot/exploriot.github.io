@@ -2,6 +2,8 @@ import {S_Entity} from "./Entity.js";
 import {EntityIds, FALLING_BLOCK_BB} from "../../../client/common/metadata/Entities.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
+import {GameRules} from "../../../client/common/metadata/GameRules.js";
+import {Item} from "../../../client/common/item/Item.js";
 
 export class S_TNTEntity extends S_Entity {
     fuse = 4;
@@ -21,7 +23,8 @@ export class S_TNTEntity extends S_Entity {
     };
 
     explode() {
-        if (this.world.gameRules.tntExplodes) {
+        const item = new Item(Ids.DIAMOND_PICKAXE);
+        if (this.world.getGameRule(GameRules.TNT_EXPLODES)) {
             for (let x = this.x - this.explodeRadius; x <= this.x + this.explodeRadius; x++) {
                 for (let y = this.y - this.explodeRadius; y <= this.y + this.explodeRadius; y++) {
                     const block = this.world.getBlock(x, y);
@@ -35,7 +38,7 @@ export class S_TNTEntity extends S_Entity {
                             entity.parentEntityId = this.parentEntityId;
                             this.world.addEntity(entity);
                         } else {
-                            this.world.breakBlock(x, y);
+                            this.world.breakBlock(x, y, item);
                         } // else if (!this.isTouchingWater) block.break(this);
                     }
                 }

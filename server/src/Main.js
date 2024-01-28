@@ -7,7 +7,6 @@ import "./Server.js";
 import "../../client/common/metadata/Blocks.js";
 import "../../client/common/metadata/Items.js";
 import {appendFileSync, existsSync, mkdirSync, readFileSync} from "fs";
-import {Item} from "../../client/common/item/Item.js";
 import {PacketIds} from "../../client/common/metadata/PacketIds.js";
 import {_TA} from "../../client/common/Utils.js";
 import {DisconnectPacket} from "./packet/DisconnectPacket.js";
@@ -116,32 +115,28 @@ wss.on("connection", (ws, req) => {
                 if (!/^[a-zA-Z\d]{1,16}$/.test(pk.username)) return kick("Invalid username.");
                 if (Array.from(Server.getPlayers()).some(i => i.username === pk.username)) return kick("You are already in the server.");
                 hasAuth = true;
-                ws.player = player = new S_Player(ws, Server.getDefaultWorld(), pk.username, pk.skinData);
                 Terminal.info(`§7[${pk.username} ${ws.ipAddress} connected]`);
-                Server.getPlayers().add(player);
+
                 if (existsSync("./players/" + pk.username + ".json")) {
                     const data = JSON.parse(readFileSync("./players/" + pk.username + ".json", "utf-8"));
-                    player.x = data.x;
-                    player.y = data.y;
-                    player.vx = data.vx;
-                    player.vy = data.vy;
-                    Object.assign(player.attributes, data.attributes);
-                    player.playerInventory.contents = data.playerInventory.map(Item.deserialize);
-                    player.cursorInventory.contents = data.cursorInventory.map(Item.deserialize);
-                    player.craftInventory.contents = data.craftInventory.map(Item.deserialize);
-                    player.armorInventory.contents = data.armorInventory.map(Item.deserialize);
-                    player.handIndex = data.handIndex;
+                    ws.player = player = S_Player.deserialize(ws, data);
                 } else {
-                    const spawn = player.getWorld().getSafeSpawnLocation();
-                    player.teleport(spawn.x, spawn.y);
+                    const world = Server.getDefaultWorld();
+                    const spawn = world.getSafeSpawnLocation();
+                    ws.player = player = new S_Player(ws, world, pk.username, pk.skinData);
+                    player.x = spawn.x;
+                    player.y = spawn.y;
                 }
-                player.world.addEntity(player);
+
                 player.session.sendAttributes();
                 player.session.sendPosition();
                 player.session.requestPing();
                 player.session.sendInventories();
                 player.session.sendHandItemIndex();
                 player.session.sendWelcomePacket();
+
+                player.world.addEntity(player);
+                Server.getPlayers().add(player);
                 clearTimeout(authInt);
                 Server.broadcastMessage(`§e${player.username} joined the server.`);
                 lastBroadcastPlayerList = Date.now();

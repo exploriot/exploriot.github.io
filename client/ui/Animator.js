@@ -1,7 +1,7 @@
 import {BASE_BLOCK_SIZE, getCanvasPosition} from "../Utils.js";
-import {Mouse, recalculateMouse} from "../input/Mouse.js";
+import {getMouseRotation, Mouse, recalculateMouse} from "../input/Mouse.js";
 import {Ids} from "../common/metadata/Ids.js";
-import {BlockTextures, getBlockHardness, getBlockTexture} from "../common/metadata/Blocks.js";
+import {getBlockHardness, getBlockMetaMod, getBlockTexture} from "../common/metadata/Blocks.js";
 import {Texture} from "../loader/Texture.js";
 import {
     isAnyUIOn,
@@ -21,6 +21,8 @@ import {Keyboard} from "../input/Keyboard.js";
 import {ClientSession} from "../network/ClientSession.js";
 
 const playerListDiv = document.querySelector(".player-list");
+const infoDiv = document.querySelector(".info");
+const infos = document.querySelector(".info > span[data-info]");
 let lastRender = Date.now() - 1;
 let _fps = [];
 
@@ -42,17 +44,13 @@ function renderMouseBlockAround() {
 function renderBlockAt(x, y, id, meta) {
     const pos = getCanvasPosition(x - 0.5, y + 0.5);
     const texture = Texture.get(getBlockTexture(id, meta));
-    const raw = BlockTextures[id];
     let img = texture.image;
-    if (typeof raw === "object" && meta >= raw.__MOD && (Metadata.slab.includes(id[0]) || Metadata.stairs.includes(id[0]))) {
-        img = texture.rotate(Math.floor(id[1] / raw.__MOD) * 90);
+    if (Metadata.slab.includes(id) || Metadata.stairs.includes(id)) {
+        const mod = getBlockMetaMod(id);
+        img = texture.rotate(Math.floor(meta / mod) * 90);
     }
     ctx.drawImage(img, pos.x - 0.5, pos.y - 0.5, BASE_BLOCK_SIZE + 1, BASE_BLOCK_SIZE + 1);
 }
-
-addEventListener("keydown", e => {
-    if (e.key === "p") animate();
-});
 
 export function animate() {
     AnimatorFrame = requestAnimationFrame(animate);
@@ -70,8 +68,8 @@ export function animate() {
     const fy = Math.floor(CServer.player.y);
 
     const rdHalf = Math.ceil(C_OPTIONS.renderDistance / 2);
-    for (let x = -rdHalf - 4; x < rdHalf + 4; x++) {
-        for (let y = -rdHalf - 4; y < rdHalf + 4; y++) {
+    for (let x = -rdHalf; x < rdHalf + 2; x++) {
+        for (let y = -rdHalf + 6; y < rdHalf - 1; y++) {
             const rx = fx + x;
             const ry = fy + y;
             const id = CServer.world.getBlock(rx, ry);
@@ -125,20 +123,19 @@ export function animate() {
 
     if (!isAnyUIOn()) {
         const place = CServer.world.canPlaceBlockAt(
-            CServer.player,
-            Mouse.rx, Mouse.ry,
-            CServer.getGamemode(), handItem
+            CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem
         );
         if (!place && (CServer.world.canBreakBlockAt(
-            CServer.player,
-            Mouse.rx, Mouse.ry,
-            CServer.getGamemode(), handItem
+            CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem
         ) || CServer.world.canInteractBlockAt(
-            CServer.player,
-            Mouse.rx, Mouse.ry,
-            CServer.getGamemode()
+            CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem
         ))) renderMouseBlockAround();
         if (place) {
+            let meta = handItemMeta;
+            if (Metadata.slab.includes(handItemId) || Metadata.stairs.includes(handItemId)) {
+                meta += getMouseRotation() * getBlockMetaMod(handItemId);
+            }
+
             ctx.save();
             // f(x: 0-500) = x/500
             // f(x: 500-1000) = 1-x/500
@@ -146,9 +143,9 @@ export function animate() {
             // f(500) = 0.5
             // f(1000) = 0
             // 0.5 - abs((500 - x)/1000)
-            const t = performance.now() % 1000;
-            ctx.globalAlpha = 0.5 - Math.abs((500 - t) / 1000);
-            renderBlockAt(Mouse.rx, Mouse.ry, handItemId, handItemMeta);
+            const t = performance.now() % 1200;
+            ctx.globalAlpha = 0.7 - Math.abs((600 - t) / 1200);
+            renderBlockAt(Mouse.rx, Mouse.ry, handItemId, meta);
             ctx.restore();
         }
     }
@@ -182,9 +179,16 @@ export function animate() {
     }
     playerListDiv.style.opacity = Keyboard["tab"] ? "1" : "0";
 
-
-    document.querySelector(".info").innerHTML = C_OPTIONS.isDebugMode ? `X: ${CServer.player.x}<br>
-Y: ${CServer.player.y}<br>
-FPS: ${_fps.length}<br>
-Chunk entities: ${(CServer.world.chunkEntities[CServer.player.x >> 4] ?? []).length}` : "";
+    if (C_OPTIONS.isDebugMode) {
+        infoDiv.classList.remove("gone");
+        const data = {
+            x: CServer.player.x,
+            y: CServer.player.y,
+            fps: _fps.length,
+            entities: (CServer.world.chunkEntities[CServer.player.x >> 4] ?? []).length
+        };
+        for (const inf of infos) {
+            inf.innerText = data[inf.getAttribute("data-info")];
+        }
+    } else infoDiv.classList.add("gone");
 }

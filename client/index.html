@@ -1,11 +1,17 @@
 <head>
+    <meta
+            http-equiv="Content-Security-Policy"
+            content="default-src 'self'; img-src data:; child-src 'none'; style-src 'self'; connect-src *" />
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Block Game</title>
     <link rel="stylesheet" href="./style/Fonts.css">
     <link rel="stylesheet" href="./style/Index.css">
 </head>
 <body>
 <div class="title">Block Game<br>
-    <span style="font-size: 30px">This game is not affiliated with Mojang. Buy the actual 3D version too.</span>
+    <span>This game is not affiliated with Mojang. Buy the actual 3D version too.</span>
 </div>
 <div class="container">
     <div class="btn" id="servers-btn">Multiplayer</div>
@@ -18,7 +24,7 @@
 <div class="reset-skin btn">Reset skin</div>
 <div class="bg gone" id="bg"></div>
 <div id="servers-menu" class="menu gone">
-    <div class="close" onclick="closeUI()">x</div>
+    <div class="close">x</div>
     <div class="servers-div">
         <div class="fl-left flex">
             <div class="search"><input spellcheck="false" placeholder="Search..." id="search"></div>
@@ -32,7 +38,7 @@
     <div class="servers"></div>
 </div>
 <div id="server-add-menu" class="menu gone">
-    <div class="close" onclick="closeUI()">x</div>
+    <div class="close">x</div>
     <div class="error" id="add-error"></div>
     <input spellcheck="false" placeholder="Server name..." maxlength="32" id="create-name">
     <input spellcheck="false" placeholder="Server IP..." id="create-ip">
@@ -43,7 +49,7 @@
     </div>
 </div>
 <div id="server-edit-menu" class="menu gone">
-    <div class="close" onclick="closeUI()">x</div>
+    <div class="close">x</div>
     <div class="error" id="edit-error"></div>
     <input spellcheck="false" placeholder="Server name..." maxlength="32" id="edit-name">
     <input spellcheck="false" placeholder="Server IP..." id="edit-ip">
@@ -54,15 +60,11 @@
     </div>
 </div>
 <div id="options-menu" class="menu gone">
-    <div class="close" onclick="closeUI()">x</div>
+    <div class="close">x</div>
 </div>
-<div id="message-menu" class="menu gone"></div>
+<div id="message-menu" class="menu gone">
+    <div class="text"></div>
+    <div class="close">x</div>
+</div>
 </body>
-<script>
-    addEventListener("keydown", e => e.key === "F5" && location.reload());
-</script>
-<script type="module">
-    import {initIndex} from "./main/Index.js";
-
-    initIndex();
-</script>
+<script type="module" src="./main/Index.js"></script>
