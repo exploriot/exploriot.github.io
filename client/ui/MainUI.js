@@ -128,7 +128,7 @@ export function renderHealthBar() {
     lastHealth = health;
     lastMaxHealth = maxHealth;
 
-    toolStackRender(health, maxHealth, healthDiv, t => `url("../assets/gui/heart/heart_${t}${Date.now() - heartsBlink < 250 ? "_blink" : ""}.png")`);
+    toolStackRender(health, maxHealth, healthDiv, t => `url("./assets/gui/heart/heart_${t}${Date.now() - heartsBlink < 250 ? "_blink" : ""}.png")`);
 }
 
 export function renderFoodBar() {
@@ -143,7 +143,7 @@ export function renderFoodBar() {
     lastFood = food;
     lastMaxFood = maxFood;
 
-    toolStackRender(food, maxFood, foodDiv, t => `url("../assets/gui/food/food_${t}.png")`);
+    toolStackRender(food, maxFood, foodDiv, t => `url("./assets/gui/food/food_${t}.png")`);
 }
 
 export function renderBreathBar() {
@@ -161,7 +161,7 @@ export function renderBreathBar() {
         return;
     }
 
-    toolStackRender(breath * 2, 20, breathDiv, t => `url("../assets/${t === "empty" ? "1px.png" : `gui/breath/breath_${t}.png`}")`);
+    toolStackRender(breath * 2, 20, breathDiv, t => `url("./assets/${t === "empty" ? "1px.png" : `gui/breath/breath_${t}.png`}")`);
 }
 
 export function renderArmorBar() {
@@ -183,7 +183,7 @@ export function renderArmorBar() {
         return;
     }
 
-    toolStackRender(armor, 20, armorDiv, t => `url("../assets/gui/armor/armor_${t}.png")`);
+    toolStackRender(armor, 20, armorDiv, t => `url("./assets/gui/armor/armor_${t}.png")`);
 }
 
 export function renderXPBar() {

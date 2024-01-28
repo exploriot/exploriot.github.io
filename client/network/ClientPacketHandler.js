@@ -292,7 +292,7 @@ export function C_handleUpdatePlayerListPacket(pk) {
         name.classList.add("name");
         connection.classList.add("connection");
         name.innerText = player.username;
-        connection.style.backgroundImage = `url("../assets/gui/connection/connection_${pingRate}.png")`;
+        connection.style.backgroundImage = `url("./assets/gui/connection/connection_${pingRate}.png")`;
         playerList.appendChild(p);
     }
 }
