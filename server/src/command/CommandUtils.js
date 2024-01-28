@@ -5,6 +5,8 @@ import {S_Player} from "../entity/Player.js";
 import {CommandLabels} from "./CommandManager.js";
 import {getItemIdByName} from "../../../client/common/metadata/Items.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
+import {GameRules} from "../../../client/common/metadata/GameRules.js";
+import {Ids} from "../../../client/common/metadata/Ids.js";
 
 export const Selectors = ["a", "p", "r", "s", "e", "c", "w"];
 
@@ -270,6 +272,8 @@ const GamemodeMap = {
     spectator: 3
 };
 
+const GamemodeNames = ["survival", "creative", "adventure", "spectator"];
+
 const Pos = {
     selector(ind, tokens, self) {
         const t = tokens[ind];
@@ -303,11 +307,11 @@ const Pos = {
         const t = tokens[ind];
         if (t.type === "number") {
             if (![0, 1, 2, 3].includes(t.value)) return "Invalid gamemode: " + t.value + ".";
-            return [ind + 1, t.value];
+            return [ind + 1, {id: t.value, name: GamemodeNames[t.value]}];
         }
         if (t.type !== "word" && t.type !== "string") return "Invalid gamemode.";
         if (!(t.value in GamemodeMap)) return "Invalid gamemode: " + t.value + ".";
-        return [ind + 1, GamemodeMap[t.value]];
+        return [ind + 1, {id: GamemodeMap[t.value], name: t.value}];
     },
     position(ind, tokens, self) {
         const pos = [];
@@ -360,6 +364,7 @@ const Pos = {
         let id = t.value;
         let meta = 0;
         if (typeof id === "string") id = getItemIdByName(id);
+        if (typeof id === "undefined" || !Object.values(Ids).includes(id)) return "Invalid item: " + t.value;
         if (n1 && n2 && n1.type === "symbol" && n1.value === ":" && n2.type === "number") {
             ind += 2;
             meta = n2.value;
@@ -424,6 +429,24 @@ const Pos = {
         } catch (e) {
             return e;
         }
+    },
+    boolean(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "word" && t.type !== "string") return "Invalid boolean.";
+        return [ind + 1, t.value === "true"];
+    },
+    gamerule(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type === "number") {
+            if (!Object.values(GameRules).includes(t.value)) return "Invalid gamerule: " + t.value + ".";
+            return [ind + 1, {
+                id: t.value,
+                name: Object.keys(GameRules).find(i => GameRules[i] === t.value).toLowerCase()
+            }];
+        }
+        if (t.type !== "word" && t.type !== "string") return "Invalid gamerule.";
+        if (!(t.value in GameRules)) return "Invalid gamerule: " + t.value + ".";
+        return [ind + 1, {id: GameRules[t.value], name: t.value}];
     }
 };
 

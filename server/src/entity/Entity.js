@@ -13,7 +13,19 @@ export class S_Entity extends Entity {
      */
     constructor(type, world, bb) {
         super(++_entityId, type, world, bb);
-    }
+    };
+
+    broadcastPacketToViewers(pk) {
+        for (const viewer of this.currentViewers) {
+            viewer.session.sendPacket(pk);
+        }
+    };
+
+    broadcastPacketsToViewers(packets) {
+        for (const viewer of this.currentViewers) {
+            viewer.sendPackets(packets);
+        }
+    };
 
     teleport(x, y) {
         this.x = x;
@@ -36,10 +48,7 @@ export class S_Entity extends Entity {
     };
 
     broadcastMovement() {
-        const pk = EntityMovementPacket(this.id, this.x, this.y);
-        for (const viewer of this.currentViewers) {
-            viewer.session.sendPacket(pk);
-        }
+        this.broadcastPacketToViewers(EntityMovementPacket(this.id, this.x, this.y));
     };
 
     broadcastDespawn() {

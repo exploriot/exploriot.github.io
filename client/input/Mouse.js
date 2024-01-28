@@ -10,6 +10,12 @@ export function recalculateMouse() {
     Mouse.ry = Math.round(Mouse.y);
 }
 
+export function getMouseRotation() {
+    const dx = Mouse.x - Mouse.rx;
+    const dy = Mouse.y - Mouse.ry;
+    return (dx > 0 ? (dy > 0 ? 3 : 0) : (dy > 0 ? 2 : 1));
+}
+
 export function initMouse() {
     addEventListener("mousedown", e => {
         switch (e.button) {

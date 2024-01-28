@@ -1,5 +1,5 @@
 import {PacketIds} from "../../../client/common/metadata/PacketIds.js";
 
-export function PlaySoundPacket(id, isAmbient) {
-    return {type: PacketIds.SERVER_PLAY_SOUND, id, isAmbient};
+export function PlaySoundPacket(file, x, y) {
+    return {type: PacketIds.SERVER_PLAY_SOUND, file, x, y};
 }

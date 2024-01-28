@@ -106,6 +106,10 @@ input::placeholder {
     text-align: center;
 }
 
+.title > span {
+    font-size: 30px;
+}
+
 .gone {
     opacity: 0;
     pointer-events: none

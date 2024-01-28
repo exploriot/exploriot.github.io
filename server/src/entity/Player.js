@@ -11,10 +11,13 @@ import {HandItemPacket} from "../packet/HandItemPacket.js";
 import {CommandSender} from "../command/CommandSender.js";
 import {extendClass} from "../Utils.js";
 import {writeFileSync} from "fs";
-import {S_Entity} from "./Entity.js";
+import {GameRules} from "../../../client/common/metadata/GameRules.js";
+import {S_Living} from "./Living.js";
+import {Item} from "../../../client/common/item/Item.js";
+import {Terminal} from "../terminal/Terminal.js";
 
 /*** @extends CommandSender */
-export class S_Player extends S_Entity {
+export class S_Player extends S_Living {
     attributes = {
         [AttributeIds.GAMEMODE]: 0,
         [AttributeIds.IS_FLYING]: false,
@@ -263,7 +266,7 @@ export class S_Player extends S_Entity {
         if (
             food > 17
             && health < maxHealth
-            && !this.world.gameRules.naturalRegeneration
+            && !this.world.getGameRule(GameRules.NATURAL_REGENERATION)
             && (this.naturalRegenTimer += dt) > (food >= maxFood ? 1 : 4)
         ) {
             this.naturalRegenTimer = 0;
@@ -290,29 +293,19 @@ export class S_Player extends S_Entity {
     };
 
     damage(hp) {
+        if (this.getGamemode() % 2 === 1) return;
         const newHealth = this.getHealth() - hp;
         this.setHealth(newHealth);
         if (newHealth <= 0) this.remove(true);
     };
 
     onFall(fallDistance) {
-        if (fallDistance < 3 || !this.world.gameRules.fallDamage) return;
+        if (fallDistance < 3.5 || !this.world.getGameRule(GameRules.FALL_DAMAGE)) return;
         this.damage(fallDistance - 3);
     };
 
     save() {
-        writeFileSync("./players/" + this.username + ".json", JSON.stringify({
-            x: this.x,
-            y: this.y,
-            vx: this.vx,
-            vy: this.vy,
-            attributes: this.attributes,
-            playerInventory: this.playerInventory.serialize(),
-            cursorInventory: this.cursorInventory.serialize(),
-            craftInventory: this.craftInventory.serialize(),
-            armorInventory: this.armorInventory.serialize(),
-            handIndex: this.handIndex
-        }));
+        writeFileSync("./players/" + this.username + ".json", JSON.stringify(this.serializeSave()));
     };
 
     holdOrDrop(item) {
@@ -339,6 +332,7 @@ export class S_Player extends S_Entity {
     };
 
     remove(kill = true) {
+        if (kill && this.getGamemode() % 2 === 1) return;
         const ext = this.externalInventory;
         if (ext && [ContainerIds.CRAFTING_TABLE].includes(ext.extra.containerId)) {
             for (let i = 0; i < ext.size - 1; i++) this.holdOrDrop(ext.contents[i]);
@@ -358,16 +352,60 @@ export class S_Player extends S_Entity {
             this.respawn();
             return;
         }
-        super.remove();
+        super.remove(kill);
+    };
+
+    static deserialize(ws, data) {
+        const world = Server.worlds.find(i => i.name === data.worldName);
+        const player = new S_Player(ws, world ?? Server.getDefaultWorld(), data.username, data.skinData);
+        if (world) {
+            player.x = data.x;
+            player.y = data.y;
+        } else {
+            Terminal.warn(player.username + "'s world couldn't be found. Using the default.");
+            const loc = world.getPlayerSpawnLocation(player.username);
+            player.x = loc.x;
+            player.y = loc.y;
+        }
+        player.vx = data.vx;
+        player.vy = data.vy;
+        Object.assign(player.attributes, data.attributes);
+        player.playerInventory.contents = data.playerInventory.map(Item.deserialize);
+        player.cursorInventory.contents = data.cursorInventory.map(Item.deserialize);
+        player.craftInventory.contents = data.craftInventory.map(Item.deserialize);
+        player.armorInventory.contents = data.armorInventory.map(Item.deserialize);
+        player.handIndex = data.handIndex;
+        player.fallY = data.fallY;
+        return player;
+    };
+
+    serializeSave() {
+        return {
+            x: this.x,
+            y: this.y,
+            vx: this.vx,
+            vy: this.vy,
+            username: this.username,
+            attributes: this.attributes,
+            playerInventory: this.playerInventory.serialize(),
+            cursorInventory: this.cursorInventory.serialize(),
+            craftInventory: this.craftInventory.serialize(),
+            armorInventory: this.armorInventory.serialize(),
+            handIndex: this.handIndex,
+            fallY: this.fallY,
+            worldName: this.world.name,
+        };
     };
 
     serialize() {
+        const item = this.getHandItem();
         return {
             id: this.id,
             type: this.type,
             username: this.username,
             skinData: this.skinData,
             rotation: this.rotation,
+            handItem: item ? item.serialize() : null,
             x: this.x,
             y: this.y
         };

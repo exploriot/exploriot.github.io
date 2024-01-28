@@ -1,13 +1,11 @@
 {
   "name": "game-server",
   "version": "1.0.0",
-  "description": "",
   "main": "src/Main.js",
   "type": "module",
   "scripts": {
     "start": "node src/Main.js"
   },
-  "keywords": [],
   "author": "OguzhanUmutlu",
   "license": "MIT",
   "dependencies": {

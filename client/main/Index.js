@@ -1,5 +1,6 @@
 import {Texture} from "../loader/Texture.js";
 import DefaultSkin from "./DefaultSkin.js";
+import {clearDiv} from "../Utils.js";
 
 const serversBtn = document.getElementById("servers-btn");
 const optionsBtn = document.getElementById("options-btn");
@@ -11,6 +12,7 @@ const serverAddMenu = document.getElementById("server-add-menu");
 const serverEditMenu = document.getElementById("server-edit-menu");
 const optionsMenu = document.getElementById("options-menu");
 const messageMenu = document.getElementById("message-menu");
+const messageMenuText = document.querySelector("#message-menu > .text");
 const uploadSkinBtn = document.querySelector(".upload-skin");
 const resetSkinBtn = document.querySelector(".reset-skin");
 const cancel0Btn = document.getElementById("add-server-cancel-btn");
@@ -38,7 +40,7 @@ function closeUI() {
     messageMenu.classList.add("gone");
     serverEditMenu.classList.add("gone");
     bg.classList.add("gone");
-    document.querySelector(".error").innerHTML = "";
+    clearDiv(document.querySelector(".error"));
 }
 
 function checkServerProps(name, ip, port) {
@@ -53,7 +55,7 @@ function checkServerProps(name, ip, port) {
 const servers = JSON.parse(localStorage.getItem("server-list") ?? "[]").sort((a, b) => b.joinedTimestamp - a.joinedTimestamp);
 
 function renderServers() {
-    serversD.innerHTML = "";
+    clearDiv(serversD);
     for (const server of servers.filter(i => !lastSearch || i.name.toLowerCase().split(" ").some(i => lastSearch.toLowerCase().split(" ").some(j => i.includes(j))))) {
         const div = document.createElement("div");
         div.classList.add("server");
@@ -89,8 +91,10 @@ function renderServers() {
         div.addEventListener("click", async e => {
             if (e.target !== div) return;
             serversMenu.classList.add("gone");
-            messageMenu.innerHTML = `<div class="text">Joining the server...</div>`;
+
+            messageMenuText.innerText = "Joining the server...";
             messageMenu.classList.remove("gone");
+
             bg.classList.remove("gone");
             let protocol = "ws";
             let response = await fetch("http://" + server.ip + (server.port !== 80 ? ":" + server.port : "")).then(r => r).catch(r => r);
@@ -98,13 +102,15 @@ function renderServers() {
                 response = await fetch("https://" + server.ip + (server.port !== 80 ? ":" + server.port : "")).then(r => r).catch(r => r);
                 protocol = "wss";
                 if (response instanceof Error) {
-                    messageMenu.innerHTML = `<div class="text">Couldn't connect to the server.</div><div class="close" onclick="closeUI()">x</div>`;
+                    messageMenuText.innerText = "Couldn't connect to the server...";
+                    messageMenu.classList.remove("gone");
                     return;
                 }
             }
             const text = await response.text().then(r => r).catch(r => r);
             if (text !== "block-game") {
-                messageMenu.innerHTML = `<div class="text">Invalid server.</div><div class="close" onclick="closeUI()">x</div>`;
+                messageMenuText.innerText = "Invalid server.";
+                messageMenu.classList.remove("gone");
                 return;
             }
             location.href = `./game.html?ip=${server.ip}&port=${server.port}&protocol=${protocol}`;
@@ -169,6 +175,8 @@ function animate() {
 
 export function initIndex() {
     usernameInp.value = lastUsername;
+
+    document.querySelectorAll(".close").forEach(i => i.addEventListener("click", closeUI));
 
     addEventListener("mousemove", e => {
         if (!bg.classList.contains("gone")) return;
@@ -303,3 +311,5 @@ export function initIndex() {
 
     animate();
 }
+
+if (["/", "/index.html", "/index"].includes(location.pathname)) initIndex();

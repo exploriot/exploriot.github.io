@@ -18,15 +18,13 @@ export function getItemName(id, meta) {
         if (!name) return "Unknown";
         return name.split("_").map(i => i[0] + i.slice(1).toLowerCase()).join(" ");
     }
-    if (typeof name === "object") name = name[meta % name.__MOD];
+    if (typeof name === "object") name = name[meta % name.length];
     return name;
 }
 
 export function getItemTexture(id, meta) {
-    let texture = ItemTextures[id];
-    if (typeof texture === "object") {
-        texture = texture[meta % texture.__MOD];
-    }
+    const texture = ItemTextures[id];
+    if (typeof texture === "object") return texture[meta % texture.length];
     return texture;
 }
 

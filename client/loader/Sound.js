@@ -1,6 +1,6 @@
 const SoundVolumes = {};
 
-class Sound {
+export class Sound {
     static ctx = new AudioContext;
     static EXTENSIONS = [
         "ogg", "mp3", "wav"

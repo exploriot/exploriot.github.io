@@ -15,19 +15,25 @@ import {
     openFurnaceUI
 } from "../ui/ContainerUI.js";
 import {C_TNTEntity} from "../entity/TNTEntity.js";
-import {colorizeTextHTML} from "../common/Utils.js";
-import {SoundIds} from "../common/metadata/Sounds.js";
 import {ClientSession} from "./ClientSession.js";
 import {dropHands} from "../ui/MainUI.js";
 import {C_XPOrbEntity} from "../entity/XPOrbEntity.js";
+import {AnimationIds} from "../common/metadata/AnimationIds.js";
+import {Sound} from "../loader/Sound.js";
+import {clearDiv, colorizeTextHTML} from "../Utils.js";
 
 const EntityCreator = {
-    [EntityIds.PLAYER]: data => new C_Player(
-        data.id,
-        CServer.world,
-        data.username,
-        data.skinData
-    ),
+    [EntityIds.PLAYER]: data => {
+        const player = new C_Player(
+            data.id,
+            CServer.world,
+            data.username,
+            data.skinData
+        );
+        player.handItem = Item.deserialize(data.handItem);
+        delete data.handItem;
+        return player;
+    },
     [EntityIds.FALLING_BLOCK]: data => new C_FallingBlockEntity(
         data.id,
         CServer.world,
@@ -141,7 +147,6 @@ export function C_handleEntityRotationPacket(pk) {
     const entity = CServer.world.entityMap[pk.id];
     if (!entity) return;
     entity.rotation = pk.rotation;
-    entity.handleMovement();
 }
 
 export function C_handleEntityRemovePacket(pk) {
@@ -201,7 +206,8 @@ export function C_handleSendMessagePacket(pk) {
     const msg = document.createElement("div");
     msg.classList.add("msg");
 
-    msg.innerHTML = colorizeTextHTML(pk.message);
+    clearDiv(msg);
+    msg.appendChild(colorizeTextHTML(pk.message));
     messages.appendChild(msg);
 }
 
@@ -255,12 +261,15 @@ export function C_handleCloseContainerPacket() {
 }
 
 export function C_handlePlaySoundPacket(pk) {
-    if (pk.isAmbient) Sound.playAmbient(SoundIds[pk.id]);
-    else Sound.play(SoundIds[pk.id]);
+    Sound.play("assets/sounds/" + pk.file);
 }
 
-export function C_handleStopSoundPacket(pk) {
-    Sound.stopAmbient(SoundIds[pk.id]);
+export function C_handlePlayAmbientPacket(pk) {
+    Sound.playAmbient("assets/sounds/" + pk.file);
+}
+
+export function C_handleStopAmbientPacket(pk) {
+    Sound.stopAmbient("assets/sounds/" + pk.file);
 }
 
 export function C_handleContainerStatePacket(pk) {
@@ -269,13 +278,33 @@ export function C_handleContainerStatePacket(pk) {
 }
 
 export function C_handleUpdatePlayerListPacket(pk) {
-    const div = document.querySelector(".player-list");
+    const playerList = document.querySelector(".player-list");
     let pingRate = 5;
     if (pk.ping < 3000) pingRate = 1;
     if (pk.ping > 1000) pingRate = 2;
     if (pk.ping > 500) pingRate = 3;
     if (pk.ping > 250) pingRate = 4;
-    div.innerHTML = pk.list.map(i => `<div class="player"><div class="name">${i.username}</div><div class="connection" style="background-image: url('../assets/gui/connection/connection_${pingRate}.png')"></div></div>`).join("");
+    for (const player of pk.list) {
+        const p = document.createElement("div");
+        const name = document.createElement("div");
+        const connection = document.createElement("div");
+        p.classList.add("player");
+        name.classList.add("name");
+        connection.classList.add("connection");
+        name.innerText = player.username;
+        connection.style.backgroundImage = `url("../assets/gui/connection/connection_${pingRate}.png")`;
+        playerList.appendChild(p);
+    }
+}
+
+export function C_handleEntityAnimationPacket(pk) {
+    const entity = CServer.world.entityMap[pk.entityId];
+    if (!entity) return;
+    switch (pk.animationId) {
+        case AnimationIds.HAND_SWING:
+            entity.swingRemaining = 0.3;
+            break;
+    }
 }
 
 const PacketMap = {
@@ -300,9 +329,11 @@ const PacketMap = {
     [PacketIds.SERVER_OPEN_CONTAINER]: C_handleOpenContainerPacket,
     [PacketIds.SERVER_CLOSE_CONTAINER]: C_handleCloseContainerPacket,
     [PacketIds.SERVER_PLAY_SOUND]: C_handlePlaySoundPacket,
-    [PacketIds.SERVER_STOP_SOUND]: C_handleStopSoundPacket,
+    [PacketIds.SERVER_PLAY_AMBIENT]: C_handlePlayAmbientPacket,
+    [PacketIds.SERVER_STOP_AMBIENT]: C_handleStopAmbientPacket,
     [PacketIds.SERVER_CONTAINER_STATE]: C_handleContainerStatePacket,
-    [PacketIds.SERVER_UPDATE_PLAYER_LIST]: C_handleUpdatePlayerListPacket
+    [PacketIds.SERVER_UPDATE_PLAYER_LIST]: C_handleUpdatePlayerListPacket,
+    [PacketIds.SERVER_ENTITY_ANIMATION]: C_handleEntityAnimationPacket
 };
 
 export function C_handlePacket(pk) {

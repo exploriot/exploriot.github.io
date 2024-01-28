@@ -64,19 +64,19 @@ export function resolvePath(path) {
     return p.join("/");
 }
 
-const ColorsHex = {
+export const ColorsHex = {
     0: "#000", 1: "#00a", 2: "#0a0", 3: "#0aa", 4: "#a00", 5: "#a0a", 6: "#fa0", 7: "#aaa", 8: "#555", 9: "#55f",
     a: "#5f5", b: "#5ff", c: "#f55", d: "#f5f", e: "#ff5", f: "#fff"
 };
-const ColorsRGB = {
+export const ColorsRGB = {
     0: [0x00, 0x00, 0x00], 1: [0x00, 0x00, 0xaa], 2: [0x00, 0xaa, 0x00], 3: [0x00, 0xaa, 0xaa], 4: [0xaa, 0x00, 0x00],
     5: [0xaa, 0x00, 0xaa], 6: [0xff, 0xaa, 0x00], 7: [0xaa, 0xaa, 0xaa], 8: [0x55, 0x55, 0x55], 9: [0x55, 0x55, 0xff],
     a: [0x55, 0xff, 0x55], b: [0x55, 0xff, 0xff], c: [0xff, 0x55, 0x55], d: [0xff, 0x55, 0xff], e: [0xff, 0xff, 0x55],
     f: [0xff, 0xff, 0xff]
 };
 
-const EMOTE_REGEX = /(:[a-z_]+:)/;
-const EMOTE_LIST = ["skull", "eyes", "slight_smile", "nerd"];
+export const EMOTE_REGEX = /(:[a-z_]+:)/;
+export const EMOTE_LIST = ["skull", "eyes", "slight_smile", "nerd"];
 
 export function splitColors(text) {
     return text.split(/(§[a-f\dsuil])/);
@@ -84,44 +84,6 @@ export function splitColors(text) {
 
 export function clearColors(text) {
     return text.replaceAll(/§[a-f\dsuil]/g, "");
-}
-
-export function colorizeTextHTML(text) {
-    const spl = splitColors(text);
-    let style = {color: "", italic: false, bold: false, underline: false, strikethrough: false};
-    let result = "";
-    for (let i = 0; i < spl.length; i++) {
-        const sp = spl[i];
-        if (sp[0] === "§") {
-            if (sp[1] in ColorsHex) {
-                style.color = ColorsHex[sp[1]];
-                continue;
-            } else if (sp[1] === "s") {
-                style.strikethrough = true;
-                continue;
-            } else if (sp[1] === "u") {
-                style.underline = true;
-                continue;
-            } else if (sp[1] === "i") {
-                style.italic = true;
-                continue;
-            } else if (sp[1] === "l") {
-                style.bold = true;
-                continue;
-            }
-        }
-        const emo = sp.split(EMOTE_REGEX);
-        const data = emo.map(i => {
-            if (EMOTE_REGEX.test(i) && EMOTE_LIST.includes(i.slice(1, -1))) return `<img src="assets/emotes/${i.slice(1, -1)}.png" width="16">`;
-            return document.createTextNode(i).data;
-        }).join("");
-        if (!style.color) {
-            result += data;
-            continue;
-        }
-        result += `<span style="color:${style.color}">${data}</span>`;
-    }
-    return result;
 }
 
 export function colorizeTextTerminal(text) {

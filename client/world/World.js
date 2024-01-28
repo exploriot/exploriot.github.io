@@ -2,7 +2,7 @@ import {World} from "../common/world/World.js";
 import {isAnyUIOn} from "../ui/MainUI.js";
 import {Keyboard} from "../input/Keyboard.js";
 import {PLAYER_JUMP_ACCELERATION, PLAYER_SPEED} from "../common/metadata/Entities.js";
-import {Mouse} from "../input/Mouse.js";
+import {getMouseRotation, Mouse} from "../input/Mouse.js";
 import {resetBlockBreaking} from "../Utils.js";
 import {Ids} from "../common/metadata/Ids.js";
 import {C_OPTIONS, CServer} from "../main/Game.js";
@@ -118,15 +118,15 @@ export class C_World extends World {
             && Mouse.rightDown
         ) {
             if (Date.now() - lastPlace > (CServer.getGamemode() % 2 === 0 ? 300 : 0)) {
-                if (this.canPlaceBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), CServer.getHandItem())) {
+                if (this.canPlaceBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem)) {
                     lastPlace = Date.now();
-                    const handItem = CServer.getHandItem();
                     if (handItem && isBlockItem(handItem.id)) {
+                        CServer.player.swingRemaining = 0.3;
                         this.setBlock(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
-                        ClientSession.sendBlockPlacePacket(Mouse.rx, Mouse.ry, handItem.id, handItem.meta);
+                        ClientSession.sendBlockPlacePacket(Mouse.rx, Mouse.ry, getMouseRotation());
                     }
                 } else if (
-                    this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode())
+                    this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem)
                     && Date.now() - lastPlace > 300
                 ) {
                     lastPlace = Date.now();

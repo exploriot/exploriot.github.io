@@ -77,6 +77,8 @@ export class World {
 
     setBlock(worldX, worldY, id, meta) {
         if (worldY < 0 || worldY >= MAX_WORLD_HEIGHT) return;
+        worldX = Math.round(worldX);
+        worldY = Math.round(worldY);
         const chunk = this.getChunk(worldX >> 4);
         let subChunk = chunk[worldY >> 4];
         if (!subChunk) subChunk = this.loadSubChunk(worldX >> 4, worldY >> 4);
@@ -87,6 +89,8 @@ export class World {
 
     getBlock(worldX, worldY) {
         if (worldY < 0 || worldY >= MAX_WORLD_HEIGHT) return new Int8Array([0, 0]);
+        worldX = Math.round(worldX);
+        worldY = Math.round(worldY);
         const chunk = this.getChunk(worldX >> 4);
         let subChunk = chunk[worldY >> 4];
         if (!subChunk) subChunk = this.loadSubChunk(worldX >> 4, worldY >> 4);
@@ -134,12 +138,15 @@ export class World {
         return true;
     };
 
-    canInteractBlockAt(player, x, y, mode = player.getGamemode()) {
-        return mode !== 3
-            && this.isInWorld(x, y)
-            && player.canReachBlock(x, y)
-            && player.world.getBlock(x, y)[0] !== Ids.AIR
-            && !this.isBlockCovered(x, y);
+    canInteractBlockAt(player, x, y, mode = player.getGamemode(), item = player.getHandItem()) {
+        if (
+            mode === 3
+            || !this.isInWorld(x, y)
+            || !player.canReachBlock(x, y)
+            || this.isBlockCovered(x, y)
+        ) return false;
+        const id = player.world.getBlock(x, y)[0];
+        return Metadata.interactable.includes(id) && (id !== Ids.TNT || (item && item.id === Ids.FLINT_AND_STEEL));
     };
 
     canPlaceBlockAt(player, x, y, mode = player.getGamemode(), item = player.getHandItem()) {
