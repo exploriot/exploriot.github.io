@@ -38,7 +38,7 @@ export const ClientSession = {
     worker: null,
 
     __init__() {
-        this.worker = new Worker("../SocketWorker.js");
+        this.worker = new Worker("./SocketWorker.js");
 
         this.worker.postMessage(JSON.stringify({
             url: protocol + "://" + ip + (port === "80" ? "" : ":" + port),
