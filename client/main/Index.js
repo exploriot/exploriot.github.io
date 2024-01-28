@@ -17,6 +17,7 @@ const uploadSkinBtn = document.querySelector(".upload-skin");
 const resetSkinBtn = document.querySelector(".reset-skin");
 const cancel0Btn = document.getElementById("add-server-cancel-btn");
 const cancel1Btn = document.getElementById("edit-server-cancel-btn");
+const usernameView = document.querySelector(".username-view");
 const bg = document.getElementById("bg");
 const searchInp = document.getElementById("search");
 const usernameInp = document.getElementById("username");
@@ -175,6 +176,7 @@ function animate() {
 
 export function initIndex() {
     usernameInp.value = lastUsername;
+    usernameView.innerText = lastUsername;
 
     document.querySelectorAll(".close").forEach(i => i.addEventListener("click", closeUI));
 
@@ -301,6 +303,7 @@ export function initIndex() {
         }
         if (usernameInp.value !== lastUsername) {
             lastUsername = usernameInp.value;
+            usernameView.innerText = lastUsername;
             localStorage.setItem("__block__game__username__", lastUsername);
         }
     });
