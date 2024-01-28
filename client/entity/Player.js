@@ -81,7 +81,7 @@ export class C_Player extends C_Entity {
             this.renderHeadRotation = this.rotation;
         }
         const pos = getCanvasPosition(this.renderX, this.renderY);
-        ctx.font = "16px monospace";
+        ctx.font = "16px Minecraft";
         ctx.fillStyle = "white";
         ctx.fillText(this.username, pos.x, pos.y - (this.baseBB.y2 + 0.125) * BASE_BLOCK_SIZE - 10);
         const skin = Texture.get(this.skinData).skin();
