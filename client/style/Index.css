@@ -238,6 +238,15 @@ input::placeholder {
     height: 100%;
 }
 
+.username-view {
+    position: absolute;
+    right: 20%;
+    width: 100px;
+    text-align: center;
+    bottom: calc(15% + 340px);
+    font-size: 20px;
+}
+
 .upload-skin {
     position: absolute;
     right: calc(20% - 15px);
