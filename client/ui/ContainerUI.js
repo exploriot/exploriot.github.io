@@ -20,7 +20,7 @@ const uiView = [];
 let lastHandIndex = null;
 let downMain;
 
-function initContainers() {
+export function initContainers() {
     for (const mainDiv of mainDivs) {
         const isDown = mainDiv.getAttribute("data-inv-down") === "true";
         const classes = isDown ? ["item", "hotbar-item"] : ["item"];
@@ -197,8 +197,6 @@ function initContainers() {
         uiView.push(h);
     }
 }
-
-setTimeout(initContainers);
 
 function onAnyClick(ev) {
     if (isEscMenuOn() || !isAnyContainerOn()) return;

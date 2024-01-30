@@ -4,15 +4,29 @@ import {Item} from "../../../client/common/item/Item.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
 import {S_Living} from "./Living.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
+import {Int8Tag} from "../../../client/common/compound/int/Int8Tag.js";
 
+/**
+ * @property {number} fallY
+ * @property {number} blockId
+ * @property {number} blockMeta
+ */
 export class S_FallingBlockEntity extends S_Entity {
-    fallY = 0;
+    static TYPE = EntityIds.FALLING_BLOCK;
+    static BOUNDING_BOX = FALLING_BLOCK_BB;
 
-    constructor(world, blockId, blockMeta) {
-        super(EntityIds.FALLING_BLOCK, world, FALLING_BLOCK_BB);
-        this.blockId = blockId;
-        this.blockMeta = blockMeta;
-    };
+    static NBT_PRIVATE_STRUCTURE = new ObjectTag({
+        fallY: new Float32Tag(0),
+        blockId: new Int8Tag(0),
+        blockMeta: new Int8Tag(0)
+    }).combine(S_Entity.NBT_PRIVATE_STRUCTURE);
+
+    static NBT_PUBLIC_STRUCTURE = new ObjectTag({
+        blockId: new Int8Tag(0),
+        blockMeta: new Int8Tag(0)
+    }).combine(S_Entity.NBT_PUBLIC_STRUCTURE);
 
     update(dt) {
         if (this.fallY === 0) this.fallY = this.y;
@@ -41,29 +55,5 @@ export class S_FallingBlockEntity extends S_Entity {
             return false;
         }
         return super.update(dt);
-    };
-
-    serialize() {
-        return {
-            id: this.id,
-            type: this.type,
-            x: this.x,
-            y: this.y,
-            vx: this.vx,
-            vy: this.vy,
-            fallY: this.fallY,
-            blockId: this.blockId,
-            blockMeta: this.blockMeta
-        };
-    };
-
-    static deserialize(world, data) {
-        const entity = new S_FallingBlockEntity(world, data.blockId, data.blockMeta);
-        entity.x = data.x;
-        entity.y = data.y;
-        entity.vx = data.vx;
-        entity.vy = data.vy;
-        entity.fallY = data.fallY;
-        return entity;
     };
 }

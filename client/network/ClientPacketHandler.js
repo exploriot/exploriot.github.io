@@ -59,6 +59,10 @@ function packetToEntity(data) {
     const entity = CServer.world.entityMap[data.id] ?? EntityCreator[data.type](data);
     CServer.world.entityMap[entity.id] = entity;
     Object.assign(entity, data);
+    if (entity instanceof C_Player) {
+        entity.renderX = entity.x;
+        entity.renderY = entity.y;
+    }
     entity.handleMovement();
 }
 
@@ -113,6 +117,7 @@ export function C_handleWelcomePacket(pk) {
     CServer.chunkDistance = pk.chunkDistance;
     CServer.isWelcome = true;
     CServer.player.handleMovement();
+    CServer.dummyPlayer.id = pk.entityId;
 }
 
 export function C_handleSubChunkPacket(pk) {
@@ -261,15 +266,18 @@ export function C_handleCloseContainerPacket() {
 }
 
 export function C_handlePlaySoundPacket(pk) {
-    Sound.play("assets/sounds/" + pk.file);
+    const dist = CServer.player.distance(pk.x, pk.y);
+    if (dist > 50) return;
+    const volume = pk.volume * Math.min(1, 1 / dist);
+    Sound.play(pk.file, volume);
 }
 
 export function C_handlePlayAmbientPacket(pk) {
-    Sound.playAmbient("assets/sounds/" + pk.file);
+    Sound.playAmbient(pk.file, pk.volume);
 }
 
 export function C_handleStopAmbientPacket(pk) {
-    Sound.stopAmbient("assets/sounds/" + pk.file);
+    Sound.stopAmbient(pk.file);
 }
 
 export function C_handleContainerStatePacket(pk) {
@@ -303,6 +311,10 @@ export function C_handleEntityAnimationPacket(pk) {
     switch (pk.animationId) {
         case AnimationIds.HAND_SWING:
             entity.swingRemaining = 0.3;
+            break;
+        case AnimationIds.ITEM_PICKUP:
+            entity.pickedUp = true;
+            entity.pickedUpPlayer = CServer.world.entityMap[pk.playerId];
             break;
     }
 }

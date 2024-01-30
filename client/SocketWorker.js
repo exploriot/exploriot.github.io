@@ -1,6 +1,8 @@
 onmessage = ({data: init}) => {
     init = JSON.parse(init);
-    const socket = new WebSocket(init.url);
+    let hasTriedSecure = false;
+    let connected = false;
+    let socket = new WebSocket("ws" + init.url);
     socket.addEventListener("message", e => {
         const pk = JSON.parse(e.data);
         if (pk.type === init.SERVER_PING) {
@@ -9,8 +11,19 @@ onmessage = ({data: init}) => {
         }
         postMessage("0" + e.data);
     });
-    socket.addEventListener("open", () => postMessage("1"));
-    socket.addEventListener("close", () => postMessage("2"));
+    socket.addEventListener("error", () => {
+        if (!connected || !hasTriedSecure) {
+            socket = new WebSocket("wss" + init.url);
+        }
+    });
+    socket.addEventListener("open", () => {
+        connected = true;
+        postMessage("1");
+    });
+    socket.addEventListener("close", () => {
+        connected = false;
+        postMessage("2");
+    });
     onmessage = ({data}) => {
         if (data === "!") return socket.close();
         socket.send(data);

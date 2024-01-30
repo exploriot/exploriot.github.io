@@ -12,7 +12,7 @@ import {initItems} from "../common/metadata/Items.js";
 import {clearDiv, colorizeTextHTML, initTextures, onResize} from "../Utils.js";
 import {initMainUI} from "../ui/MainUI.js";
 import {ClientSession} from "../network/ClientSession.js";
-import {initContainerUI} from "../ui/ContainerUI.js";
+import {initContainers, initContainerUI} from "../ui/ContainerUI.js";
 import {initMouse} from "../input/Mouse.js";
 import {initKeyboard} from "../input/Keyboard.js";
 import DefaultSkin from "./DefaultSkin.js";
@@ -30,7 +30,7 @@ export function initGame() {
         username: localStorage.getItem("__block__game__username__") || "Steve",
         skinData: localStorage.getItem("__block__game__skin__") || DefaultSkin,
         renderDistance: 20,
-        showCoveredBlocks: true,
+        showCoveredBlocks: false,
         showBoundingBoxes: false,
         showHitBoxes: false,
         isDebugMode: false
@@ -54,6 +54,7 @@ export function initGame() {
         containerState: null,
         handIndex: 0,
         player: null,
+        dummyPlayer: null,
         world: null,
         attributes: {},
         getHandItem() {
@@ -104,11 +105,12 @@ export function initGame() {
 
     CServer.world = new C_World(0);
     CServer.player = new C_Player(null, CServer.world, CServer.username, CServer.skinData);
-    CServer.world.entityMap[CServer.player.x >> 4] = CServer.player;
+    CServer.dummyPlayer = new C_Player(null, CServer.world, CServer.username, CServer.skinData);
 
     animate();
     CServer.world.update();
     ClientSession.__init__();
+    initContainers();
     initMainUI();
     initContainerUI();
     initMouse();

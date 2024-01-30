@@ -44,8 +44,8 @@ export function initTextures() {
     }
 }
 
-export function colorizeTextHTML(text) {
-    const spl = splitColors(text);
+export function colorizeTextHTML(text) { // []
+    const spl = splitColors(text); // ["Hello, ", "§c", "world"]
     let style = {color: "", italic: false, bold: false, underline: false, strikethrough: false};
     const result = document.createElement("div");
     for (let i = 0; i < spl.length; i++) {

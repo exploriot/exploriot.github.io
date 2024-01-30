@@ -32,24 +32,24 @@ function _pad(s) {
 }
 
 export const Terminal = {
-    send(text, prefix) {
-        if (text instanceof Error) text = text.stack;
+    send(text, prefix, fn = "log") {
+        if (text instanceof Error) text = text.stack.replaceAll("", "");
         if (typeof text !== "string") text = text.toString();
         const d = new Date;
-        console.log(colorizeTextTerminal(text.split("\n").map(
+        for (const line of text.split("\n").map(
             i => `§b[${_pad(d.getHours())}:${_pad(d.getMinutes())}:${_pad(d.getSeconds())}]§f ${prefix}${i}`
-        ).join("\n")));
+        )) console[fn](colorizeTextTerminal(line));
     },
     debug(text) {
-        this.send(text, "§9[DEBUG] §7");
+        this.send(text, "§9[DEBUG] §7", "debug");
     },
     info(text) {
-        this.send(text, "§7[INFO] §f");
+        this.send(text, "§7[INFO] §f", "info");
     },
     error(text) {
-        this.send(text, "§c[ERROR] §c");
+        this.send(text, "§c[ERROR] §c", "error");
     },
     warn(text) {
-        this.send(text, "§6[WARN] §e");
+        this.send(text, "§6[WARN] §e", "warn");
     }
 };

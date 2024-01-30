@@ -1,12 +1,13 @@
 // @a[a=10, b="test", c={a:10}]
 
-import {EntityIds} from "../../../client/common/metadata/Entities.js";
+import {EntityIds, getEntityByName, getEntityName} from "../../../client/common/metadata/Entities.js";
 import {S_Player} from "../entity/Player.js";
 import {CommandLabels} from "./CommandManager.js";
 import {getItemIdByName} from "../../../client/common/metadata/Items.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
 import {GameRules} from "../../../client/common/metadata/GameRules.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
+import {randArr} from "../../../client/common/Utils.js";
 
 export const Selectors = ["a", "p", "r", "s", "e", "c", "w"];
 
@@ -227,38 +228,42 @@ function applySelectorFilters(entities, sel) {
     return entities;
 }
 
-function computeSelectorType(self, selT) {
-    let players;
-    switch (selT) {
-        case "a":
-            return Array.from(Server.getPlayers());
-        case "p":
-            if (self instanceof S_Player) return [self];
-            players = Array.from(Server.getPlayers());
-            if (players.length === 0 || self === _ConsoleCommandSender) return [];
-            let closest = [players[0], players[0].distance(self.x, self.y)];
-            for (let i = 1; i < players.length; i++) {
-                const p = players[i];
-                const dist = p.distance(self.x, self.y);
-                if (dist < closest[1]) closest = [p, dist];
-            }
-            return [closest[0]];
-        case "r":
-            players = Server.getPlayers();
-            return [players[Math.floor(Math.random() * players.size)]];
-        case "s":
-            return [self];
-        case "e":
-            return Server.getWorlds().map(i => Object.values(i.entityMap)).flat(1);
-        case "c":
-            return [_ConsoleCommandSender];
-        case "w":
-            return [_ConsoleCommandSender, ...Array.from(Server.getPlayers())];
+const SelectorComputer = {
+    a() {
+        return Array.from(Server.getPlayers());
+    },
+    p(self) {
+        if (self instanceof S_Player) return [self];
+        const players = Array.from(Server.getPlayers());
+        if (players.length === 0 || self === _ConsoleCommandSender) return [];
+        let closest = [players[0], players[0].distance(self.x, self.y)];
+        for (let i = 1; i < players.length; i++) {
+            const p = players[i];
+            const dist = p.distance(self.x, self.y);
+            if (dist < closest[1]) closest = [p, dist];
+        }
+        return [closest[0]];
+    },
+    r() {
+        const players = Array.from(Server.getPlayers());
+        return [randArr(players)];
+    },
+    s(self) {
+        return [self];
+    },
+    e() {
+        return Server.getWorlds().map(i => Object.values(i.entityMap)).flat(1);
+    },
+    c() {
+        return [_ConsoleCommandSender];
+    },
+    w() {
+        return [_ConsoleCommandSender, ...Array.from(Server.getPlayers())];
     }
-}
+};
 
 function computeSelector(self, sel, selT) {
-    return applySelectorFilters(computeSelectorType(self, selT), sel);
+    return applySelectorFilters(SelectorComputer[selT](self), sel);
 }
 
 function testSelector(self, entity, sel, selT) {
@@ -386,6 +391,14 @@ const Pos = {
         }
         return [ind + 1, {id, meta}];
     },
+    entity_type(ind, tokens) {
+        const t = tokens[ind];
+        if (t.type !== "word" && t.type !== "string" && t.type !== "number") return "Invalid entity.";
+        let id = t.value;
+        if (typeof id === "string") id = getEntityByName(id);
+        if (typeof id === "undefined" || !Object.values(EntityIds).includes(id)) return "Invalid entity: " + t.value;
+        return [ind + 1, {id, name: getEntityName(id)}];
+    },
     world(ind, tokens) {
         const t = tokens[ind];
         if (t.type !== "word" && t.type !== "string") return "Invalid world.";
@@ -425,9 +438,9 @@ const Pos = {
         const t = tokens[ind];
         if (t.type !== "parent" || t.value[0] !== "{") return "Invalid JSON.";
         try {
-            return [ind + 1, t.value];
+            return [ind + 1, parseObjectTokens(t.children)];
         } catch (e) {
-            return e;
+            return "JSONError: " + e.message;
         }
     },
     boolean(ind, tokens) {
@@ -477,6 +490,8 @@ export function testArguments(self, sender, text, all) {
                     fail = true;
                     break;
                 }
+                const fn = Pos[p];
+                if (!fn) throw new Error("Invalid command argument: " + p);
                 const r = Pos[p](tokInd, tokens, self, sender, text);
                 if (Array.isArray(r)) {
                     tokInd = r[0];

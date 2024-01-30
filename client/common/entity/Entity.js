@@ -20,8 +20,8 @@ export class Entity {
         this.type = type;
         this.world = world;
         this.baseBB = bb;
-        this.bb = bb.clone();
-        this.downBB = bb.clone();
+        this.bb = bb?.clone();
+        this.downBB = bb?.clone();
     };
 
     getWorld() {
@@ -66,13 +66,15 @@ export class Entity {
         let moved = false;
         if (Math.abs(dx) > 0.0000001) {
             this.x += dx;
+            const onGround = this.isOnGround();
             this.recalculateBoundingBox();
             const b = this.world.getCollidingBlock(this.bb);
             if (!already && b) {
                 const maxY = b.collisions.sort((a, b) => b.y2 - a.y2)[0].y2 + b.y;
                 const dy = maxY - this.bb.y1;
                 if (
-                    b.collisions.length === 1
+                    onGround
+                    && b.collisions.length === 1
                     && (SLAB_BB.includes(b.bb) || STAIRS_BB.includes(b.bb))
                     && dy < 0.5
                 ) {

@@ -13,7 +13,7 @@ export class GiveCommand extends AdvancedCommand {
     };
 
     executor = {
-        "<player: selector_p> <item: item> <count?: uint> <nbt?: json>": (sender, [players, baseItem, _count, _nbt]) => {
+        "<player: selector_p> <item: item> <count?: uint> <nbt?: json>"(sender, [players, baseItem, _count, _nbt]) {
             const count = _count ?? 1;
             const nbt = _nbt ?? {};
 

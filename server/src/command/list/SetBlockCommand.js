@@ -12,11 +12,11 @@ export class SetBlockCommand extends AdvancedCommand {
     };
 
     executor = {
-        "@p <position: position> <block: block>": (sender, [position, block]) => {
+        "@p <position: position> <block: block>"(sender, [position, block])  {
             sender.world.setBlock(position.x, position.y, block.id, block.meta);
             sender.sendMessage(`The block at (${position.x}, ${position.y}) was replaced with ${getItemName(block.id, block.meta)}.`);
         },
-        "<world: world> <position: position> <block: block>": (sender, [world, position, block]) => {
+        "<world: world> <position: position> <block: block>" (sender, [world, position, block])  {
             world.setBlock(position.x, position.y, block.id, block.meta);
             sender.sendMessage(`The block at (${position.x}, ${position.y}) in the world ${world.name} was replaced with ${getItemName(block.id, block.meta)}.`);
         }

@@ -26,10 +26,7 @@ import {clearDiv, colorizeTextHTML} from "../Utils.js";
 const connectionDiv = document.querySelector(".connection-menu");
 const connectionText = document.querySelector(".connection-menu > .container > .text");
 const rejoinBtn = document.querySelector("#rejoin-btn");
-const query = new URLSearchParams(location.search);
-const ip = query.get("ip");
-const port = query.get("port");
-const protocol = query.get("protocol");
+const pageHash = location.hash.slice(1);
 let connected = false;
 
 export const ClientSession = {
@@ -41,7 +38,7 @@ export const ClientSession = {
         this.worker = new Worker("./SocketWorker.js");
 
         this.worker.postMessage(JSON.stringify({
-            url: protocol + "://" + ip + (port === "80" ? "" : ":" + port),
+            url: "://" + pageHash,
             CLIENT_PING: PacketIds.CLIENT_PING,
             SERVER_PING: PacketIds.SERVER_PING
         }));

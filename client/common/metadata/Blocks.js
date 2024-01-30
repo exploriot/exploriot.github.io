@@ -3,6 +3,7 @@ import {Metadata, TOOL_LEVEL, TOOL_MULTIPLIERS, TOOL_TYPES} from "./Metadata.js"
 import {ItemTextures} from "./Items.js";
 import {Item, ItemDescriptor as ID} from "../item/Item.js";
 import {BoundingBox} from "../entity/BoundingBox.js";
+import {randInt} from "../Utils.js";
 
 export const BlockTextures = {};
 
@@ -35,7 +36,7 @@ export const STAIRS_BB = [
 
 export function getBlockTexture(id, meta) {
     const texture = BlockTextures[id];
-    if (typeof texture === "object") return texture[meta % texture.length];
+    if (Array.isArray(texture)) return texture[meta % texture.length];
     return texture;
 }
 
@@ -55,7 +56,7 @@ export function getBlockDrops(id, meta, handItem) {
             meta % getBlockMetaMod(id)
         )];
     }
-    if (!Array.isArray(drops)) drops = drops[meta % drops.length];
+    if (Array.isArray(drops[0])) drops = drops[meta % drops.length];
     return drops.map(i => i.evaluate()).filter(Boolean);
 }
 
@@ -91,30 +92,44 @@ export function getBlockHardness(id, itemId, efficiencyLevel, hasteLevel) {
     return base / multiplier * 1.3;
 }
 
+export function getBlockDigSound(id) {
+    const soundType = Metadata.dig[id];
+    if (!soundType) return null;
+    const num = randInt(1, soundType[1]);
+    return "./assets/sounds/dig/" + soundType[0] + num + ".ogg";
+}
+
+export function getBlockStepSound(id) {
+    const soundType = Metadata.step[id];
+    if (!soundType) return null;
+    const num = randInt(1, soundType[1]);
+    return "./assets/sounds/dig/" + soundType[0] + num + ".ogg";
+}
+
 export const STEPS = {
-    CLOTH: "cloth",
-    CORAL: "coral",
-    GRASS: "grass",
-    GRAVEL: "gravel",
-    LADDER: "ladder",
-    SAND: "sand",
-    SCAFFOLD: "scaffold",
-    SNOW: "snow",
-    STONE: "stone",
-    WET_GRASS: "wet_grass",
-    WOOD: "wood"
+    CLOTH: ["cloth", 4],
+    CORAL: ["coral", 6],
+    GRASS: ["grass", 6],
+    GRAVEL: ["gravel", 4],
+    LADDER: ["ladder", 5],
+    SAND: ["sand", 5],
+    SCAFFOLD: ["scaffold", 7],
+    SNOW: ["snow", 4],
+    STONE: ["stone", 6],
+    WET_GRASS: ["wet_grass", 6],
+    WOOD: ["wood", 6]
 };
 export const DIGS = {
-    CLOTH: "cloth",
-    CORAL: "coral",
-    GLASS: "glass",
-    GRASS: "grass",
-    GRAVEL: "gravel",
-    SAND: "sand",
-    SNOW: "snow",
-    STONE: "stone",
-    WET_GRASS: "wet_grass",
-    WOOD: "wood"
+    CLOTH: ["cloth", 4],
+    CORAL: ["coral", 4],
+    GLASS: ["glass", 4],
+    GRASS: ["grass", 4],
+    GRAVEL: ["gravel", 4],
+    SAND: ["sand", 4],
+    SNOW: ["snow", 4],
+    STONE: ["stone", 4],
+    WET_GRASS: ["wet_grass", 4],
+    WOOD: ["wood", 4]
 };
 
 /**
@@ -156,7 +171,7 @@ export function registerBlock(id, {
     slab = false, stairs = false
 } = blockOpts) {
     if (Metadata.block.includes(id)) throw new Error("ID is already in use: " + id);
-    BlockTextures[id] = ItemTextures[id] = texture || "assets/blocks/" + Object.keys(Ids).find(k => Ids[k] === id).toLowerCase() + ".png";
+    BlockTextures[id] = ItemTextures[id] = texture || "assets/blocks/" + Object.keys(Ids).find(k => k[0] !== "_" && Ids[k] === id).toLowerCase() + ".png";
     Metadata.block.push(id);
     Metadata.hardness[id] = hardness;
     Metadata.step[id] = step;

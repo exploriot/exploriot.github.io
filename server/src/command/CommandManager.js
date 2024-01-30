@@ -15,6 +15,8 @@ import {FillCommand} from "./list/FillCommand.js";
 import {KillCommand} from "./list/KillCommand.js";
 import {CloneCommand} from "./list/CloneCommand.js";
 import {GameRuleCommand} from "./list/GameRuleCommand.js";
+import {StatusCommand} from "./list/StatusCommand.js";
+import {SummonCommand} from "./list/SummonCommand.js";
 
 export const CommandLabels = {};
 export const Commands = new Set;
@@ -54,6 +56,8 @@ export function initCommands() {
         new FillCommand,
         new CloneCommand,
         new KillCommand,
-        new GameRuleCommand
+        new GameRuleCommand,
+        new StatusCommand,
+        new SummonCommand
     );
 }

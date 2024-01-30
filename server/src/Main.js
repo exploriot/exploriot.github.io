@@ -10,6 +10,7 @@ import {appendFileSync, existsSync, mkdirSync, readFileSync} from "fs";
 import {PacketIds} from "../../client/common/metadata/PacketIds.js";
 import {_TA} from "../../client/common/Utils.js";
 import {DisconnectPacket} from "./packet/DisconnectPacket.js";
+import {Tag} from "../../client/common/compound/Tag.js";
 
 export const SERVER_BEGIN_TIME = Date.now();
 const app = express();
@@ -44,6 +45,9 @@ if (!existsSync("./logs")) mkdirSync("./logs");
 // todo: water is broken
 // todo: when teleporting to someone/somewhere, it doesn't load the surrounding entities, sometimes
 
+// todo: bow and arrow, projectiles
+// todo: block scheduler
+
 const wss = new WebSocketServer({server});
 
 process.on("SIGINT", () => {
@@ -52,10 +56,6 @@ process.on("SIGINT", () => {
 });
 
 let lastUpdate = Date.now() - 1;
-
-/*world.generator = new CustomGenerator(world,
-    `${Ids.BEDROCK};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.STONE};${Ids.DIRT};${Ids.DIRT};${Ids.DIRT};${Ids.GRASS_BLOCK}`
-);*/
 
 wss.on("connection", (ws, req) => {
     let hasAuth = false;
@@ -114,18 +114,16 @@ wss.on("connection", (ws, req) => {
                 );
                 if (!/^[a-zA-Z\d]{1,16}$/.test(pk.username)) return kick("Invalid username.");
                 if (Array.from(Server.getPlayers()).some(i => i.username === pk.username)) return kick("You are already in the server.");
+                ws.skinData = pk.skinData;
+                ws.username = pk.username;
                 hasAuth = true;
-                Terminal.info(`§7[${pk.username} ${ws.ipAddress} connected]`);
-
-                if (existsSync("./players/" + pk.username + ".json")) {
-                    const data = JSON.parse(readFileSync("./players/" + pk.username + ".json", "utf-8"));
-                    ws.player = player = S_Player.deserialize(ws, data);
+                Terminal.info(`§7[${ws.username} ${ws.ipAddress} connected]`);
+                if (existsSync("./players/" + ws.username + ".nbt")) {
+                    const nbt = Tag.readAny(readFileSync("./players/" + ws.username + ".nbt"), 0)[1];
+                    ws.player = player = new S_Player(ws, nbt);
+                    player.skinData = ws.skinData;
                 } else {
-                    const world = Server.getDefaultWorld();
-                    const spawn = world.getSafeSpawnLocation();
-                    ws.player = player = new S_Player(ws, world, pk.username, pk.skinData);
-                    player.x = spawn.x;
-                    player.y = spawn.y;
+                    ws.player = player = new S_Player(ws);
                 }
 
                 player.session.sendAttributes();
@@ -154,10 +152,14 @@ wss.on("connection", (ws, req) => {
 });
 
 let lastBroadcastPlayerList = Date.now();
+let _ups = [];
 
 function update() {
-    const dt = (Date.now() - lastUpdate) / 1000;
-    lastUpdate = Date.now();
+    const now = Date.now();
+    const dt = (now - lastUpdate) / 1000;
+    _ups = _ups.filter(i => i + 1000 > now);
+    _ups.push(lastUpdate = now);
+    Server.ups = _ups.length;
     for (const world of Server.getWorlds()) {
         world.update(dt);
     }

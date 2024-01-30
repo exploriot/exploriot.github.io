@@ -14,7 +14,7 @@ else window._getItemMaxStack = getItemMaxStack;
 export function getItemName(id, meta) {
     let name = Metadata.itemName[id];
     if (!name) {
-        name = Object.keys(Ids).find(i => Ids[i] === id);
+        name = Object.keys(Ids).find(i => i[0] !== "_" && Ids[i] === id);
         if (!name) return "Unknown";
         return name.split("_").map(i => i[0] + i.slice(1).toLowerCase()).join(" ");
     }
@@ -55,7 +55,7 @@ function registerItem(id, {
     armorType = -1, armorLevel = -1, armorPoints = 0
 } = {}) {
     if (Metadata.item.includes(id)) throw new Error("ID is already in use: " + id);
-    ItemTextures[id] = texture || "assets/items/" + Object.keys(Ids).find(k => Ids[k] === id).toLowerCase() + ".png";
+    ItemTextures[id] = texture || "assets/items/" + Object.keys(Ids).find(k => k[0] !== "_" && Ids[k] === id).toLowerCase() + ".png";
     Metadata.item.push(id);
     if (toolLevel !== -1) Metadata.toolLevelItems[id] = toolLevel;
     if (toolType !== -1) Metadata.toolTypeItems[id] = toolType;

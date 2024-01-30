@@ -11,7 +11,7 @@ export class KickCommand extends AdvancedCommand {
     };
 
     executor = {
-        "<player: selector_p> <reason?: string>": (sender, [players, reason]) => {
+        "<player: selector_p> <reason?: string>"(sender, [players, reason]) {
             for (const player of players) player.kick("§cKicked by operator." + (reason ? " Reason: " + reason : ""));
             sender.sendMessage(`Player${players.length > 1 ? "s" : ""} ${players.map(i => i.username).join(" and ")} was kicked.`);
         }

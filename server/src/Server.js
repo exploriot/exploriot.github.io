@@ -17,6 +17,7 @@ export const S_Server = {
     /*** @type {S_World[]} */
     worlds: [],
     chunkDistance: 3,
+    ups: 0,
 
     init() {
         initCommands();

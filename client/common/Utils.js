@@ -1,22 +1,26 @@
-export function _T(thing, type) {
-    if (type === "object" && thing === null) throw new Error("Invalid object.");
+export function _T_base(thing, type) {
+    if (type === "object" && thing === null) return false;
     if (type === "int") {
-        _T(thing, "number");
-        if (thing !== Math.floor(thing)) throw new Error("Invalid int.");
-        return;
+        return _T_base(thing, "number") && thing === Math.floor(thing);
     }
     if (type === "uint") {
-        _T(thing, "int");
-        if (thing < 0) throw new Error("Invalid uint.");
-        return;
+        return _T_base(thing, "int") && thing >= 0;
     }
-    if (typeof thing !== type) throw new Error("Invalid " + type + ".");
+    return typeof thing === type;
+}
+
+export function _T(thing, type) {
+    if (!_T_base(thing, type)) throw new Error("Invalid " + type + ".");
 }
 
 export function _TA(...things) {
     for (let i = 0; i < things.length; i += 2) {
         _T(things[i], things[i + 1]);
     }
+}
+
+export function _TR(thing, type, def) {
+    return _T_base(thing, type) ? thing : def;
 }
 
 export function generateSeed(s) {
@@ -37,6 +41,10 @@ export function randInt(x, y) {
 
 export function randFloat(x, y) {
     return Math.random() * (y - x) + x;
+}
+
+export function randArr(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
 }
 
 export const Around = [
