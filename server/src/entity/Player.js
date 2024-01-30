@@ -350,7 +350,7 @@ export class S_Player extends S_Living {
 
     save() {
         this.saveNBT();
-        const buffer = new Buffer(this.__private_nbt.getSize());
+        const buffer = Buffer.alloc(this.__private_nbt.getSize());
         this.__private_nbt.write(buffer, 0);
         writeFileSync("./players/" + this.username + ".nbt", buffer);
     };
