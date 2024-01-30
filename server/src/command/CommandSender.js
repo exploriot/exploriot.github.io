@@ -3,6 +3,18 @@ import {Command} from "./Command.js";
 import {clearColors} from "../../../client/common/Utils.js";
 import {Terminal} from "../terminal/Terminal.js";
 
+const CmdResultProcessor = {
+    [Command.ERR_USAGE](command) {
+        return "§cInvalid usage!\n" + command.usageMessage.split("\n").map(i => `§c${i}`).join("\n");
+    },
+    [Command.ERR_PERMISSION]() {
+        return "You don't have permission to run this command!";
+    },
+    [Command.ERR_INVALID](command, label) {
+        return "Unknown command: " + label;
+    }
+};
+
 export class CommandSender {
     username = "";
 
@@ -26,16 +38,7 @@ export class CommandSender {
             return this.sendMessage("Unknown command: " + name);
         }
         const result = command.permission && !isOp ? Command.ERR_PERMISSION : command.execute(this, args);
-        switch (result) {
-            case Command.ERR_USAGE:
-                this.sendMessage("§cInvalid usage!\n" + command.usageMessage.split("\n").map(i => `§c${i}`).join("\n"));
-                break;
-            case Command.ERR_PERMISSION:
-                this.sendMessage("You don't have permission to run this command!");
-                break;
-            case Command.ERR_INVALID:
-                this.sendMessage("Unknown command: " + name);
-                break;
-        }
+        const c = CmdResultProcessor[result];
+        if (c) this.sendMessage(c(command, name));
     };
 }

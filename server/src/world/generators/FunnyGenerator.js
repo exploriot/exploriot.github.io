@@ -18,12 +18,12 @@ export class FunnyGenerator extends Generator {
             const pY = getPY(worldX, x);
             const hasTree = x >= 2 && x <= 13 && x % 3 === 0 && Math.round(pY) > 54;
             Generator.setBlock(chunk, x, pY, [
-                Math.round(pY) <= 54 ? [Ids.SAND, Ids.GRAVEL][Math.round(Math.random())] : (hasTree ? Math.floor(Math.random() * Ids.ANVIL) : Math.floor(Math.random() * Ids.ANVIL)), 0
+                Math.round(pY) <= 54 ? [Ids.SAND, Ids.GRAVEL][Math.round(Math.random())] : (hasTree ? randInt(0, Ids.ANVIL) : randInt(0, Ids.ANVIL)), 0
             ]);
             if (hasTree) {
                 const treeSize = randInt(3, 5);
-                for (let y = 0; y < treeSize; y++) Generator.setBlock(chunk, x, pY + y + 1, [Math.floor(Math.random() * Ids.ANVIL)]);
-                DefaultGenerator.LEAVES.forEach(pos => Generator.setBlock(chunk, pos[0] + x, pos[1] + pY + treeSize + 1, [Math.floor(Math.random() * Ids.ANVIL)]));
+                for (let y = 0; y < treeSize; y++) Generator.setBlock(chunk, x, pY + y + 1, [randInt(0, Ids.ANVIL)]);
+                DefaultGenerator.LEAVES.forEach(pos => Generator.setBlock(chunk, pos[0] + x, pos[1] + pY + treeSize + 1, [randInt(0, Ids.ANVIL)]));
             }
             for (let y = 1; y < Math.max(Math.round(pY), 55); y++) {
                 if (Generator.getBlock(chunk, x, y)[0] !== Ids.AIR) continue;
@@ -44,7 +44,7 @@ export class FunnyGenerator extends Generator {
                         return true;
                     }
 
-                    if (Math.random() >= 0.02 || !ore(x, y)) Generator.setBlock(chunk, x, y, [pY - y <= 3 ? (Math.round(pY) <= 54 ? [Ids.SAND, Ids.GRAVEL][Math.round(Math.random())] : Math.floor(Math.random() * Ids.ANVIL)) : Math.floor(Math.random() * Ids.ANVIL), 0]);
+                    if (Math.random() >= 0.02 || !ore(x, y)) Generator.setBlock(chunk, x, y, [pY - y <= 3 ? (Math.round(pY) <= 54 ? [Ids.SAND, Ids.GRAVEL][Math.round(Math.random())] :  randInt(0, Ids.ANVIL)) : randInt(0, Ids.ANVIL), 0]);
                 } else {
                     Generator.setBlock(chunk, x, y, [Ids.WATER, 0]);
                 }

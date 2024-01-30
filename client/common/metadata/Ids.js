@@ -59,6 +59,8 @@ export const Ids = {
     DIAMOND_BLOCK: _(),
     ANVIL: _(),
 
+    __MAX_BLOCK: __id - 1,
+
     APPLE: _(),
     COAL: _(),
     COOKED_BEEF: _(),
@@ -133,5 +135,7 @@ export const Ids = {
     DIAMOND_HELMET: _(),
     DIAMOND_CHESTPLATE: _(),
     DIAMOND_LEGGINGS: _(),
-    DIAMOND_BOOTS: _()
+    DIAMOND_BOOTS: _(),
+
+    __LEN: _()
 };

@@ -1,5 +1,4 @@
 import {Ids} from "./Ids.js";
-import {EntityIds} from "./Entities.js";
 
 export const PreloadTextures = [
     "destroy/0.png",
@@ -69,12 +68,8 @@ export const Metadata = {
     blockDrops: {},
     xpDrops: {},
     edible: {[Ids.APPLE]: 4},
-    itemName: {
-        other: id => (Object.keys(Ids).find(i => Ids[i] === id) || "UNKNOWN").split("_").map(i => i[0].toUpperCase() + i.substring(1).toLowerCase()).join(" ")
-    },
-    entityName: {
-        other: id => (Object.keys(EntityIds).find(i => EntityIds[i] === id) || "UNKNOWN").split("_").map(i => i[0].toUpperCase() + i.substring(1).toLowerCase()).join(" ")
-    },
+    itemName: {},
+    entityName: {},
     durabilities: {},
     maxStack: {},
     canFall: [],

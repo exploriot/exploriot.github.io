@@ -1,7 +1,16 @@
 import {S_Entity} from "./Entity.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
 
+/**
+ * @property {number} voidTicks
+ */
 export class S_Living extends S_Entity {
-    voidTicks = 0;
+    static NBT_PRIVATE_STRUCTURE = new ObjectTag({
+        voidTicks: new Float32Tag(0)
+    }).combine(S_Entity.NBT_PRIVATE_STRUCTURE);
+
+    static NBT_PUBLIC_STRUCTURE = S_Entity.NBT_PUBLIC_STRUCTURE;
 
     update(dt) {
         if (this.y < -64) {

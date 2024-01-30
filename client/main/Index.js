@@ -97,24 +97,7 @@ function renderServers() {
             messageMenu.classList.remove("gone");
 
             bg.classList.remove("gone");
-            let protocol = "ws";
-            let response = await fetch("http://" + server.ip + (server.port !== 80 ? ":" + server.port : "")).then(r => r).catch(r => r);
-            if (response instanceof Error) {
-                response = await fetch("https://" + server.ip + (server.port !== 80 ? ":" + server.port : "")).then(r => r).catch(r => r);
-                protocol = "wss";
-                if (response instanceof Error) {
-                    messageMenuText.innerText = "Couldn't connect to the server...";
-                    messageMenu.classList.remove("gone");
-                    return;
-                }
-            }
-            const text = await response.text().then(r => r).catch(r => r);
-            if (text !== "block-game") {
-                messageMenuText.innerText = "Invalid server.";
-                messageMenu.classList.remove("gone");
-                return;
-            }
-            location.href = `./game.html?ip=${server.ip}&port=${server.port}&protocol=${protocol}`;
+            location.href = `./game.html#${server.ip}:${server.port}`;
         });
         serversD.appendChild(div);
     }
@@ -149,8 +132,11 @@ function animate() {
         w * 0.5, w * 1.5
     ];
 
+    // noinspection JSUnresolvedReference
     ctx.drawImage(side.back_arm, ...armBody);
+    // noinspection JSUnresolvedReference
     ctx.drawImage(side.body, ...armBody);
+    // noinspection JSUnresolvedReference
     ctx.drawImage(side.front_arm, ...armBody);
 
     const leg = [
@@ -158,7 +144,9 @@ function animate() {
         w * 0.5, w * 1.5
     ];
 
+    // noinspection JSUnresolvedReference
     ctx.drawImage(side.back_leg, ...leg);
+    // noinspection JSUnresolvedReference
     ctx.drawImage(side.front_leg, ...leg);
 
     ctx.save();
@@ -248,6 +236,7 @@ export function initIndex() {
 
     uploadSkinBtn.addEventListener("click", async () => {
         try {
+            // noinspection JSUnresolvedReference
             const [fileHandle] = await showOpenFilePicker({
                 types: [
                     {

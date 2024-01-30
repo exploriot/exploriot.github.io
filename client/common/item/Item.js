@@ -1,3 +1,5 @@
+import {Ids} from "../metadata/Ids.js";
+
 export class Item {
     /**
      * @param {number} id
@@ -30,7 +32,7 @@ export class Item {
     };
 
     static deserialize(data) {
-        return data ? new Item(data.id, data.meta, data.count, data.nbt) : null;
+        return data && data.id !== Ids.AIR ? new Item(data.id, data.meta, data.count, data.nbt) : null;
     };
 }
 

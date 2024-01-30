@@ -11,6 +11,16 @@ export const XP_ORB_BB = new BoundingBox(-0.15, -0.15, 0.15, 0.15);
 export const SURVIVAL_REACH = 5;
 export const CREATIVE_REACH = 10;
 
+export function getEntityByName(name) {
+    return EntityIds[name.toUpperCase()];
+}
+
+export function getEntityName(id) {
+    const e = Object.keys(EntityIds).find(i => EntityIds[i] === id);
+    if (!e) return "Unknown";
+    return e.split("_").map(i => i[0] + i.slice(1).toLowerCase()).join(" ");
+}
+
 let __id = 0;
 const _ = () => __id++;
 

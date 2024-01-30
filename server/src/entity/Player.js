@@ -13,50 +13,92 @@ import {extendClass} from "../Utils.js";
 import {writeFileSync} from "fs";
 import {GameRules} from "../../../client/common/metadata/GameRules.js";
 import {S_Living} from "./Living.js";
-import {Item} from "../../../client/common/item/Item.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Int8Tag} from "../../../client/common/compound/int/Int8Tag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
+import {BoolTag} from "../../../client/common/compound/BoolTag.js";
 import {Terminal} from "../terminal/Terminal.js";
+import {InventoryTag} from "../../../client/common/compound/InventoryTag.js";
+import {StringTag} from "../../../client/common/compound/StringTag.js";
+import DefaultSkin from "../../../client/main/DefaultSkin.js";
+import {Item} from "../../../client/common/item/Item.js";
+import {ItemTag} from "../../../client/common/compound/ItemTag.js";
+import {Ids} from "../../../client/common/metadata/Ids.js";
 
-/*** @extends CommandSender */
+/**
+ * @extends CommandSender
+ * @property {Record<number, any>} attributes
+ * @property {number} handIndex
+ * @property {Inventory} playerInventory
+ * @property {Inventory} cursorInventory
+ * @property {Inventory} craftInventory
+ * @property {Inventory} armorInventory
+ * @property {number} fallY
+ * @property {number} naturalRegenTimer
+ * @property {number} starveTimer
+ * @property {number} rotation
+ */
 export class S_Player extends S_Living {
-    attributes = {
-        [AttributeIds.GAMEMODE]: 0,
-        [AttributeIds.IS_FLYING]: false,
-        [AttributeIds.CAN_FLY]: false,
-        [AttributeIds.HEALTH]: 20,
-        [AttributeIds.MAX_HEALTH]: 20,
-        [AttributeIds.FOOD]: 20,
-        [AttributeIds.MAX_FOOD]: 20,
-        [AttributeIds.SATURATION]: 20,
-        [AttributeIds.BREATH]: 10,
-        [AttributeIds.XP]: 0
-    };
+    static TYPE = EntityIds.PLAYER;
+    static BOUNDING_BOX = PLAYER_BB;
+
+    static NBT_PRIVATE_STRUCTURE = new ObjectTag({
+        attributes: new ObjectTag({
+            [AttributeIds.GAMEMODE]: new Int8Tag(0),
+            [AttributeIds.IS_FLYING]: new BoolTag(false),
+            [AttributeIds.CAN_FLY]: new BoolTag(false),
+            [AttributeIds.HEALTH]: new Float32Tag(20),
+            [AttributeIds.MAX_HEALTH]: new Float32Tag(20),
+            [AttributeIds.FOOD]: new Float32Tag(20),
+            [AttributeIds.MAX_FOOD]: new Float32Tag(20),
+            [AttributeIds.SATURATION]: new Float32Tag(5),
+            [AttributeIds.BREATH]: new Float32Tag(20),
+            [AttributeIds.XP]: new Float32Tag(0)
+        }),
+        worldName: new StringTag(""),
+        handIndex: new Int8Tag(0),
+        playerInventory: new InventoryTag(new Inventory(36, InventoryIds.PLAYER)),
+        cursorInventory: new InventoryTag(new Inventory(1, InventoryIds.CURSOR)),
+        craftInventory: new InventoryTag(new Inventory(5, InventoryIds.CRAFT)),
+        armorInventory: new InventoryTag(new Inventory(4, InventoryIds.ARMOR)),
+        fallY: new Float32Tag(0),
+        naturalRegenTimer: new Float32Tag(0),
+        starveTimer: new Float32Tag(0)
+    }).combine(S_Living.NBT_PRIVATE_STRUCTURE);
+
+    static NBT_PUBLIC_STRUCTURE = new ObjectTag({
+        username: new StringTag("Steve"),
+        skinData: new StringTag(""),
+        rotation: new Float32Tag(0),
+        handItem: new ItemTag(new Item(Ids.AIR)),
+    }).combine(S_Living.NBT_PUBLIC_STRUCTURE);
+
+    dirtyAttributes = new Set;
     breaking = null;
     breakingEndAt = null;
     /*** @type {Inventory | null} */
     externalInventory = null;
-    handIndex = 0;
-    playerInventory = new Inventory(36, InventoryIds.PLAYER);
-    cursorInventory = new Inventory(1, InventoryIds.CURSOR);
-    craftInventory = new Inventory(5, InventoryIds.CRAFT);
-    armorInventory = new Inventory(4, InventoryIds.ARMOR);
-    dirtyAttributes = new Set;
-    fallY = null;
-    naturalRegenTimer = 0;
-    starveTimer = 0;
-    rotation = 0;
 
     /**
      * @param ws
-     * @param {S_World} world
-     * @param {string} username
-     * @param {string} skinData
+     * @param {ObjectTag} initNBT
      */
-    constructor(ws, world, username, skinData) {
-        super(EntityIds.PLAYER, world, PLAYER_BB);
+    constructor(ws, initNBT = new ObjectTag) {
+        super(null, initNBT);
         this.ws = ws;
-        this.username = username;
         this.session = new NetworkSession(this, ws);
-        this.skinData = skinData;
+        const world = Server.worlds.find(i => i.name === this.worldName);
+        delete this.worldName;
+        this.username = ws.username;
+        this.world = world ?? Server.getDefaultWorld();
+        this.skinData = ws.skinData || DefaultSkin;
+
+        if (!world) {
+            Terminal.warn(this.username + "'s world couldn't be found. Using the default.");
+            const loc = this.world.getPlayerSpawnLocation(this.username);
+            this.x = loc.x;
+            this.y = loc.y;
+        }
     };
 
     updateHandItem() {
@@ -93,10 +135,14 @@ export class S_Player extends S_Living {
     };
 
     setGamemode(mode) {
+        if (this.getGamemode() === mode) return;
         this.setAttribute(AttributeIds.GAMEMODE, mode);
         this.setCanFly(mode % 2 === 1);
         if (!this.canFly()) this.setFlying(false);
-        if (mode === 3) this.setFlying(true);
+        if (mode === 3) {
+            this.setFlying(true);
+            this.broadcastDespawn();
+        } else this.broadcastEntity();
     };
 
     getXP() {
@@ -153,6 +199,10 @@ export class S_Player extends S_Living {
 
     setBreath(breath) {
         this.setAttribute(AttributeIds.BREATH, breath);
+    };
+
+    isInvisible() {
+        return this.getGamemode() === 3;
     };
 
     getInventories() {
@@ -223,7 +273,7 @@ export class S_Player extends S_Living {
     broadcastHandItem() {
         const item = this.getHandItem();
         const pk = HandItemPacket(this.id, item ? item.serialize() : null);
-        for (const viewer of this.getViewers()) {
+        for (const viewer of this.getPlayerViewers()) {
             if (viewer === this) continue;
             viewer.session.sendPacket(pk);
         }
@@ -251,7 +301,6 @@ export class S_Player extends S_Living {
             if (this.y > this.fallY) this.fallY = this.y;
         }
 
-        const saturation = this.getSaturation();
         const health = this.getHealth();
 
         if (health <= 0) {
@@ -272,21 +321,15 @@ export class S_Player extends S_Living {
             this.naturalRegenTimer = 0;
             const heal = Math.min(maxHealth - health, 1);
             this.setHealth(health + heal);
-            this.setSaturation(Math.max(0, saturation - health));
         }
-        if (saturation <= 0 && food <= 0 && (this.starveTimer += dt) > 4) {
+        if (food <= 0 && (this.starveTimer += dt) > 4) {
             this.starveTimer = 0;
             this.damage(1);
         }
         return super.update(dt);
     };
 
-    useSaturation(amount) {
-        const saturation = this.getSaturation();
-        if (saturation > 0) {
-            this.setSaturation(Math.max(0, saturation - amount));
-            return;
-        }
+    exhaust(amount) {
         const food = this.getFood();
         if (food <= 0) return;
         this.setFood(Math.max(0, food - amount));
@@ -302,10 +345,14 @@ export class S_Player extends S_Living {
     onFall(fallDistance) {
         if (fallDistance < 3.5 || !this.world.getGameRule(GameRules.FALL_DAMAGE)) return;
         this.damage(fallDistance - 3);
+        this.world.playSound("assets/sounds/damage/fall" + (fallDistance > 8 ? "big" : "small") + ".ogg", this.x, this.y);
     };
 
     save() {
-        writeFileSync("./players/" + this.username + ".json", JSON.stringify(this.serializeSave()));
+        this.saveNBT();
+        const buffer = new Buffer(this.__private_nbt.getSize());
+        this.__private_nbt.write(buffer, 0);
+        writeFileSync("./players/" + this.username + ".nbt", buffer);
     };
 
     holdOrDrop(item) {
@@ -324,7 +371,7 @@ export class S_Player extends S_Living {
         this.setHealth(this.getMaxHealth());
         this.setXP(0);
         this.setFood(this.getMaxFood());
-        this.setSaturation(20);
+        this.setSaturation(5);
         this.setBreath(10);
         const spawn = this.getSpawnPoint();
         this.teleport(spawn.x, spawn.y);
@@ -355,60 +402,16 @@ export class S_Player extends S_Living {
         super.remove(kill);
     };
 
-    static deserialize(ws, data) {
-        const world = Server.worlds.find(i => i.name === data.worldName);
-        const player = new S_Player(ws, world ?? Server.getDefaultWorld(), data.username, data.skinData);
-        if (world) {
-            player.x = data.x;
-            player.y = data.y;
-        } else {
-            Terminal.warn(player.username + "'s world couldn't be found. Using the default.");
-            const loc = world.getPlayerSpawnLocation(player.username);
-            player.x = loc.x;
-            player.y = loc.y;
-        }
-        player.vx = data.vx;
-        player.vy = data.vy;
-        Object.assign(player.attributes, data.attributes);
-        player.playerInventory.contents = data.playerInventory.map(Item.deserialize);
-        player.cursorInventory.contents = data.cursorInventory.map(Item.deserialize);
-        player.craftInventory.contents = data.craftInventory.map(Item.deserialize);
-        player.armorInventory.contents = data.armorInventory.map(Item.deserialize);
-        player.handIndex = data.handIndex;
-        player.fallY = data.fallY;
-        return player;
+    saveNBT() {
+        this.worldName = this.world.name;
+        super.saveNBT();
+        delete this.worldName;
     };
 
-    serializeSave() {
-        return {
-            x: this.x,
-            y: this.y,
-            vx: this.vx,
-            vy: this.vy,
-            username: this.username,
-            attributes: this.attributes,
-            playerInventory: this.playerInventory.serialize(),
-            cursorInventory: this.cursorInventory.serialize(),
-            craftInventory: this.craftInventory.serialize(),
-            armorInventory: this.armorInventory.serialize(),
-            handIndex: this.handIndex,
-            fallY: this.fallY,
-            worldName: this.world.name,
-        };
-    };
-
-    serialize() {
-        const item = this.getHandItem();
-        return {
-            id: this.id,
-            type: this.type,
-            username: this.username,
-            skinData: this.skinData,
-            rotation: this.rotation,
-            handItem: item ? item.serialize() : null,
-            x: this.x,
-            y: this.y
-        };
+    savePublicNBT() {
+        this.handItem = this.getHandItem() ?? new Item(Ids.AIR);
+        super.savePublicNBT();
+        delete this.handItem;
     };
 }
 

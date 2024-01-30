@@ -1,5 +1,5 @@
 import {World} from "../../../client/common/world/World.js";
-import {SelfAround} from "../../../client/common/Utils.js";
+import {randInt, SelfAround} from "../../../client/common/Utils.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
 import {BlockUpdatePacket} from "../packet/BlockUpdatePacket.js";
@@ -8,22 +8,31 @@ import {S_ItemEntity} from "../entity/ItemEntity.js";
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
 import {EntityIds} from "../../../client/common/metadata/Entities.js";
 import {Generators} from "./GeneratorManager.js";
-import {FlowerIds, getBlockDrops} from "../../../client/common/metadata/Blocks.js";
+import {FlowerIds, getBlockDigSound, getBlockDrops} from "../../../client/common/metadata/Blocks.js";
 import {TileBlockIdMap, TileIds} from "../tile/Tile.js";
 import {FurnaceTile} from "../tile/FurnaceTile.js";
 import {ChestTile} from "../tile/ChestTile.js";
 import {S_XPOrbEntity} from "../entity/XPOrbEntity.js";
 import {S_TNTEntity} from "../entity/TNTEntity.js";
 import {GameRules} from "../../../client/common/metadata/GameRules.js";
+import {S_Player} from "../entity/Player.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Int8Tag} from "../../../client/common/compound/int/Int8Tag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
+import {ItemTag} from "../../../client/common/compound/ItemTag.js";
 
+/*** @type {{[key: number]: function(world: S_World, x: number, y: number, self: [number, number]): void}} */
 const BlockUpdater = {
     [Ids.SAND](world, x, y, self) {
         const down = world.getBlock(x, y - 1);
         if (!Metadata.phaseable.includes(down[0])) return;
         world.setBlock(x, y, Ids.AIR);
-        const sand = new S_FallingBlockEntity(world, self[0], self[1]);
-        sand.x = x;
-        sand.y = y;
+        const sand = new S_FallingBlockEntity(world, new ObjectTag({
+            blockId: new Int8Tag(self[0]),
+            blockMeta: new Int8Tag(self[1]),
+            x: new Float32Tag(x),
+            y: new Float32Tag(y)
+        }));
         world.addEntity(sand);
     },
     [Ids.SPONGE]: (world, X, Y) => {
@@ -93,13 +102,17 @@ const BlockUpdater = {
 BlockUpdater[Ids.GRAVEL] = BlockUpdater[Ids.ANVIL] = BlockUpdater[Ids.SAND];
 
 export function generateSeed() {
-    return Math.floor(Math.random() * 9999999999999);
+    return randInt(0, 9999999999999);
 }
 
 export class S_World extends World {
     dirtyChunks = new Set;
     data = {};
     dirtyUpdateBlocks = new Set;
+
+    // worldX, worldY
+    /*** @type {Record<number, S_Entity[]>} */
+    chunkEntities = {};
 
     // worldX, worldY
     /*** @type {Record<number, Record<number, Tile>>} */
@@ -151,8 +164,13 @@ export class S_World extends World {
         this._info.gameRules[id] = value;
     };
 
-    breakBlock(x, y, breakItem = null, instant = false) {
+    breakBlock(x, y, breakItem = null, instant = false, sound = true) {
         if (!instant) this.summonBlockDrops(x, y, breakItem);
+        if (sound) {
+            const id = this.getBlock(x, y)[0];
+            const sound = getBlockDigSound(id);
+            if (sound) this.playSound(sound, x, y);
+        }
         this.setBlock(x, y, Ids.AIR);
         this.checkTile(x, y);
     };
@@ -251,7 +269,7 @@ export class S_World extends World {
 
     broadcastBlockUpdate(x, y, id, meta, except = null) {
         const pk = BlockUpdatePacket(x, y, id, meta);
-        for (const player of this.getChunkViewers(x >> 4)) {
+        for (const player of this.getChunkPlayerViewers(x >> 4)) {
             if (player === except) continue;
             player.session.sendPacket(pk);
         }
@@ -293,9 +311,24 @@ export class S_World extends World {
 
     /**
      * @param chunkX
-     * @return {S_Player[]}
+     * @return {S_Entity[]}
      */
     getChunkViewers(chunkX) {
+        const viewers = [];
+        const chunkDistance = Server.getChunkDistance();
+        for (let X = chunkX - chunkDistance; X <= chunkX + chunkDistance; X++) {
+            for (const entity of (this.entityMap[X] ?? [])) {
+                viewers.push(entity);
+            }
+        }
+        return viewers;
+    };
+
+    /**
+     * @param chunkX
+     * @return {S_Player[]}
+     */
+    getChunkPlayerViewers(chunkX) {
         const viewers = [];
         const chunkDistance = Server.getChunkDistance();
         for (const player of Server.getPlayers()) {
@@ -306,29 +339,47 @@ export class S_World extends World {
         return viewers;
     };
 
-    dropItem(x, y, item, holdDelay = 250, vx = (Math.random() - 0.5) * 5, vy = Math.random() * 3 + 2) {
+    dropItem(x, y, item, holdDelay = 0.25, vx = (Math.random() - 0.5) * 5, vy = Math.random() * 3 + 2) {
         if (!item) return;
-        const entity = new S_ItemEntity(this, item, holdDelay);
-        entity.x = x;
-        entity.y = y;
-        entity.vx = vx;
-        entity.vy = vy;
+        const entity = new S_ItemEntity(this, new ObjectTag({
+            item: new ItemTag(item),
+            holdTimer: new Float32Tag(holdDelay),
+            x: new Float32Tag(x),
+            y: new Float32Tag(y),
+            vx: new Float32Tag(vx),
+            vy: new Float32Tag(vy)
+        }));
         this.addEntity(entity);
         return entity;
     };
 
-    dropXP(x, y, amount, vx = (Math.random() - 0.5) * 5, vy = Math.random() * 3 + 2) {
-        const entity = new S_XPOrbEntity(this, amount);
-        entity.x = x;
-        entity.y = y;
-        entity.vx = vx;
-        entity.vy = vy;
+    dropXP(x, y, amount = 1, vx = (Math.random() - 0.5) * 5, vy = Math.random() * 3 + 2) {
+        const entity = new S_XPOrbEntity(this, new ObjectTag({
+            size: new Float32Tag(amount),
+            x: new Float32Tag(x),
+            y: new Float32Tag(y),
+            vx: new Float32Tag(vx),
+            vy: new Float32Tag(vy)
+        }));
         this.addEntity(entity);
         return entity;
+    };
+
+    playSound(file, x, y) {
+        for (const player of this.getChunkPlayerViewers(x >> 4)) {
+            if (player instanceof S_Player) player.session.playSound(file, x, y);
+        }
+    };
+
+    addParticle(id, x, y, extra = {}) {
+        for (const player of this.getChunkPlayerViewers(x >> 4)) {
+            if (player instanceof S_Player) player.session.sendParticle(id, x, y, extra);
+        }
     };
 
     saveChunk(x) {
         const chunk = this.chunks[x];
+        /*** @type {S_Entity[]} */
         const entities = this.chunkEntities[x] ?? [];
         const tiles = this.chunkTiles[x] ?? [];
         const data = {subChunks: [], entities: [], tiles: []};
@@ -337,7 +388,8 @@ export class S_World extends World {
         }
         for (const entity of entities) {
             if (entity.type === EntityIds.PLAYER) continue;
-            data.entities.push(entity.serialize());
+            entity.saveNBT();
+            data.entities.push(entity.__private_nbt.value);
         }
         for (const tile of tiles) {
             data.tiles.push(tile.serialize());

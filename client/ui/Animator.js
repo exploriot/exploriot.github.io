@@ -22,7 +22,7 @@ import {ClientSession} from "../network/ClientSession.js";
 
 const playerListDiv = document.querySelector(".player-list");
 const infoDiv = document.querySelector(".info");
-const infos = document.querySelector(".info > span[data-info]");
+const infos = document.querySelectorAll(".info > span[data-info]");
 let lastRender = Date.now() - 1;
 let _fps = [];
 
@@ -67,19 +67,22 @@ export function animate() {
     const fx = Math.floor(CServer.player.x);
     const fy = Math.floor(CServer.player.y);
 
-    const rdHalf = Math.ceil(C_OPTIONS.renderDistance / 2);
-    for (let x = -rdHalf; x < rdHalf + 2; x++) {
-        for (let y = -rdHalf + 6; y < rdHalf - 1; y++) {
-            const rx = fx + x;
-            const ry = fy + y;
-            const id = CServer.world.getBlock(rx, ry);
-            if (id[0] === Ids.AIR) continue;
-            if (!C_OPTIONS.showCoveredBlocks && CServer.world.isBlockCovered(rx, ry)) {
-                const pos = getCanvasPosition(rx - 0.5, ry + 0.5);
-                ctx.fillStyle = "black";
-                ctx.fillRect(pos.x - 0.5, pos.y - 0.5, BASE_BLOCK_SIZE + 1, BASE_BLOCK_SIZE + 1);
-            } else {
-                renderBlockAt(rx, ry, id[0], id[1]);
+    if (BASE_BLOCK_SIZE > 0) {
+        const widthHalf = Math.ceil((innerWidth / BASE_BLOCK_SIZE - 1) / 2);
+        const heightHalf = Math.ceil((innerHeight / BASE_BLOCK_SIZE - 1) / 2);
+        for (let x = -widthHalf; x < widthHalf + 2; x++) {
+            for (let y = -heightHalf + 1; y < heightHalf + 3; y++) {
+                const rx = fx + x;
+                const ry = fy + y;
+                const id = CServer.world.getBlock(rx, ry);
+                if (id[0] === Ids.AIR) continue;
+                if (!C_OPTIONS.showCoveredBlocks && CServer.world.isBlockCovered(rx, ry)) {
+                    const pos = getCanvasPosition(rx - 0.5, ry + 0.5);
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(pos.x - 0.5, pos.y - 0.5, BASE_BLOCK_SIZE + 1, BASE_BLOCK_SIZE + 1);
+                } else {
+                    renderBlockAt(rx, ry, id[0], id[1]);
+                }
             }
         }
     }

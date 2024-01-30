@@ -107,6 +107,9 @@ export class C_World extends World {
                 this.setBlock(Mouse.rx, Mouse.ry, Ids.AIR);
                 ClientSession.sendBlockBreakPacket(Mouse.rx, Mouse.ry);
                 resetBlockBreaking();
+                if (isCreative) {
+                    CServer.player.swingRemaining = 0.3;
+                }
             }
         }
         if (!Mouse.rightDown) {
@@ -127,7 +130,7 @@ export class C_World extends World {
                     }
                 } else if (
                     this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem)
-                    && Date.now() - lastPlace > 300
+                    && Date.now() - lastPlace > (CServer.getGamemode() % 2 === 0 ? 300 : 0)
                 ) {
                     lastPlace = Date.now();
                     ClientSession.sendInteractBlockPacket(Mouse.rx, Mouse.ry);
@@ -147,7 +150,7 @@ export class C_World extends World {
             && !this.isBlockCovered(Mouse.rx, Mouse.ry)
         ) {
             const block = this.getBlock(Mouse.rx, Mouse.ry);
-            if (block[0] !== handItemId || block[1] !== handItemMeta) {
+            if (block[0] !== Ids.AIR && (block[0] !== handItemId || block[1] !== handItemMeta)) {
                 lastMiddle = Date.now();
                 ClientSession.sendObtainItemPacket(
                     new Item(block[0] === Ids.NATURAL_LOG ? Ids.LOG : block[0], block[1]),

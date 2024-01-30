@@ -11,13 +11,13 @@ export class HelpCommand extends AdvancedCommand {
     };
 
     executor = {
-        "": sender => {
+        ""(sender) {
             sender.sendMessage("§e--- Help Menu ---");
             for (const command of Commands) {
                 sender.sendMessage(`§b/${command.name} - ${command.description}`);
             }
         },
-        "<command: command>": (sender, [cmd]) => {
+        "<command: command>"(sender, [cmd]) {
             sender.sendMessage("§e--- Help /" + cmd.name + " ---");
             sender.sendMessage("§bName: §a" + cmd.name);
             sender.sendMessage("§bDescription: §a" + cmd.description);

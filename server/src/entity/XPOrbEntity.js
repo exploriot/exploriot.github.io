@@ -1,18 +1,29 @@
 import {S_Entity} from "./Entity.js";
 import {EntityIds, XP_ORB_BB} from "../../../client/common/metadata/Entities.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
 
+/**
+ * @property {number} despawnTimer
+ * @property {number} size
+ * @property {number} combineTimer
+ */
 export class S_XPOrbEntity extends S_Entity {
-    size = 1;
-    despawnsAt = Date.now() + 1000 * 60 * 5;
-    combineTimer = 0;
+    static TYPE = EntityIds.XP_ORB;
+    static BOUNDING_BOX = XP_ORB_BB;
 
-    constructor(world, size) {
-        super(EntityIds.XP_ORB, world, XP_ORB_BB);
-        this.size = size;
-    };
+    static NBT_PRIVATE_STRUCTURE = new ObjectTag({
+        despawnTimer: new Float32Tag(1000 * 60 * 5),
+        combineTimer: new Float32Tag(0),
+        size: new Float32Tag(1)
+    }).combine(S_Entity.NBT_PRIVATE_STRUCTURE);
+
+    static NBT_PUBLIC_STRUCTURE = new ObjectTag({
+        size: new Float32Tag(1)
+    }).combine(S_Entity.NBT_PUBLIC_STRUCTURE);
 
     update(dt) {
-        if (this.despawnsAt < Date.now()) {
+        if ((this.despawnTimer -= dt) <= 0) {
             this.remove();
             return false;
         }
@@ -31,33 +42,12 @@ export class S_XPOrbEntity extends S_Entity {
         }
         this.applyGravity(dt);
         this.vx *= 0.9;
-        for (const player of this.getViewers()) {
+        for (const player of this.currentViewers) {
             if (player.distance(this.x, this.y) < 0.75) {
                 player.setXP(player.getXP() + this.size);
                 this.remove();
             }
         }
         return super.update(dt);
-    };
-
-    serialize() {
-        return {
-            id: this.id,
-            type: this.type,
-            x: this.x,
-            y: this.y,
-            vx: this.vx,
-            vy: this.vy,
-            size: this.size
-        };
-    };
-
-    static deserialize(world, data) {
-        const entity = new S_XPOrbEntity(world, data.size);
-        entity.x = data.x;
-        entity.y = data.y;
-        entity.vx = data.vx;
-        entity.vy = data.vy;
-        return entity;
     };
 }

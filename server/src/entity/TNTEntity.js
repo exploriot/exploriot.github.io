@@ -4,17 +4,32 @@ import {Metadata} from "../../../client/common/metadata/Metadata.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
 import {GameRules} from "../../../client/common/metadata/GameRules.js";
 import {Item} from "../../../client/common/item/Item.js";
+import {randFloat, randInt} from "../../../client/common/Utils.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
+import {StringTag} from "../../../client/common/compound/StringTag.js";
+import {ParticleIds} from "../../../client/common/metadata/ParticleIds.js";
 
+/**
+ * @property {number} fuse
+ * @property {number} explodeRadius
+ * @property {number} damageRadius
+ * @property {number} maxDamage
+ * @property {string} parentEntityUUID
+ */
 export class S_TNTEntity extends S_Entity {
-    fuse = 4;
-    explodeRadius = 5;
-    damageRadius = 5;
-    maxDamage = 13;
-    parentEntityId = null;
+    static TYPE = EntityIds.TNT;
+    static BOUNDING_BOX = FALLING_BLOCK_BB;
 
-    constructor(world) {
-        super(EntityIds.TNT, world, FALLING_BLOCK_BB);
-    };
+    static NBT_PRIVATE_STRUCTURE = new ObjectTag({
+        fuse: new Float32Tag(3),
+        explodeRadius: new Float32Tag(5),
+        damageRadius: new Float32Tag(5),
+        maxDamage: new Float32Tag(13),
+        parentEntityUUID: new StringTag("")
+    }).combine(S_Entity.NBT_PRIVATE_STRUCTURE);
+
+    static NBT_PUBLIC_STRUCTURE = S_Entity.NBT_PUBLIC_STRUCTURE;
 
     update(dt) {
         if ((this.fuse -= dt) <= 0) this.explode();
@@ -35,42 +50,23 @@ export class S_TNTEntity extends S_Entity {
                             const entity = new S_TNTEntity(this.world);
                             entity.x = x;
                             entity.y = y;
-                            entity.parentEntityId = this.parentEntityId;
+                            entity.fuse = randFloat(0.5, 1.5);
+                            entity.parentEntityUUID = this.parentEntityUUID;
                             this.world.addEntity(entity);
-                        } else {
+                        } else { // todo: check if it's touching water
                             this.world.breakBlock(x, y, item);
-                        } // else if (!this.isTouchingWater) block.break(this);
+                        }
                     }
                 }
             }
-            /*for (const entity of this.getViewers()) {
+            for (const entity of this.getViewers()) {
                 const dist = this.distance(entity);
                 if (dist > this.damageRadius) return;
-                entity.attack(new TNTDamage(this, dist));
-            }*/
+                entity.attack(this.damageRadius - dist);
+            }
         }
-        //this.world.addParticle(this.x, this.y, ParticleIds.EXPLOSION, this.explodeRadius);
-        //this.playSound("assets/sounds/random/explode" + rand(1, 4) + ".ogg");
+        this.world.addParticle(ParticleIds.EXPLOSION, this.x, this.y, {radius: this.explodeRadius});
+        this.world.playSound("assets/sounds/random/explode" + randInt(1, 4) + ".ogg");
         this.remove();
-    };
-
-    serialize() {
-        return {
-            id: this.id,
-            type: this.type,
-            x: this.x,
-            y: this.y,
-            vx: this.vx,
-            vy: this.vy
-        };
-    };
-
-    static deserialize(world, data) {
-        const entity = new S_TNTEntity(world);
-        entity.x = data.x;
-        entity.y = data.y;
-        entity.vx = data.vx;
-        entity.vy = data.vy;
-        return entity;
     };
 }

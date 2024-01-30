@@ -31,12 +31,12 @@ export class FillCommand extends AdvancedCommand {
     };
 
     executor = {
-        "@p <from: position> <to: position> <block: block>": (sender, [from, to, block]) => {
+        "@p <from: position> <to: position> <block: block>"(sender, [from, to, block]) {
             const r = doFill(sender.world, from, to, block.id, block.meta);
             if (!r) return sender.sendMessage("§cCannot fill more than " + MAX_FILL + " blocks!");
             sender.sendMessage(`The blocks from (${from.x}, ${from.y}) to (${to.x}, ${to.y}) was replaced with ${getItemName(block.id, block.meta)}.`);
         },
-        "<world: world> <from: position> <to: position> <block: block>": (sender, [world, from, to, block]) => {
+        "<world: world> <from: position> <to: position> <block: block>"(sender, [world, from, to, block]) {
             const r = doFill(world, from, to, block.id, block.meta);
             if (!r) return sender.sendMessage("§cCannot fill more than " + MAX_FILL + " blocks!");
             sender.sendMessage(`The blocks from (${from.x}, ${from.y}) to (${to.x}, ${to.y}) in the world ${world.name} was replaced with ${getItemName(block.id, block.meta)}.`);

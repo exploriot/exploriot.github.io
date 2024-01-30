@@ -14,7 +14,12 @@ import {PingPacket} from "../packet/PingPacket.js";
 import {InventoryUpdatePacket} from "../packet/InventoryUpdatePacket.js";
 import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
 import {InventorySetIndexPacket} from "../packet/InventorySetIndexPacket.js";
-import {getBlockHardness, getBlockMetaMod, isBlockItem} from "../../../client/common/metadata/Blocks.js";
+import {
+    getBlockDigSound,
+    getBlockHardness,
+    getBlockMetaMod,
+    isBlockItem
+} from "../../../client/common/metadata/Blocks.js";
 import {SetPositionPacket} from "../packet/SetPositionPacket.js";
 import {findCrafting} from "../../../client/common/metadata/Crafts.js";
 import {SendMessagePacket} from "../packet/SendMessagePacket.js";
@@ -35,6 +40,7 @@ import {PlaySoundPacket} from "../packet/PlaySoundPacket.js";
 import {StopAmbientPacket} from "../packet/StopAmbientPacket.js";
 import {PlayAmbientPacket} from "../packet/PlayAmbientPacket.js";
 import {AddParticlePacket} from "../packet/AddParticlePacket.js";
+import {randomUUID} from "crypto";
 
 const PacketMap = {
     [PacketIds.BATCH]: "handleBatchPacket",
@@ -84,10 +90,10 @@ const BlockInteractMap = {
         const handItem = network.player.getHandItem();
         if (!handItem || handItem.id !== Ids.FLINT_AND_STEEL) return false;
         network.player.world.setBlock(x, y, Ids.AIR);
-        const entity = new S_TNTEntity(network.player.world);
+        const entity = new S_TNTEntity(randomUUID(), network.player.world);
         entity.x = x;
         entity.y = y;
-        entity.parentEntityId = network.player.id;
+        entity.parentEntityUUID = network.player.uuid;
         network.player.world.addEntity(entity);
         return true;
     }
@@ -174,7 +180,7 @@ export class NetworkSession {
         }
         const chunkEntities = this.player.world.chunkEntities[x];
         if (chunkEntities) for (const e of chunkEntities) {
-            if (e.id === this.player.id) continue;
+            if (e.id === this.player.id || e.isInvisible()) continue;
             this.showEntity(e);
         }
         if (!this.sentChunks.includes(x)) this.sentChunks.push(x);
@@ -234,7 +240,10 @@ export class NetworkSession {
     showEntity(entity) {
         entity.currentViewers.add(this.player);
         if (this.doesSeeEntity(entity)) return;
-        this.sendPacket(EntityUpdatePacket(entity.serialize()));
+        entity.savePublicNBT();
+        const data = entity.__public_nbt.value;
+        data.type = entity.type;
+        this.sendPacket(EntityUpdatePacket(data));
         this.viewingEntities.add(entity);
     };
 
@@ -259,12 +268,12 @@ export class NetworkSession {
         ))));
     };
 
-    playSound(file, x, y) {
-        this.sendPacket(PlaySoundPacket(file, x, y));
+    playSound(file, x, y, volume = 0.3) {
+        this.sendPacket(PlaySoundPacket(file, x, y, volume));
     };
 
-    playAmbient(file) {
-        this.sendPacket(PlayAmbientPacket(file));
+    playAmbient(file, volume = 0.3) {
+        this.sendPacket(PlayAmbientPacket(file, volume));
     };
 
     stopAmbient(file) {
@@ -293,7 +302,7 @@ export class NetworkSession {
             return;
         }
         const dx = Math.abs(this.player.x - pk.x);
-        this.player.useSaturation(dx / 60);
+        this.player.exhaust(dx / 60);
         this.player.x = pk.x;
         this.player.y = pk.y + 0.000000001;
         this.player.handleMovement();
@@ -327,6 +336,8 @@ export class NetworkSession {
                     this.player.playerInventory.removeIndex(this.player.handIndex);
                 }
             }
+        } else {
+            this.player.broadcastPacketToViewers(EntityAnimationPacket(this.player.id, AnimationIds.HAND_SWING));
         }
 
         this.player.world.breakBlock(x, y, handItem, this.player.getGamemode() === 1);
@@ -348,20 +359,23 @@ export class NetworkSession {
 
         if (!handItem || !isBlockItem(handItem.id)) return this.sendBlock(x, y);
 
+        let {id, meta} = handItem;
+
         if (this.player.getGamemode() !== 1) {
             handItem.count--;
             this.player.updateHandItem();
         }
 
         this.player.broadcastPacketToViewers(EntityAnimationPacket(this.player.id, AnimationIds.HAND_SWING));
-        this.playSound("", x, y);
 
-        let meta = handItem.meta;
-        if (Metadata.slab.includes(handItem.id) || Metadata.stairs.includes(handItem.id)) {
-            meta += (pk.rotation % 4) * getBlockMetaMod(handItem.id);
+        const sound = getBlockDigSound(id);
+        if (sound) this.player.world.playSound(sound, x, y);
+
+        if (Metadata.slab.includes(id) || Metadata.stairs.includes(id)) {
+            meta += (pk.rotation % 4) * getBlockMetaMod(id);
         }
 
-        this.player.world.setBlock(x, y, handItem.id, meta);
+        this.player.world.setBlock(x, y, id, meta);
 
         this.player.world.checkTile(x, y);
     };
@@ -696,7 +710,7 @@ export class NetworkSession {
         else inv.updateIndex(index);
 
         const drop = item.clone(count);
-        this.player.world.dropItem(this.player.x, this.player.y + this.player.baseBB.y2, drop, 1000, (this.player.rotation > -90 && this.player.rotation < 90 ? 1 : -1) * 15, 0);
+        this.player.world.dropItem(this.player.x, this.player.y + this.player.baseBB.y2, drop, 1, (this.player.rotation > -90 && this.player.rotation < 90 ? 1 : -1) * 15, 0);
     };
 
     handleSendMessagePacket(pk) {
@@ -759,8 +773,7 @@ export class NetworkSession {
             pk.item.nbt, "object"
         );
 
-        if (this.player.getGamemode() !== 1) return;
-
+        if (this.player.getGamemode() !== 1 || pk.item.id === Ids.AIR) return;
 
         const item = new Item(
             pk.item.id,
@@ -786,7 +799,7 @@ export class NetworkSession {
             const maxFood = this.player.getMaxFood();
             if (currentFood >= maxFood) return;
             this.player.setFood(Math.min(maxFood, currentFood + food))
-            this.player.setSaturation(this.player.getSaturation() + Math.ceil(food * 1.5));
+            // this.player.setSaturation(this.player.getSaturation() + Math.ceil(food * 1.5));
             item.count--;
             this.player.updateHandItem();
             return;
