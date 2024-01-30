@@ -26,7 +26,8 @@ import {clearDiv, colorizeTextHTML} from "../Utils.js";
 const connectionDiv = document.querySelector(".connection-menu");
 const connectionText = document.querySelector(".connection-menu > .container > .text");
 const rejoinBtn = document.querySelector("#rejoin-btn");
-const pageHash = location.hash.slice(1);
+let pageHash = location.hash.slice(1);
+if (pageHash.endsWith(":80")) pageHash = pageHash.slice(0, -3);
 let connected = false;
 
 export const ClientSession = {
