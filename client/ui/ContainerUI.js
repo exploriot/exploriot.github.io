@@ -18,7 +18,8 @@ const furnaceSmeltDiv = document.getElementById("furnace-smelt");
 const furnaceArrowDiv = document.getElementById("furnace-arrow");
 const mainDivs = document.querySelectorAll(`[data-inv]`);
 const playerInvCanvas = document.querySelector(".player-inventory-canvas");
-const piCtx = playerInvCanvas.getContext("2d");
+/*** @type {CanvasRenderingContext2D} */
+let piCtx;
 const uiView = [];
 let lastHandIndex = null;
 let downMain;
@@ -29,10 +30,6 @@ function onPlayerInvResize() {
     playerInvCanvas.height = container.height;
     playerInvCanvas.imageSmoothingEnabled = false;
 }
-
-addEventListener("resize", onPlayerInvResize);
-
-onPlayerInvResize();
 
 function animatePlayerInvCanvas() {
     requestAnimationFrame(animatePlayerInvCanvas);
@@ -412,8 +409,14 @@ export function isDoubleChestUIOn() {
 }
 
 export function initContainerUI() {
+    piCtx = playerInvCanvas.getContext("2d");
+
     addEventListener("click", onAnyClick);
     addEventListener("contextmenu", onAnyClick);
+
+    addEventListener("resize", onPlayerInvResize);
+
+    onPlayerInvResize();
 
     addEventListener("mousemove", e => {
         if (!e.target.classList.contains("item")) {
