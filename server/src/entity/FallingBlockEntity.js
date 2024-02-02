@@ -29,6 +29,7 @@ export class S_FallingBlockEntity extends S_Entity {
     }).combine(S_Entity.NBT_PUBLIC_STRUCTURE);
 
     update(dt) {
+        if (this.y < -64 || !this.blockId) return this.remove();
         if (this.fallY === 0) this.fallY = this.y;
         this.applyGravity(dt);
         if (this.isOnGround()) {

@@ -4,7 +4,8 @@
   "main": "client.js",
   "type": "module",
   "scripts": {
-    "start": "vite --host --port=1923"
+    "start": "node client.js",
+    "dev": "npx vite --host --port=1923"
   },
   "author": "OguzhanUmutlu",
   "license": "MIT",

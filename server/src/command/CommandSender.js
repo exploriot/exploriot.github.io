@@ -18,6 +18,10 @@ const CmdResultProcessor = {
 export class CommandSender {
     username = "";
 
+    getName() {
+        return this.username;
+    };
+
     sendMessage(message) {
     };
 

@@ -9,6 +9,7 @@ import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
 import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
 import {StringTag} from "../../../client/common/compound/StringTag.js";
 import {ParticleIds} from "../../../client/common/metadata/ParticleIds.js";
+import {S_Living} from "./Living.js";
 
 /**
  * @property {number} fuse
@@ -32,14 +33,36 @@ export class S_TNTEntity extends S_Entity {
     static NBT_PUBLIC_STRUCTURE = S_Entity.NBT_PUBLIC_STRUCTURE;
 
     update(dt) {
+        if (this.y < -64) return this.remove();
         if ((this.fuse -= dt) <= 0) this.explode();
-        if (this.y <= 0) this.remove();
         return super.update(dt);
+    };
+
+    throwEntity(entity, dx, dy, dist) {
+        entity.applyVelocity(3 * dx / dist * (this.damageRadius - dist), 3 * dy / dist * (this.damageRadius - dist));
     };
 
     explode() {
         const item = new Item(Ids.DIAMOND_PICKAXE);
         if (this.world.getGameRule(GameRules.TNT_EXPLODES)) {
+            for (const entity of this.getViewers()) {
+                if (!(entity instanceof S_Living)) {
+                    if (entity.type === EntityIds.ITEM) entity.remove();
+                    if (entity.type === EntityIds.TNT) {
+                        const dx = entity.x - this.x;
+                        const dy = entity.y - this.y;
+                        const dist = Math.sqrt(dx ** 2 + dy ** 2);
+                        this.throwEntity(entity, dx, dy, dist);
+                    }
+                    continue;
+                }
+                const dx = entity.x - this.x;
+                const dy = entity.y - this.y;
+                const dist = Math.sqrt(dx ** 2 + dy ** 2);
+                if (dist > this.damageRadius) continue;
+                entity.damage(this.damageRadius - dist);
+                this.throwEntity(entity, dx, dy, dist);
+            }
             for (let x = this.x - this.explodeRadius; x <= this.x + this.explodeRadius; x++) {
                 for (let y = this.y - this.explodeRadius; y <= this.y + this.explodeRadius; y++) {
                     const block = this.world.getBlock(x, y);
@@ -59,14 +82,9 @@ export class S_TNTEntity extends S_Entity {
                     }
                 }
             }
-            for (const entity of this.getViewers()) {
-                const dist = this.distance(entity);
-                if (dist > this.damageRadius) return;
-                entity.attack(this.damageRadius - dist);
-            }
         }
         this.world.addParticle(ParticleIds.EXPLOSION, this.x, this.y, {radius: this.explodeRadius});
-        this.world.playSound("assets/sounds/random/explode" + randInt(1, 4) + ".ogg");
+        this.world.playSound("assets/sounds/random/explode" + randInt(1, 4) + ".ogg", this.x, this.y);
         this.remove();
     };
 }

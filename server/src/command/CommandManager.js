@@ -17,6 +17,7 @@ import {CloneCommand} from "./list/CloneCommand.js";
 import {GameRuleCommand} from "./list/GameRuleCommand.js";
 import {StatusCommand} from "./list/StatusCommand.js";
 import {SummonCommand} from "./list/SummonCommand.js";
+import {SpawnPointCommand} from "./list/SpawnPointCommand.js";
 
 export const CommandLabels = {};
 export const Commands = new Set;
@@ -58,6 +59,7 @@ export function initCommands() {
         new KillCommand,
         new GameRuleCommand,
         new StatusCommand,
-        new SummonCommand
+        new SummonCommand,
+        new SpawnPointCommand
     );
 }

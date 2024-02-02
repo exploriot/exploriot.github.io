@@ -23,21 +23,30 @@ export class InventoryTag extends ObjectTag {
         this.apply(value);
     };
 
+    serialize() {
+        return super.serialize();
+    }
+
     // noinspection JSCheckFunctionSignatures
     get value() {
-        const obj = super.value;
-        const inv = new Inventory(obj.size, obj.type);
-        inv.contents = obj.contents.map(Item.deserialize);
+        const inv = new Inventory(this.tags.size.value, this.tags.type.value);
+        inv.contents = this.tags.contents.value.map(Item.deserialize);
         return inv;
     };
 
     apply(inventory) {
-        if (!(inventory instanceof Inventory)) return;
+        if (!(inventory instanceof Inventory)) {
+            if (inventory !== null && typeof inventory === "object") {
+                super.apply(inventory);
+            }
+            return this;
+        }
         super.apply({
             size: inventory.size,
             type: inventory.type
         });
         this.tags.contents = new ListTag(inventory.contents.map(i => new ItemTag(i ?? new Item(Ids.AIR))));
+        return this;
     };
 
     static read(buffer, j, cls = InventoryTag) {

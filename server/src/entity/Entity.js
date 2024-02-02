@@ -5,12 +5,15 @@ import {StringTag} from "../../../client/common/compound/StringTag.js";
 import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
 import {Int32Tag} from "../../../client/common/compound/int/Int32Tag.js";
 import {randomUUID} from "crypto";
+import {UInt8Tag} from "../../../client/common/compound/int/UInt8Tag.js";
+import {EntityVelocityPacket} from "../packet/EntityVelocityPacket.js";
 
 let _entityId = 0;
 
 export class S_Entity extends Entity {
     static NBT_PRIVATE_STRUCTURE = new ObjectTag({
         uuid: new StringTag(""),
+        type: new UInt8Tag(0),
         x: new Float32Tag(0),
         y: new Float32Tag(0),
         vx: new Float32Tag(0),
@@ -18,11 +21,13 @@ export class S_Entity extends Entity {
     });
     static NBT_PUBLIC_STRUCTURE = new ObjectTag({
         id: new Int32Tag(0),
+        type: new UInt8Tag(0),
         x: new Float32Tag(0),
         y: new Float32Tag(0),
         vx: new Float32Tag(0),
         vy: new Float32Tag(0)
     });
+    static NBT_IGNORE = ["type"];
 
     currentViewers = new Set;
 
@@ -37,25 +42,21 @@ export class S_Entity extends Entity {
         this.bb = this.constructor.BOUNDING_BOX.clone();
         this.downBB = this.constructor.BOUNDING_BOX.clone();
 
-        const pri = this.constructor.NBT_PRIVATE_STRUCTURE.clone();
-        const pub = this.constructor.NBT_PUBLIC_STRUCTURE.clone();
-
-        pri.apply(nbt.value);
-        pub.apply(nbt.value);
-        pub.tags.id.value = this.id;
-
-        /*** @type {ObjectTag} */
-        this.__private_nbt = pri;
-        /*** @type {ObjectTag} */
-        this.__public_nbt = pub;
-
-        const keys = Object.keys(this.__private_nbt.tags);
-        for (let i = 0; i < keys.length; i++) {
-            const k = keys[i];
-            this[k] = this.__private_nbt.tags[k].value;
-        }
-
+        const nbtValue = nbt.value;
+        this.nbt = this.constructor.NBT_PRIVATE_STRUCTURE.clone().apply(nbtValue);
+        this.publicNBT = this.constructor.NBT_PUBLIC_STRUCTURE.clone().apply(nbtValue);
+        this.nbt.applyTo(this, this.constructor.NBT_IGNORE);
         this.uuid ||= randomUUID();
+    };
+
+    findClosestPlayer() {
+        let closest = null;
+        for (const player of this.currentViewers) {
+            if (player.getGamemode() === 3) continue;
+            const dist = player.distance(this.x, this.y);
+            if (!closest || dist < closest[0]) closest = [dist, player];
+        }
+        return closest ? closest[1] : null;
     };
 
     broadcastPacketToViewers(pk) {
@@ -78,10 +79,17 @@ export class S_Entity extends Entity {
         this.broadcastEntity();
     };
 
+    applyVelocity(vx, vy) {
+        super.applyVelocity(vx, vy);
+        this.broadcastVelocity();
+    };
+
+    /*** @return {S_Entity[]} */
     getViewers() {
         return this.world.getChunkViewers(this.x >> 4);
     };
 
+    /*** @return {S_Player[]} */
     getPlayerViewers() {
         return this.world.getChunkPlayerViewers(this.x >> 4);
     };
@@ -103,6 +111,11 @@ export class S_Entity extends Entity {
         this.broadcastPacketToViewers(EntityMovementPacket(this.id, this.x, this.y));
     };
 
+    broadcastVelocity() {
+        if (this.isInvisible()) return;
+        this.broadcastPacketToViewers(EntityVelocityPacket(this.id, this.vx, this.vy));
+    };
+
     broadcastDespawn() {
         for (const viewer of this.currentViewers) {
             viewer.session.hideEntity(this);
@@ -115,16 +128,10 @@ export class S_Entity extends Entity {
     };
 
     saveNBT() {
-        this.__private_nbt.apply(this);
+        this.nbt.apply(this);
     };
 
     savePublicNBT() {
-        const object = {};
-        const keys = Object.keys(this.__public_nbt);
-        for (let i = 0; i < keys.length; i++) {
-            const k = keys[i];
-            object[k] = this[k];
-        }
-        this.__public_nbt.apply(object);
+        this.publicNBT.apply(this);
     };
 }

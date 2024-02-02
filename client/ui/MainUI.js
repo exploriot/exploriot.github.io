@@ -16,6 +16,7 @@ import {getLevelFromXP} from "../common/Utils.js";
 import {Metadata} from "../common/metadata/Metadata.js";
 import {Keyboard} from "../input/Keyboard.js";
 import {clearDiv, colorizeTextHTML} from "../Utils.js";
+import {Mouse} from "../input/Mouse.js";
 
 const escMenu = document.querySelector(".esc-menu");
 const pauseBtn = document.querySelector(".pause");
@@ -115,7 +116,7 @@ export function renderHealthBar() {
     }
     healthDiv.hidden = false;
     const maxHealth = Math.floor(CServer.getMaxHealth());
-    const health = Math.min(Math.floor(CServer.getHealth()), maxHealth);
+    const health = Math.min(Math.ceil(CServer.getHealth()), maxHealth);
     if (
         lastHealth === health
         && lastMaxHealth === maxHealth
@@ -137,7 +138,7 @@ export function renderFoodBar() {
         return;
     }
     foodDiv.hidden = false;
-    const maxFood = Math.floor(CServer.getMaxFood());
+    const maxFood = 20;//Math.floor(CServer.getMaxFood());
     const food = Math.min(Math.floor(CServer.getFood()), maxFood);
     if (lastFood === food && lastMaxFood === maxFood) return;
     lastFood = food;
@@ -332,5 +333,17 @@ export function initMainUI() {
 
 // addEventListener("blur", () => openEscMenu());
 
-    addEventListener("contextmenu", e => e.preventDefault());
+    function onClick(e) {
+        if (isAnyUIOn() || !Mouse.entity || Mouse.entity === CServer.player) return;
+        ClientSession.sendTouchEntityPacket(Mouse.entity.id, e.button);
+    }
+
+    addEventListener("contextmenu", e => {
+        e.preventDefault();
+        onClick(e);
+    });
+
+    addEventListener("click", e => onClick(e));
+
+    addEventListener("scroll", e => onClick(e));
 }

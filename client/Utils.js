@@ -1,9 +1,11 @@
 import {C_OPTIONS, canvas, CServer, ctx} from "./main/Game.js";
-import {PreloadTextures} from "./common/metadata/Metadata.js";
+import {Metadata, PreloadTextures} from "./common/metadata/Metadata.js";
 import {Texture} from "./loader/Texture.js";
 import {Mouse} from "./input/Mouse.js";
 import {ClientSession} from "./network/ClientSession.js";
 import {ColorsHex, EMOTE_LIST, EMOTE_REGEX, splitColors} from "./common/Utils.js";
+import {getItemTexture} from "./common/metadata/Items.js";
+import {PLAYER_BB} from "./common/metadata/Entities.js";
 
 export function getDominantSize() {
     return Math.max(innerWidth, innerHeight);
@@ -88,4 +90,85 @@ export function colorizeTextHTML(text) { // []
 
 export function clearDiv(div) {
     for (const c of div.childNodes) c.remove();
+}
+
+export function renderPlayerModel(
+    ctx, {
+        SIZE,
+        renderX, renderY, skin, bodyRotation,
+        renderLeftArmRotation, renderLeftLegRotation, renderRightLegRotation, renderRightArmRotation,
+        renderHeadRotation, handItem
+    }
+) {
+    /*** @type {Record<string, HTMLCanvasElement>} */
+    const side = skin[bodyRotation ? 0 : 1];
+    const pos = getCanvasPosition(renderX, renderY);
+
+    const head = [
+        pos.x + PLAYER_BB.x1 * SIZE, pos.y - (PLAYER_BB.y2 + 0.125) * SIZE,
+        SIZE * 0.5, SIZE * 0.5
+    ];
+
+    const leg = [
+        pos.x + (PLAYER_BB.x1 + 0.125) * SIZE, pos.y - (PLAYER_BB.y2 - 1.25 + 0.125) * SIZE,
+        SIZE * 0.25, SIZE * 0.75
+    ];
+
+    const armBody = [
+        pos.x + (PLAYER_BB.x1 + 0.125) * SIZE, pos.y - (PLAYER_BB.y2 - 0.5 + 0.125) * SIZE,
+        SIZE * 0.25, SIZE * 0.75
+    ];
+
+    ctx.save();
+    ctx.translate(armBody[0] + armBody[2] / 2, armBody[1]);
+    ctx.rotate(renderLeftArmRotation);
+    ctx.drawImage(side.back_arm, -armBody[2] / 2, 0, armBody[2], armBody[3]);
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(leg[0] + leg[2] / 2, leg[1]);
+    ctx.rotate(renderLeftLegRotation);
+    ctx.drawImage(side.back_leg, -leg[2] / 2, 0, leg[2], leg[3]);
+    ctx.restore();
+
+    ctx.drawImage(side.body, ...armBody);
+
+    ctx.save();
+    ctx.translate(leg[0] + leg[2] / 2, leg[1]);
+    ctx.rotate(renderRightLegRotation);
+    ctx.drawImage(side.front_leg, -leg[2] / 2, 0, leg[2], leg[3]);
+    ctx.restore();
+
+    const item = handItem;
+
+    ctx.save();
+    ctx.translate(armBody[0] + armBody[2] / 2, armBody[1]);
+    ctx.rotate(renderRightArmRotation);
+    ctx.fillStyle = "white";
+    ctx.drawImage(side.front_arm, -armBody[2] / 2, 0, armBody[2], armBody[3]);
+    if (item) {
+        const texture = getItemTexture(item.id, item.meta);
+        if (Metadata.toolTypeItems[item.id]) {
+            ctx.drawImage(
+                bodyRotation ? texture.image : texture.flip(),
+                bodyRotation ? -armBody[2] * 0.5 : -armBody[2] * 2.5, 0,
+                SIZE * 0.8, SIZE * 0.8
+            );
+        } else ctx.drawImage(
+            texture.image,
+            bodyRotation ? 0 : -armBody[2] * 1.5, armBody[3] * 0.8,
+            SIZE * 0.4, SIZE * 0.4
+        );
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(head[0] + head[2] / 2, head[1] + head[3] * 0.55);
+    ctx.rotate((renderHeadRotation + (bodyRotation ? 0 : 180)) * Math.PI / 180);
+    ctx.drawImage(side.head, -head[2] / 2, -head[3] / 2, head[2], head[3]);
+    head[0] -= 0.015 * SIZE;
+    head[1] -= 0.015 * SIZE;
+    head[3] = head[2] += 0.03 * SIZE;
+    ctx.drawImage(side.head_topping, -head[2] / 2, -head[3] / 2, head[2], head[3]);
+    ctx.restore();
 }

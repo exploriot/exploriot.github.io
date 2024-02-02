@@ -5,6 +5,7 @@ export const PLAYER_JUMP_ACCELERATION = 6;
 export const GRAVITY_FORCE = 20;
 export const EMPTY_BB = new BoundingBox(0, 0, 0, 0);
 export const PLAYER_BB = new BoundingBox(-0.25, -0.5, 0.25, 1.375);
+export const ZOMBIE_BB = new BoundingBox(-0.25, -0.5, 0.25, 1.375);
 export const FALLING_BLOCK_BB = new BoundingBox(-0.49, -0.49, 0.49, 0.49);
 export const ITEM_BB = new BoundingBox(-0.15, -0.15, 0.15, 0.15);
 export const XP_ORB_BB = new BoundingBox(-0.15, -0.15, 0.15, 0.15);
@@ -42,5 +43,6 @@ export const EntityIds = {
     TNT: _(),
     ITEM: _(),
     FALLING_BLOCK: _(),
-    XP_ORB: _()
+    XP_ORB: _(),
+    ZOMBIE: _()
 };

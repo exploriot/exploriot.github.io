@@ -12,7 +12,7 @@ import {initItems} from "../common/metadata/Items.js";
 import {clearDiv, colorizeTextHTML, initTextures, onResize} from "../Utils.js";
 import {initMainUI} from "../ui/MainUI.js";
 import {ClientSession} from "../network/ClientSession.js";
-import {initContainers, initContainerUI} from "../ui/ContainerUI.js";
+import {initContainers, initContainerUI, openInventoryUI} from "../ui/ContainerUI.js";
 import {initMouse} from "../input/Mouse.js";
 import {initKeyboard} from "../input/Keyboard.js";
 import DefaultSkin from "./DefaultSkin.js";
@@ -23,7 +23,7 @@ export function initGame() {
     // todo: mobile support
 
     const connectionText = document.querySelector(".connection-menu > .container > .text");
-    canvas = document.querySelector("canvas");
+    canvas = document.querySelector(".game");
     ctx = canvas.getContext("2d");
 
     C_OPTIONS = {
@@ -43,6 +43,7 @@ export function initGame() {
         chunkDistance: null,
         canUpdateMovement: false,
         canUpdateRotation: false,
+        canUpdateMouse: true,
         isWelcome: false,
         lastHandIndex: 0,
         playerInventory: new Inventory(36, InventoryIds.PLAYER),
@@ -105,6 +106,7 @@ export function initGame() {
 
     CServer.world = new C_World(0);
     CServer.player = new C_Player(null, CServer.world, CServer.username, CServer.skinData);
+    CServer.player.HAS_RENDER_POS = false;
     CServer.dummyPlayer = new C_Player(null, CServer.world, CServer.username, CServer.skinData);
 
     animate();
@@ -125,6 +127,7 @@ export function initGame() {
 
     clearDiv(connectionText);
     connectionText.appendChild(colorizeTextHTML("§aConnecting..."));
+    setTimeout(() => openInventoryUI(), 300);
 }
 
 if (["game", "game.html"].includes(location.pathname.split("/").at(-1))) initGame();

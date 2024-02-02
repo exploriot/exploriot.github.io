@@ -20,7 +20,7 @@ export class GiveCommand extends AdvancedCommand {
             const item = new Item(baseItem.id, baseItem.meta, count, nbt);
             for (const player of players) player.playerInventory.add(item);
             sender.sendMessage(
-                "Added " + (count - item.count) + " " + getItemName(baseItem.id, baseItem.meta)
+                "Added " + (count - item.count) + " " + getItemName(baseItem.id, baseItem.meta, baseItem.nbt)
                 + " to " + players.map(i => i.username).join(" and ") + "." + (item.count > 0 ? "(Couldn't give " + item.count + " of it)" : "")
             );
         }

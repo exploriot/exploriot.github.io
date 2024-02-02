@@ -12,8 +12,9 @@ export class BaseNumberTag extends Tag {
     };
 
     apply(num) {
-        if (!this.check(num)) return;
+        if (!this.check(num)) return this;
         this.value = num;
+        return this;
     };
 
     clone() {

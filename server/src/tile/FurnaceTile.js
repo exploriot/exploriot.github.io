@@ -3,34 +3,27 @@ import {ContainerTile} from "./ContainerTile.js";
 import {ContainerIds} from "../../../client/common/item/Inventory.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
 
+/**
+ * @property {number} fuel
+ * @property {number} maxFuel
+ * @property {number} smeltProgress
+ * @property {number} holdingXP
+ */
 export class FurnaceTile extends ContainerTile {
+    static TYPE = TileIds.FURNACE;
+    static NBT_STRUCTURE = new ObjectTag({
+        fuel: new Float32Tag(0),
+        maxFuel: new Float32Tag(0),
+        smeltProgress: new Float32Tag(0),
+        holdingXP: new Float32Tag(0)
+    }).combine(ContainerTile.NBT_STRUCTURE);
+
     size = 3;
     containerId = ContainerIds.FURNACE;
     updatePeriod = 0.1;
-    fuel = 0;
-    maxFuel = 0;
-    smeltProgress = 0; // 0 to 10
-    holdingXP = 0;
-
-    constructor(world, x, y) {
-        super(TileIds.FURNACE, world, x, y);
-    };
-
-    static deserialize(world, data) {
-        const tile = new FurnaceTile(world, data.x, data.y);
-        tile._contents = data.contents ?? null;
-        tile.fuel = data.fuel ?? 0;
-        tile.maxFuel = data.maxFuel ?? 0;
-        tile.holdingXP = data.holdingXP ?? 0;
-        return tile;
-    };
-
-    serialize() {
-        return {
-            ...super.serialize(), fuel: this.fuel, maxFuel: this.maxFuel
-        };
-    };
 
     canSmeltItem() {
         const item = this.container.contents[0];
@@ -43,8 +36,7 @@ export class FurnaceTile extends ContainerTile {
 
     smeltItem() {
         const item = this.container.contents[0];
-        item.count--;
-        this.container.updateIndex(0);
+        this.container.decreaseItemAt(0);
         const result = Metadata.smeltsTo[item.id]?.evaluate();
         this.holdingXP += Metadata.smeltXP[item.id] ?? 0;
         const currentResult = this.container.contents[2];
@@ -94,8 +86,7 @@ export class FurnaceTile extends ContainerTile {
         } else {
             const fuelItem = this.container.contents[1];
             if (fuelItem && this.canSmeltItem()) {
-                fuelItem.count--;
-                this.container.updateIndex(1);
+                this.container.decreaseItemAt(1);
                 this.fuel = this.maxFuel = (Metadata.fuel[fuelItem.id] ?? 0) * 10;
                 this.world.setBlock(this.x, this.y, Ids.FURNACE, 1);
                 this.broadcastState();

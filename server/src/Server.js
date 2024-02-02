@@ -8,6 +8,8 @@ import {initCommands} from "./command/CommandManager.js";
 import {initBlocks} from "../../client/common/metadata/Blocks.js";
 import {initCrafts} from "../../client/common/metadata/Crafts.js";
 import {initItems} from "../../client/common/metadata/Items.js";
+import {ObjectTag} from "../../client/common/compound/ObjectTag.js";
+import {StringTag} from "../../client/common/compound/StringTag.js";
 
 export const S_Server = {
     /*** @type {Set<S_Player>} */
@@ -27,9 +29,9 @@ export const S_Server = {
 
         if (this.ops.size === 1 && !Array.from(this.ops)[0]) this.ops.clear();
 
-        const overworld = new S_World(0, "overworld", {
-            generatorType: "default"
-        });
+        const overworld = new S_World(0, "overworld", new ObjectTag({
+            generatorName: new StringTag("flat")
+        }));
 
         this.worlds.push(overworld);
         this.defaultWorld = overworld;

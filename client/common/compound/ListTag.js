@@ -2,7 +2,7 @@ import {Tag, TagBytes} from "./Tag.js";
 import {TagMatch} from "./TagManager.js";
 
 export class ListTag extends Tag {
-    /*** @param {Tag[]} tags */
+    /*** @param {(Tag | ObjectTag | ListTag | StringTag | BoolTag | BaseNumberTag | InventoryTag | ItemTag)[]} tags */
     constructor(tags = []) {
         super();
         this.tags = tags;
@@ -20,6 +20,14 @@ export class ListTag extends Tag {
         return 1 + this.tags.reduce((a, b) => a + b.getSize(), 0) + 1;
     };
 
+    serialize() {
+        const list = [];
+        for (let i = 0; i < this.tags.length; i++) {
+            list.push(this.tags[i].serialize());
+        }
+        return list;
+    };
+
     write(buffer, j) {
         buffer[j++] = TagBytes.LIST;
         for (let i = 0; i < this.tags.length; i++) {
@@ -30,11 +38,12 @@ export class ListTag extends Tag {
     };
 
     apply(list) {
-        if (!Array.isArray(list)) return;
+        if (!Array.isArray(list)) return this;
         const len = Math.min(this.tags.length, list.length);
         for (let i = 0; i < len; i++) {
             this.tags[i].apply(list[i]);
         }
+        return this;
     };
 
     clone() {
@@ -45,14 +54,21 @@ export class ListTag extends Tag {
         return tag;
     };
 
+    /**
+     * @param {Tag} tag
+     */
+    push(tag) {
+        this.tags.push(tag);
+    };
+
     static read(buffer, j) {
         const tag = new ListTag;
         while (true) {
             if (j >= buffer.length) throw new Error("Unexpected end of list tag.");
+            if (buffer[j] === TagBytes.BREAK) break;
             const r = Tag.readAny(buffer, j);
             j = r[0];
             tag.tags.push(r[1]);
-            if (buffer[j] === TagBytes.BREAK) break;
         }
         return [j + 1, tag];
     };

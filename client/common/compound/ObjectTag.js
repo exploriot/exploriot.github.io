@@ -4,7 +4,7 @@ import {TagMatch} from "./TagManager.js";
 export class ObjectTag extends Tag {
     static SIGN = TagBytes.OBJECT;
 
-    /*** @param {Record<string, Tag>} tags */
+    /*** @param {Record<string, Tag | ObjectTag | ListTag | StringTag | BoolTag | BaseNumberTag | InventoryTag | ItemTag>} tags */
     constructor(tags = {}) {
         super();
         this.tags = tags;
@@ -20,8 +20,26 @@ export class ObjectTag extends Tag {
         return obj;
     };
 
+    serialize() {
+        const obj = {};
+        const keys = Object.keys(this.tags);
+        for (let i = 0; i < keys.length; i++) {
+            const k = keys[i];
+            obj[k] = this.tags[k].serialize();
+        }
+        return obj;
+    };
+
+    getTag(key) {
+        return this.tags[key];
+    };
+
     getTagValue(key) {
         return this.tags[key].value;
+    };
+
+    setTag(key, value) {
+        this.tags[key] = value;
     };
 
     removeTag(key) {
@@ -47,13 +65,29 @@ export class ObjectTag extends Tag {
     };
 
     apply(object) {
-        if (typeof object !== "object" || object === null) return;
+        if (typeof object !== "object" || object === null) return this;
         const keys = Object.keys(this.tags);
         for (let i = 0; i < keys.length; i++) {
             const k = keys[i];
             if (!(k in object)) continue;
             this.tags[k].apply(object[k]);
         }
+        return this;
+    };
+
+    /**
+     * @param {Object} target
+     * @param {string[]} ignore
+     * @return {any}
+     */
+    applyTo(target, ignore = []) {
+        const keys = Object.keys(this.tags);
+        for (let i = 0; i < keys.length; i++) {
+            const k = keys[i];
+            if (ignore.includes(k)) continue;
+            target[k] = this.tags[k].value;
+        }
+        return target;
     };
 
     clone() {
@@ -92,6 +126,7 @@ export class ObjectTag extends Tag {
             }
             if (buffer[j] === TagBytes.BREAK) break;
             j++;
+            if (buffer[j] === TagBytes.BREAK) break;
             const r = Tag.readAny(buffer, j);
             j = r[0];
             tag.tags[key] = r[1];

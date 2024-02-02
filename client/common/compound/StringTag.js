@@ -22,8 +22,9 @@ export class StringTag extends Tag {
     };
 
     apply(string) {
-        if (typeof string !== "string" || string.length > 65535) return;
+        if (typeof string !== "string" || string.length > 65535) return this;
         this.value = string;
+        return this;
     };
 
     clone() {
@@ -34,6 +35,7 @@ export class StringTag extends Tag {
         const long = buffer[j - 1] === TagBytes.STRING_LONG;
         const length = long ? buffer.readUInt16BE(j) : buffer.readUInt8(j);
         j += long ? 4 : 2;
+        // noinspection JSDeprecatedSymbols
         return [j + length, new StringTag(buffer.slice(j, j + length).toString())];
     };
 }

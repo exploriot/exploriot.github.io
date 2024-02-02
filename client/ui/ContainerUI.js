@@ -1,11 +1,12 @@
 import {CServer} from "../main/Game.js";
-import {getItemName, getItemTexture} from "../common/metadata/Items.js";
+import {getItemName, getTextureURL} from "../common/metadata/Items.js";
 import {Metadata} from "../common/metadata/Metadata.js";
 import {getInventoryByName} from "../network/ClientPacketHandler.js";
 import {Keyboard} from "../input/Keyboard.js";
 import {ClientSession} from "../network/ClientSession.js";
 import {ContainerIds, InventoryIds} from "../common/item/Inventory.js";
 import {isEscMenuOn} from "./MainUI.js";
+import {renderPlayerModel} from "../Utils.js";
 
 const invUI = document.getElementById("player-inventory-ui");
 const craftingTableUI = document.getElementById("crafting-table-ui");
@@ -16,9 +17,44 @@ const invInfoText = document.querySelector(".container-cursor-text");
 const furnaceSmeltDiv = document.getElementById("furnace-smelt");
 const furnaceArrowDiv = document.getElementById("furnace-arrow");
 const mainDivs = document.querySelectorAll(`[data-inv]`);
+const playerInvCanvas = document.querySelector(".player-inventory-canvas");
+const piCtx = playerInvCanvas.getContext("2d");
 const uiView = [];
 let lastHandIndex = null;
 let downMain;
+
+function onPlayerInvResize() {
+    const container = playerInvCanvas.getBoundingClientRect();
+    playerInvCanvas.width = container.width;
+    playerInvCanvas.height = container.height;
+    playerInvCanvas.imageSmoothingEnabled = false;
+}
+
+addEventListener("resize", onPlayerInvResize);
+
+onPlayerInvResize();
+
+function animatePlayerInvCanvas() {
+    requestAnimationFrame(animatePlayerInvCanvas);
+    if (!isInventoryUIOn()) return;
+    // aspect ratio: 3 / 4
+    const W = playerInvCanvas.width;
+    renderPlayerModel(
+        piCtx, {
+            SIZE: W / 2,
+            renderX: 1,
+            renderY: 1,
+            skin: CServer.player.skin,
+            bodyRotation: true,
+            renderLeftArmRotation: 0,
+            renderLeftLegRotation: 0,
+            renderRightLegRotation: 0,
+            renderRightArmRotation: 0,
+            renderHeadRotation: 0,
+            handItem: CServer.getHandItem()
+        }
+    );
+}
 
 export function initContainers() {
     for (const mainDiv of mainDivs) {
@@ -256,7 +292,7 @@ export function renderInventories() {
             const hasItemChanged = (o.last && !item) || (o.last && !item.equals(o.last)) || (!o.last && item);
             if (!hasItemChanged) continue;
             o.last = item ? item.serialize() : null;
-            o.img.src = item ? "./" + getItemTexture(item.id, item.meta) : "assets/1px.png";
+            o.img.src = item ? "./" + getTextureURL(item.id, item.meta) : "assets/1px.png";
             o.count.innerText = item && item.count !== 1 ? item.count : "";
             const durability = item ? Metadata.durabilities[item.id] : 0;
             o.damage.style.width = durability ? (
@@ -376,8 +412,6 @@ export function isDoubleChestUIOn() {
 }
 
 export function initContainerUI() {
-
-
     addEventListener("click", onAnyClick);
     addEventListener("contextmenu", onAnyClick);
 
@@ -397,8 +431,10 @@ export function initContainerUI() {
         const item = inv.contents[index];
 
         if (item && !CServer.cursorInventory.contents[0]) {
-            invInfoText.innerText = getItemName(item.id, item.meta);
+            invInfoText.innerText = getItemName(item.id, item.meta, item.nbt);
             invInfoText.style.opacity = "1";
         } else invInfoText.style.opacity = "0";
     });
+
+    animatePlayerInvCanvas();
 }
