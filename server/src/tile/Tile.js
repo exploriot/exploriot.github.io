@@ -1,34 +1,57 @@
 import {Ids} from "../../../client/common/metadata/Ids.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
+import {randomUUID} from "crypto";
+import {UInt8Tag} from "../../../client/common/compound/int/UInt8Tag.js";
+import {StringTag} from "../../../client/common/compound/StringTag.js";
 
 export const TileIds = {
     FURNACE: 0,
     CHEST: 1,
-    __LEN: 2
+    SPAWNER: 2,
+    __LEN: 3
 };
 
 export const TileBlockIdMap = {
     [Ids.FURNACE]: TileIds.FURNACE,
-    [Ids.CHEST]: TileIds.CHEST
+    [Ids.CHEST]: TileIds.CHEST,
+    [Ids.ENTITY_SPAWNER]: TileIds.SPAWNER
 };
 
+/**
+ * @property {number} type
+ * @property {string} uuid
+ * @property {number} x
+ * @property {number} y
+ * @property {number} updateCounter
+ */
 export class Tile {
+    static NBT_STRUCTURE = new ObjectTag({
+        type: new UInt8Tag(0),
+        uuid: new StringTag(""),
+        x: new Float32Tag(0),
+        y: new Float32Tag(0),
+        updateCounter: new Float32Tag(0)
+    });
+    static NBT_IGNORE = ["type"];
+
     updatePeriod = 1;
-    __updateCounter = 0;
 
     /**
-     * @param {number} type
      * @param {S_World} world
-     * @param {number} x
-     * @param {number} y
+     * @param {ObjectTag} nbt
      */
-    constructor(type, world, x, y) {
-        this.type = type;
+    constructor(world, nbt = new ObjectTag()) {
+        this.type = this.constructor.TYPE;
         this.world = world;
-        this.x = x;
-        this.y = y;
+        /*** @type {ObjectTag} */
+        this.nbt = this.constructor.NBT_STRUCTURE.clone().apply(nbt.value);
+        this.nbt.applyTo(this, this.constructor.NBT_IGNORE);
+        this.uuid ||= randomUUID();
     };
 
     init() {
+        return true;
     };
 
     update(dt) {
@@ -59,5 +82,9 @@ export class Tile {
         delete holder[this.y];
         const tiles = this.world.chunkTiles[this.x >> 4] ??= [];
         if (tiles.includes(this)) tiles.splice(tiles.indexOf(this), 1);
+    };
+
+    saveNBT() {
+        this.nbt.apply(this);
     };
 }

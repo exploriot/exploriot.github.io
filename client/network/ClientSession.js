@@ -22,6 +22,7 @@ import {ObtainItemPacket} from "../packet/ObtainItemPacket.js";
 import {ConsumeItemPacket} from "../packet/ConsumeItemPacket.js";
 import {UpdateRotationPacket} from "../packet/UpdateRotationPacket.js";
 import {clearDiv, colorizeTextHTML} from "../Utils.js";
+import {TouchEntityPacket} from "../packet/TouchEntityPacket.js";
 
 const connectionDiv = document.querySelector(".connection-menu");
 const connectionText = document.querySelector(".connection-menu > .container > .text");
@@ -137,6 +138,7 @@ export const ClientSession = {
     },
 
     sendDropItemPacket(id, index, count) {
+        if (CServer.getGamemode() === 3) return;
         this.sendPacket(ItemDropPacket(id, index, count));
     },
 
@@ -163,6 +165,10 @@ export const ClientSession = {
 
     sendConsumeItemPacket() {
         this.sendPacket(ConsumeItemPacket());
+    },
+
+    sendTouchEntityPacket(entityId, button) {
+        this.sendPacket(TouchEntityPacket(entityId, button));
     },
 
     handlePacket(pk) {

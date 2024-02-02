@@ -21,6 +21,7 @@ import {C_XPOrbEntity} from "../entity/XPOrbEntity.js";
 import {AnimationIds} from "../common/metadata/AnimationIds.js";
 import {Sound} from "../loader/Sound.js";
 import {clearDiv, colorizeTextHTML} from "../Utils.js";
+import {C_ZombieEntity} from "../entity/ZombieEntity.js";
 
 const EntityCreator = {
     [EntityIds.PLAYER]: data => {
@@ -53,6 +54,10 @@ const EntityCreator = {
         data.id,
         CServer.world
     ),
+    [EntityIds.ZOMBIE]: data => new C_ZombieEntity(
+        data.id,
+        CServer.world
+    )
 };
 
 function packetToEntity(data) {
@@ -266,7 +271,7 @@ export function C_handleCloseContainerPacket() {
 }
 
 export function C_handlePlaySoundPacket(pk) {
-    const dist = CServer.player.distance(pk.x, pk.y);
+    const dist = Math.max(1, CServer.player.distance(pk.x, pk.y));
     if (dist > 50) return;
     const volume = pk.volume * Math.min(1, 1 / dist);
     Sound.play(pk.file, volume);
@@ -312,11 +317,24 @@ export function C_handleEntityAnimationPacket(pk) {
         case AnimationIds.HAND_SWING:
             entity.swingRemaining = 0.3;
             break;
-        case AnimationIds.ITEM_PICKUP:
+        case AnimationIds.PICKUP:
             entity.pickedUp = true;
             entity.pickedUpPlayer = CServer.world.entityMap[pk.playerId];
             break;
     }
+}
+
+export function C_handleApplyVelocityPacket(pk) {
+    CServer.player.vx += pk.vx;
+    CServer.player.vy += pk.vy;
+}
+
+export function C_handleEntityVelocityPacket(pk) {
+    const entity = CServer.world.entityMap[pk.id];
+    if (!entity) return;
+    entity.vx = pk.vx;
+    entity.vy = pk.vy;
+    entity.handleMovement();
 }
 
 const PacketMap = {
@@ -345,7 +363,9 @@ const PacketMap = {
     [PacketIds.SERVER_STOP_AMBIENT]: C_handleStopAmbientPacket,
     [PacketIds.SERVER_CONTAINER_STATE]: C_handleContainerStatePacket,
     [PacketIds.SERVER_UPDATE_PLAYER_LIST]: C_handleUpdatePlayerListPacket,
-    [PacketIds.SERVER_ENTITY_ANIMATION]: C_handleEntityAnimationPacket
+    [PacketIds.SERVER_ENTITY_ANIMATION]: C_handleEntityAnimationPacket,
+    [PacketIds.SERVER_APPLY_VELOCITY]: C_handleApplyVelocityPacket,
+    [PacketIds.SERVER_ENTITY_VELOCITY]: C_handleEntityVelocityPacket
 };
 
 export function C_handlePacket(pk) {

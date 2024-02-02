@@ -1,6 +1,4 @@
-import {BASE_BLOCK_SIZE} from "../Utils.js";
-
-const imagePlaceholder = document.createElement("canvas");
+const imagePlaceholder = typeof global === "undefined" ? document.createElement("canvas") : null;
 
 // BASED ON 64x64
 const SKIN_PARTS = [
@@ -125,17 +123,6 @@ export class Texture {
             console.log("%cFailed to load " + src, "color: #ff0000");
         });
         return Texture.textures[src] = new Texture(prom, src);
-    };
-
-    static shadow(opacity) {
-        if (Texture.shadows[opacity + ";" + BASE_BLOCK_SIZE]) return Texture.shadows[opacity + ";" + BASE_BLOCK_SIZE];
-        const cnv = document.createElement("canvas");
-        const ct = cnv.getContext("2d");
-        cnv.width = BASE_BLOCK_SIZE;
-        cnv.height = BASE_BLOCK_SIZE;
-        ct.globalAlpha = opacity;
-        ct.fillRect(0, 0, BASE_BLOCK_SIZE, BASE_BLOCK_SIZE);
-        return Texture.shadows[opacity + ";" + BASE_BLOCK_SIZE] = cnv;
     };
 
     flip(way = 1) {

@@ -1,4 +1,5 @@
 import {Item} from "./Item.js";
+import {Metadata} from "../metadata/Metadata.js";
 
 export const InventoryIds = {
     PLAYER: 0,
@@ -166,6 +167,23 @@ export class Inventory {
         this.cleanDirty = true;
         this.dirtyIndexes.clear();
         this.contents.fill(null);
+    };
+
+    damageItemAt(index, amount = 1) {
+        const item = this.contents[index];
+        if (item && item.id in Metadata.durabilities) {
+            const durability = Metadata.durabilities[item.id];
+            item.nbt.damage ??= 0;
+            if ((item.nbt.damage += amount) >= durability) this.removeIndex(index);
+        }
+    };
+
+    decreaseItemAt(index, amount = 1) {
+        const item = this.contents[index];
+        if (item) {
+            item.count -= amount;
+            this.updateIndex(index);
+        }
     };
 
     serialize() {

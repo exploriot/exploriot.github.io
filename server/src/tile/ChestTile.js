@@ -1,30 +1,21 @@
 import {TileIds} from "./Tile.js";
 import {ContainerTile} from "./ContainerTile.js";
 import {ContainerIds} from "../../../client/common/item/Inventory.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {BoolTag} from "../../../client/common/compound/BoolTag.js";
 
+/**
+ * @property {boolean} isDouble
+ */
 export class ChestTile extends ContainerTile {
-    isDouble = false;
-
-    constructor(world, x, y) {
-        super(TileIds.CHEST, world, x, y);
-    };
+    static TYPE = TileIds.CHEST;
+    static NBT_STRUCTURE = new ObjectTag({
+        isDouble: new BoolTag(false)
+    }).combine(ContainerTile.NBT_STRUCTURE);
 
     init() {
         this.size = this.isDouble ? 54 : 27;
         this.containerId = this.isDouble ? ContainerIds.DOUBLE_CHEST : ContainerIds.CHEST;
-        super.init();
-    };
-
-    static deserialize(world, data) {
-        const tile = new ChestTile(world, data.x, data.y);
-        tile.isDouble = data.isDouble;
-        tile._contents = data.contents;
-        return tile;
-    };
-
-    serialize() {
-        return {
-            ...super.serialize(), isDouble: this.isDouble
-        };
+        return super.init();
     };
 }

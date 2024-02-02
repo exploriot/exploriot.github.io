@@ -5,12 +5,11 @@ import {
     PLAYER_BB,
     SURVIVAL_REACH
 } from "../../../client/common/metadata/Entities.js";
+import {existsSync, mkdirSync, writeFileSync} from "fs";
 import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
 import {NetworkSession} from "../network/NetworkSession.js";
 import {HandItemPacket} from "../packet/HandItemPacket.js";
-import {CommandSender} from "../command/CommandSender.js";
 import {extendClass} from "../Utils.js";
-import {writeFileSync} from "fs";
 import {GameRules} from "../../../client/common/metadata/GameRules.js";
 import {S_Living} from "./Living.js";
 import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
@@ -24,6 +23,7 @@ import DefaultSkin from "../../../client/main/DefaultSkin.js";
 import {Item} from "../../../client/common/item/Item.js";
 import {ItemTag} from "../../../client/common/compound/ItemTag.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
+import {CommandSender} from "../command/CommandSender.js";
 
 /**
  * @extends CommandSender
@@ -37,6 +37,8 @@ import {Ids} from "../../../client/common/metadata/Ids.js";
  * @property {number} naturalRegenTimer
  * @property {number} starveTimer
  * @property {number} rotation
+ * @property {Record<string, {x: number, y: number}>} spawnPoints
+ * @property {undefined} worldName
  */
 export class S_Player extends S_Living {
     static TYPE = EntityIds.PLAYER;
@@ -50,7 +52,7 @@ export class S_Player extends S_Living {
             [AttributeIds.HEALTH]: new Float32Tag(20),
             [AttributeIds.MAX_HEALTH]: new Float32Tag(20),
             [AttributeIds.FOOD]: new Float32Tag(20),
-            [AttributeIds.MAX_FOOD]: new Float32Tag(20),
+            [AttributeIds.MAX_FOOD]: new Float32Tag(25),
             [AttributeIds.SATURATION]: new Float32Tag(5),
             [AttributeIds.BREATH]: new Float32Tag(20),
             [AttributeIds.XP]: new Float32Tag(0)
@@ -63,14 +65,15 @@ export class S_Player extends S_Living {
         armorInventory: new InventoryTag(new Inventory(4, InventoryIds.ARMOR)),
         fallY: new Float32Tag(0),
         naturalRegenTimer: new Float32Tag(0),
-        starveTimer: new Float32Tag(0)
+        starveTimer: new Float32Tag(0),
+        spawnPoints: new ObjectTag
     }).combine(S_Living.NBT_PRIVATE_STRUCTURE);
 
     static NBT_PUBLIC_STRUCTURE = new ObjectTag({
         username: new StringTag("Steve"),
         skinData: new StringTag(""),
         rotation: new Float32Tag(0),
-        handItem: new ItemTag(new Item(Ids.AIR)),
+        handItem: new ItemTag(new Item(Ids.AIR))
     }).combine(S_Living.NBT_PUBLIC_STRUCTURE);
 
     dirtyAttributes = new Set;
@@ -95,10 +98,23 @@ export class S_Player extends S_Living {
 
         if (!world) {
             Terminal.warn(this.username + "'s world couldn't be found. Using the default.");
-            const loc = this.world.getPlayerSpawnLocation(this.username);
+            const loc = this.getSpawnPoint();
             this.x = loc.x;
             this.y = loc.y;
         }
+    };
+
+    decreaseHandItem(amount = 1) {
+        this.playerInventory.decreaseItemAt(this.handIndex, amount);
+    };
+
+    damageHandItem(amount = 1) {
+        this.playerInventory.damageItemAt(this.handIndex, amount);
+    };
+
+    applyVelocity(vx, vy) {
+        if (this.isFlying()) return;
+        this.session.sendVelocity(vx, vy);
     };
 
     updateHandItem() {
@@ -315,12 +331,13 @@ export class S_Player extends S_Living {
         if (
             food > 17
             && health < maxHealth
-            && !this.world.getGameRule(GameRules.NATURAL_REGENERATION)
+            && this.world.getGameRule(GameRules.NATURAL_REGENERATION)
             && (this.naturalRegenTimer += dt) > (food >= maxFood ? 1 : 4)
         ) {
             this.naturalRegenTimer = 0;
             const heal = Math.min(maxHealth - health, 1);
             this.setHealth(health + heal);
+            this.setFood(Math.max(0, food - heal / 3));
         }
         if (food <= 0 && (this.starveTimer += dt) > 4) {
             this.starveTimer = 0;
@@ -337,9 +354,7 @@ export class S_Player extends S_Living {
 
     damage(hp) {
         if (this.getGamemode() % 2 === 1) return;
-        const newHealth = this.getHealth() - hp;
-        this.setHealth(newHealth);
-        if (newHealth <= 0) this.remove(true);
+        super.damage(hp);
     };
 
     onFall(fallDistance) {
@@ -350,9 +365,8 @@ export class S_Player extends S_Living {
 
     save() {
         this.saveNBT();
-        const buffer = Buffer.alloc(this.__private_nbt.getSize());
-        this.__private_nbt.write(buffer, 0);
-        writeFileSync("./players/" + this.username + ".nbt", buffer);
+        if (!existsSync("./players")) mkdirSync("./players");
+        writeFileSync("./players/" + this.username + ".nbt", this.nbt.toBuffer());
     };
 
     holdOrDrop(item) {
@@ -363,8 +377,13 @@ export class S_Player extends S_Living {
         }
     };
 
-    getSpawnPoint() {
-        return this.world.getSafeSpawnLocation();
+    getSpawnPoint(world = this.world) {
+        const sp = this.spawnPoints[world.name];
+        return sp ?? this.world.getSafeSpawnLocation();
+    };
+
+    setSpawnPoint(x, y, world = this.world) {
+        this.spawnPoints[world.name] = {x, y};
     };
 
     respawn() {

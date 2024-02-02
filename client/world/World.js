@@ -130,13 +130,13 @@ export class C_World extends World {
                     }
                 } else if (
                     this.canInteractBlockAt(CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem)
-                    && Date.now() - lastPlace > (CServer.getGamemode() % 2 === 0 ? 300 : 0)
+                    && Date.now() - lastPlace > (CServer.getGamemode() % 2 === 0 ? 300 : 50)
                 ) {
                     lastPlace = Date.now();
                     ClientSession.sendInteractBlockPacket(Mouse.rx, Mouse.ry);
                 }
             }
-            if (!Metadata.block.includes(handItemId) && Date.now() - lastConsume > 300) {
+            if (Metadata.edible[handItemId] && Date.now() - lastConsume > 300) {
                 lastConsume = Date.now();
                 ClientSession.sendConsumeItemPacket();
             }
@@ -165,8 +165,7 @@ export class C_World extends World {
         const renderChunkMinX = playerChunkX - renderDistChunks;
         const renderChunkMaxX = playerChunkX + renderDistChunks;
         for (let x = renderChunkMinX; x <= renderChunkMaxX; x++) {
-            const entities = this.chunkEntities[x];
-            if (!entities) continue;
+            const entities = this.getChunkEntities(x);
             for (const entity of entities) {
                 if (
                     Math.abs(entity.x - CServer.player.x) < C_OPTIONS.renderDistance + 4 &&

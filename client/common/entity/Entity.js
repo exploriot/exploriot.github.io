@@ -1,8 +1,9 @@
 import {BoundingBox} from "./BoundingBox.js";
-import {GRAVITY_FORCE} from "../metadata/Entities.js";
+import {getEntityName, GRAVITY_FORCE} from "../metadata/Entities.js";
 import {SLAB_BB, STAIRS_BB} from "../metadata/Blocks.js";
 
 export class Entity {
+    /*** @type {number | null} */
     lastChunkX = null;
     x = 0;
     y = 0;
@@ -24,14 +25,18 @@ export class Entity {
         this.downBB = bb?.clone();
     };
 
+    getName() {
+        return getEntityName(this.type);
+    };
+
     getWorld() {
         return this.world;
     };
 
     update(dt) {
-        this.vx *= 0.999;
+        if (this.isOnGround()) this.vx *= 0.9;
+        else this.vx *= 0.999;
         this.vy *= 0.999;
-        //if (this.type === EntityIds.ITEM) return;
         return this.move(this.vx * dt, this.vy * dt);
     };
 
@@ -53,6 +58,11 @@ export class Entity {
         this.y += dy;
         this.handleMovement();
         return true;
+    };
+
+    applyVelocity(vx, vy) {
+        this.vx = vx;
+        this.vy = vy;
     };
 
     move(dx, dy) {
@@ -117,10 +127,16 @@ export class Entity {
     updateChunk() {
         const newCX = this.x >> 4;
         if (newCX === this.lastChunkX) return false;
-        const oldChunk = this.world.chunkEntities[this.lastChunkX];
+        if (this.world.dirtyChunks) {
+            if (this.lastChunkX !== null) this.world.dirtyChunks.add(this.lastChunkX);
+            this.world.dirtyChunks.add(newCX);
+        }
+        const oldChunk = this.world.getChunkEntities(this.lastChunkX);
         if (oldChunk) {
             const index = oldChunk.indexOf(this);
-            if (index !== -1) oldChunk.splice(index, 1);
+            if (index !== -1) {
+                oldChunk.splice(index, 1);
+            }
         }
         const newEntities = this.world.chunkEntities[newCX] ??= [];
         if (!newEntities.includes(this)) {
@@ -131,12 +147,12 @@ export class Entity {
     };
 
     isOnGround() {
-        return this.world.getCollidingBlock(this.downBB);
+        return !!this.world.getCollidingBlock(this.downBB);
     };
 
     remove() {
         if (this.lastChunkX !== null) {
-            const chunk = this.world.chunkEntities[this.lastChunkX];
+            const chunk = this.world.getChunkEntities(this.lastChunkX);
             if (chunk) {
                 const index = chunk.indexOf(this);
                 if (index !== -1) chunk.splice(index, 1);
@@ -151,6 +167,10 @@ export class Entity {
 
     distance(x, y) {
         return Math.sqrt((this.x - x) ** 2 + (this.y - y) ** 2);
+    };
+
+    distanceBasic(x, y) {
+        return Math.abs(this.x - x) + Math.abs(this.y - y);
     };
 
     serialize() {

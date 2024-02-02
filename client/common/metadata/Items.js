@@ -1,6 +1,8 @@
 import {ARMOR_LEVEL, ARMOR_TYPES, Metadata, TOOL_LEVEL, TOOL_TYPES} from "./Metadata.js";
 import {Ids} from "./Ids.js";
 import {ItemDescriptor as ID} from "../item/Item.js";
+import {Texture} from "../../loader/Texture.js";
+import {getEntityName} from "./Entities.js";
 
 export const ItemTextures = {};
 
@@ -11,21 +13,30 @@ export function getItemMaxStack(id) {
 if (typeof window === "undefined") global._getItemMaxStack = getItemMaxStack;
 else window._getItemMaxStack = getItemMaxStack;
 
-export function getItemName(id, meta) {
+export function getItemName(id, meta, nbt = {}) {
+    if (id === Ids.SPAWN_EGG) {
+        return getEntityName(nbt.entityType) + " Spawn Egg";
+    }
     let name = Metadata.itemName[id];
     if (!name) {
         name = Object.keys(Ids).find(i => i[0] !== "_" && Ids[i] === id);
         if (!name) return "Unknown";
         return name.split("_").map(i => i[0] + i.slice(1).toLowerCase()).join(" ");
     }
-    if (typeof name === "object") name = name[meta % name.length];
+    if (Array.isArray(name)) name = name[meta % name.length];
     return name;
 }
 
-export function getItemTexture(id, meta) {
-    const texture = ItemTextures[id];
-    if (typeof texture === "object") return texture[meta % texture.length];
+export function getTextureURL(id, meta) {
+    const texture = Metadata.textures[id];
+    if (Array.isArray(texture)) return texture[meta % texture.length];
     return texture;
+}
+
+export function getItemTexture(id, meta) {
+    const f = id + ":" + meta;
+    if (f in ItemTextures) return ItemTextures[f];
+    return ItemTextures[f] = Texture.get(getTextureURL(id, meta));
 }
 
 export function getItemIdByName(name) {
@@ -36,10 +47,10 @@ export function getItemIdByName(name) {
  * @param {number} id
  * @param {string | 0} texture
  * @param {string | Object | 0} name
- * @param {number | 0} edible
+ * @param {number} edible
  * @param {number | 0} durability
  * @param {number | 0} maxStack
- * @param {0 | 1} isArmor
+ * @param {boolean} isArmor
  * @param {number | 0} toolType
  * @param {number | 0} toolLevel
  * @param {number | 0} fuel
@@ -48,14 +59,15 @@ export function getItemIdByName(name) {
  * @param {number} armorType
  * @param {number} armorLevel
  * @param {number} armorPoints
+ * @param {boolean} interactable
  */
 function registerItem(id, {
     texture = 0, name = 0, edible = 0, durability = 0, maxStack = 0,
-    isArmor = 0, toolType = -1, toolLevel = -1, fuel = 0, smeltsTo = 0, smeltXP = 0,
-    armorType = -1, armorLevel = -1, armorPoints = 0
+    isArmor = false, toolType = -1, toolLevel = -1, fuel = 0, smeltsTo = 0, smeltXP = 0,
+    armorType = -1, armorLevel = -1, armorPoints = 0, interactable = false
 } = {}) {
     if (Metadata.item.includes(id)) throw new Error("ID is already in use: " + id);
-    ItemTextures[id] = texture || "assets/items/" + Object.keys(Ids).find(k => k[0] !== "_" && Ids[k] === id).toLowerCase() + ".png";
+    Metadata.textures[id] = texture || "assets/items/" + Object.keys(Ids).find(k => k[0] !== "_" && Ids[k] === id).toLowerCase() + ".png";
     Metadata.item.push(id);
     if (toolLevel !== -1) Metadata.toolLevelItems[id] = toolLevel;
     if (toolType !== -1) Metadata.toolTypeItems[id] = toolType;
@@ -71,6 +83,7 @@ function registerItem(id, {
     // https://minecraft.fandom.com/wiki/Smelting#Foods
     if (smeltsTo) Metadata.smeltsTo[id] = smeltsTo;
     if (smeltXP) Metadata.smeltXP[id] = smeltXP;
+    if (interactable) Metadata.interactableItems.push(id);
     // console.debug("%cRegistered item with the ID " + id, "color: #00ff00");
 }
 
@@ -81,6 +94,10 @@ export function initItems() {
         Ids.IRON_NUGGET, Ids.GOLDEN_NUGGET, Ids.COAL_BLOCK, Ids.IRON_BLOCK, Ids.GOLD_BLOCK, Ids.DIAMOND_BLOCK,
         Ids.COAL, Ids.CHARCOAL
     ]) registerItem(id);
+
+    registerItem(Ids.SPAWN_EGG, {
+        interactable: true, texture: "assets/items/spawn_eggs/base_spawn_egg.png"
+    });
 
     Metadata.fuel[Ids.CHARCOAL] = Metadata.fuel[Ids.COAL] = 8;
     Metadata.fuel[Ids.COAL_BLOCK] = 80;

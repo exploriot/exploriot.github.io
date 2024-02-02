@@ -1,4 +1,4 @@
-import {World} from "../../../client/common/world/World.js";
+import {makeSubChunk, World} from "../../../client/common/world/World.js";
 import {randInt, SelfAround} from "../../../client/common/Utils.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
@@ -13,13 +13,28 @@ import {TileBlockIdMap, TileIds} from "../tile/Tile.js";
 import {FurnaceTile} from "../tile/FurnaceTile.js";
 import {ChestTile} from "../tile/ChestTile.js";
 import {S_XPOrbEntity} from "../entity/XPOrbEntity.js";
-import {S_TNTEntity} from "../entity/TNTEntity.js";
 import {GameRules} from "../../../client/common/metadata/GameRules.js";
 import {S_Player} from "../entity/Player.js";
 import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
 import {Int8Tag} from "../../../client/common/compound/int/Int8Tag.js";
 import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
 import {ItemTag} from "../../../client/common/compound/ItemTag.js";
+import {StringTag} from "../../../client/common/compound/StringTag.js";
+import {UInt32Tag} from "../../../client/common/compound/int/UInt32Tag.js";
+import {BoolTag} from "../../../client/common/compound/BoolTag.js";
+import {Tag} from "../../../client/common/compound/Tag.js";
+import {ListTag} from "../../../client/common/compound/ListTag.js";
+import {SpawnerTile} from "../tile/SpawnerTile.js";
+import {S_TNTEntity} from "../entity/TNTEntity.js";
+import {S_ZombieEntity} from "../entity/ZombieEntity.js";
+
+export const ENTITY_MAP = {
+    [EntityIds.ITEM]: S_ItemEntity,
+    [EntityIds.FALLING_BLOCK]: S_FallingBlockEntity,
+    [EntityIds.TNT]: S_TNTEntity,
+    [EntityIds.XP_ORB]: S_XPOrbEntity,
+    [EntityIds.ZOMBIE]: S_ZombieEntity
+};
 
 /*** @type {{[key: number]: function(world: S_World, x: number, y: number, self: [number, number]): void}} */
 const BlockUpdater = {
@@ -29,10 +44,10 @@ const BlockUpdater = {
         world.setBlock(x, y, Ids.AIR);
         const sand = new S_FallingBlockEntity(world, new ObjectTag({
             blockId: new Int8Tag(self[0]),
-            blockMeta: new Int8Tag(self[1]),
-            x: new Float32Tag(x),
-            y: new Float32Tag(y)
+            blockMeta: new Int8Tag(self[1])
         }));
+        sand.x = x;
+        sand.y = y;
         world.addEntity(sand);
     },
     [Ids.SPONGE]: (world, X, Y) => {
@@ -105,7 +120,26 @@ export function generateSeed() {
     return randInt(0, 9999999999999);
 }
 
+/**
+ * @property {string} generatorName
+ * @property {string} generatorOptions
+ * @property {number} seed
+ * @property {Record<number, boolean>} gameRules
+ */
 export class S_World extends World {
+    static NBT_STRUCTURE = new ObjectTag({
+        generatorName: new StringTag("default"),
+        generatorOptions: new StringTag(""),
+        seed: new UInt32Tag(generateSeed()),
+        gameRules: new ObjectTag({
+            [GameRules.TNT_EXPLODES]: new BoolTag(true),
+            [GameRules.FALL_DAMAGE]: new BoolTag(true),
+            [GameRules.NATURAL_REGENERATION]: new BoolTag(true),
+            [GameRules.STARVE_DAMAGE]: new BoolTag(true),
+            [GameRules.DROWNING_DAMAGE]: new BoolTag(true)
+        })
+    });
+
     dirtyChunks = new Set;
     data = {};
     dirtyUpdateBlocks = new Set;
@@ -125,43 +159,42 @@ export class S_World extends World {
     /**
      * @param {number} id
      * @param {string} name
-     * @param init
+     * @param {ObjectTag} init
      */
-    constructor(id, name, init = {}) {
+    constructor(id, name, init = new ObjectTag) {
         super(id);
         this.name = name;
         this.path = "./worlds/" + name;
-        this._info = init ?? {};
-        if (!existsSync(this.path)) mkdirSync(this.path);
-        if (!existsSync(this.path + "/chunks")) mkdirSync(this.path + "/chunks");
-        if (!existsSync(this.path + "/world.json")) {
-            this._info = Object.assign({
-                generator: "default",
-                generatorOptions: "",
-                seed: generateSeed(),
-                gameRules: {},
-                playerSpawnPoints: {}
-            }, this._info);
-            this._info.gameRules = Object.assign({
-                [GameRules.TNT_EXPLODES]: true,
-                [GameRules.FALL_DAMAGE]: true,
-                [GameRules.NATURAL_REGENERATION]: true,
-                [GameRules.STARVE_DAMAGE]: true,
-                [GameRules.DROWNING_DAMAGE]: true
-            }, this._info.gameRules);
-            writeFileSync(this.path + "/world.json", JSON.stringify(this._info));
-        } else {
-            this._info = JSON.parse(readFileSync(this.path + "/world.json", "utf8"));
-        }
-        this.generator = new (Generators[this.getGeneratorType()])(this, this.getGeneratorOptions());
+        this.validatePath();
+        /*** @type {ObjectTag} */
+        this.nbt = existsSync("./worlds/" + this.name + "/world.nbt")
+            ? Tag.readAny(readFileSync("./worlds/" + this.name + "/world.nbt"), 0)[1]
+            : this.constructor.NBT_STRUCTURE.clone();
+        this.nbt.combine(init);
+        this.nbt.applyTo(this);
+        this.generator = new (Generators[this.generatorName])(this, this.generatorOptions);
+    };
+
+    /**
+     * @param {number} chunkX
+     * @return {Tile[]}
+     */
+    getChunkTiles(chunkX) {
+        return this.chunkTiles[chunkX] ?? [];
+    };
+
+    validatePath() {
+        if (!existsSync("./worlds")) mkdirSync("./worlds");
+        if (!existsSync("./worlds/" + this.name)) mkdirSync(this.path);
+        if (!existsSync("./worlds/" + this.name + "/chunks")) mkdirSync(this.path + "/chunks");
     };
 
     getGameRule(id) {
-        return this._info.gameRules[id];
+        return this.gameRules[id];
     };
 
     setGameRule(id, value) {
-        this._info.gameRules[id] = value;
+        this.gameRules[id] = value;
     };
 
     breakBlock(x, y, breakItem = null, instant = false, sound = true) {
@@ -175,20 +208,21 @@ export class S_World extends World {
         this.checkTile(x, y);
     };
 
+    placeBlock(x, y, id, meta = 0, sound = true) {
+        if (sound) {
+            const sound = getBlockDigSound(id);
+            if (sound) this.playSound(sound, x, y);
+        }
+        this.setBlock(x, y, id, meta);
+        this.checkTile(x, y);
+    };
+
     summonBlockDrops(x, y, breakItem = null) {
         const block = this.getBlock(x, y);
         const drops = getBlockDrops(block[0], block[1], breakItem);
         for (const item of drops) {
             this.dropItem(x, y, item);
         }
-    };
-
-    getPlayerSpawnLocation(name) {
-        return this._info.playerSpawnPoints[name] ?? this.getSafeSpawnLocation();
-    };
-
-    setPlayerSpawnLocation(name, x, y) {
-        this._info.playerSpawnPoints[name] = {x, y};
     };
 
     getSpawnLocation() {
@@ -201,15 +235,7 @@ export class S_World extends World {
     };
 
     getSeed() {
-        return this._info.seed;
-    };
-
-    getGeneratorType() {
-        return this._info.generator;
-    };
-
-    getGeneratorOptions() {
-        return this._info.generatorOptions;
+        return this.seed;
     };
 
     generateChunk(x) {
@@ -218,30 +244,35 @@ export class S_World extends World {
     };
 
     getChunk(x) {
-        if (!this.chunks[x] && existsSync(this.path + "/chunks/" + x + ".json")) {
-            const loaded = JSON.parse(readFileSync(this.path + "/chunks/" + x + ".json", "utf8"));
-            for (const data of loaded.entities) {
-                const clas = {
-                    [EntityIds.ITEM]: S_ItemEntity,
-                    [EntityIds.FALLING_BLOCK]: S_FallingBlockEntity,
-                    [EntityIds.TNT]: S_TNTEntity,
-                    [EntityIds.XP_ORB]: S_XPOrbEntity
-                }[data.type];
-                if (!clas) continue;
-                const entity = clas.deserialize(this, data);
-                this.addEntity(entity);
+        if (!this.chunks[x] && existsSync("./worlds/" + this.name + "/chunks/" + x + ".nbt")) {
+            /*** @type {ObjectTag} */
+            const chunkNbt = Tag.readAny(readFileSync("./worlds/" + this.name + "/chunks/" + x + ".nbt"), 0)[1];
+            /*** @type {ObjectTag} */
+            const subChunksNbt = chunkNbt.getTag("subChunks");
+            /*** @type {ListTag} */
+            const entitiesNbt = chunkNbt.getTag("entities");
+            /*** @type {ListTag} */
+            const tilesNbt = chunkNbt.getTag("tiles");
+            for (const nbt of entitiesNbt.tags) {
+                this.summonEntity(nbt.getTagValue("type"), 0, 0, nbt);
             }
-            for (const data of loaded.tiles) {
+            for (const nbt of tilesNbt.tags) {
                 const clas = {
                     [TileIds.FURNACE]: FurnaceTile,
-                    [TileIds.CHEST]: ChestTile
-                }[data.type];
+                    [TileIds.CHEST]: ChestTile,
+                    [TileIds.SPAWNER]: SpawnerTile
+                }[nbt.getTagValue("type")];
                 if (!clas) continue;
-                const tile = clas.deserialize(this, data);
-                tile.init();
-                tile.add();
+                const tile = new clas(this, nbt);
+                if (tile.init()) tile.add();
             }
-            return this.chunks[x] = loaded.subChunks;
+            const subChunks = subChunksNbt.tags;
+            const chunk = this.chunks[x] = {};
+            for (const y in subChunks) {
+                const subChunk = chunk[y] = makeSubChunk();
+                subChunk.set(subChunks[y].value.split("").map(i => i.charCodeAt(0)), 0);
+            }
+            return chunk;
         }
         return super.getChunk(x);
     };
@@ -279,6 +310,7 @@ export class S_World extends World {
         this.entityMap[entity.id] = entity;
         entity.broadcastEntity();
         entity.handleMovement();
+        this.dirtyChunks.add(entity.x >> 4);
     };
 
     getTile(worldX, worldY) {
@@ -291,7 +323,7 @@ export class S_World extends World {
         if (tile) tile.add();
     };
 
-    checkTile(worldX, worldY) {
+    checkTile(worldX, worldY, nbt = {}) {
         const id = this.getBlock(worldX, worldY)[0];
         const old = this.getTile(worldX, worldY);
         if (!(id in TileBlockIdMap)) {
@@ -299,13 +331,17 @@ export class S_World extends World {
             return;
         }
         const tileType = TileBlockIdMap[id];
-        const tileClass = {
+        const clas = {
             [TileIds.FURNACE]: FurnaceTile,
-            [TileIds.CHEST]: ChestTile
+            [TileIds.CHEST]: ChestTile,
+            [TileIds.SPAWNER]: SpawnerTile
         }[tileType];
         if (old && old.type === tileType) return;
-        const tile = new tileClass(this, worldX, worldY);
-        tile.init();
+        const tile = new clas(this, new ObjectTag({
+            x: new Float32Tag(worldX),
+            y: new Float32Tag(worldY)
+        }).combine(clas.NBT_STRUCTURE).apply(nbt));
+        if (!tile.init()) return;
         this.setTile(worldX, worldY, tile);
     };
 
@@ -317,7 +353,7 @@ export class S_World extends World {
         const viewers = [];
         const chunkDistance = Server.getChunkDistance();
         for (let X = chunkX - chunkDistance; X <= chunkX + chunkDistance; X++) {
-            for (const entity of (this.entityMap[X] ?? [])) {
+            for (const entity of (this.chunkEntities[X] ?? [])) {
                 viewers.push(entity);
             }
         }
@@ -339,7 +375,7 @@ export class S_World extends World {
         return viewers;
     };
 
-    dropItem(x, y, item, holdDelay = 0.25, vx = (Math.random() - 0.5) * 5, vy = Math.random() * 3 + 2) {
+    dropItem(x, y, item, holdDelay = 0.25, vx = (Math.random() - 0.5) * 3, vy = Math.random() * 3 + 2) {
         if (!item) return;
         const entity = new S_ItemEntity(this, new ObjectTag({
             item: new ItemTag(item),
@@ -365,9 +401,9 @@ export class S_World extends World {
         return entity;
     };
 
-    playSound(file, x, y) {
+    playSound(file, x, y, volume = 0.3) {
         for (const player of this.getChunkPlayerViewers(x >> 4)) {
-            if (player instanceof S_Player) player.session.playSound(file, x, y);
+            if (player instanceof S_Player) player.session.playSound(file, x, y, volume);
         }
     };
 
@@ -377,32 +413,72 @@ export class S_World extends World {
         }
     };
 
+    /**
+     * @param {number} id
+     * @param {number} x
+     * @param {number} y
+     * @param {Object | ObjectTag} nbt
+     * @return {S_Entity | null}
+     */
+    summonEntity(id, x, y, nbt = {}) {
+        const clas = ENTITY_MAP[id];
+        if (!clas) return null;
+        const entity = new clas(this, nbt instanceof ObjectTag ? nbt : clas.NBT_PRIVATE_STRUCTURE.clone().apply(nbt));
+        entity.x = x;
+        entity.y = y;
+        this.addEntity(entity);
+        return entity;
+    };
+
     saveChunk(x) {
         const chunk = this.chunks[x];
         /*** @type {S_Entity[]} */
         const entities = this.chunkEntities[x] ?? [];
         const tiles = this.chunkTiles[x] ?? [];
-        const data = {subChunks: [], entities: [], tiles: []};
-        for (const y in chunk) {
-            data.subChunks[y] = Array.from(chunk[y]);
-        }
+
+        const subChunksNbt = new ObjectTag;
+        const entitiesNbt = new ListTag;
+        const tilesNbt = new ListTag;
+
+        const chunkNbt = new ObjectTag({
+            subChunks: subChunksNbt,
+            entities: entitiesNbt,
+            tiles: tilesNbt
+        });
+
+        for (const y in chunk) subChunksNbt.setTag(y, new StringTag(
+            Array.from(chunk[y])
+                .map(i => String.fromCharCode(i))
+                .join("")
+        ));
+
         for (const entity of entities) {
             if (entity.type === EntityIds.PLAYER) continue;
             entity.saveNBT();
-            data.entities.push(entity.__private_nbt.value);
+            entitiesNbt.push(entity.nbt);
         }
+
         for (const tile of tiles) {
-            data.tiles.push(tile.serialize());
+            tile.saveNBT();
+            tilesNbt.push(tile.nbt);
         }
-        writeFileSync(this.path + "/chunks/" + x + ".json", JSON.stringify(data));
+
+        this.validatePath();
+        writeFileSync("./worlds/" + this.name + "/chunks/" + x + ".nbt", chunkNbt.toBuffer());
     };
 
     save() {
+        this.validatePath();
         this.dirtyChunks.forEach(x => {
             this.saveChunk(x);
         });
         this.dirtyChunks.clear();
-        writeFileSync(this.path + "/world.json", JSON.stringify(this._info));
+        this.saveNBT();
+        writeFileSync("./worlds/" + this.name + "/world.nbt", this.nbt.toBuffer());
+    };
+
+    saveNBT() {
+        this.nbt.apply(this);
     };
 
     update() {

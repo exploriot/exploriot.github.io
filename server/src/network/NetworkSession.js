@@ -1,46 +1,50 @@
-import {SUB_CHUNK_AMOUNT} from "../../../client/common/world/World.js";
 import {SubChunkPacket} from "../packet/SubChunkPacket.js";
 import {BatchPacket} from "../packet/BatchPacket.js";
 import {WelcomePacket} from "../packet/WelcomePacket.js";
-import {_T, _TA} from "../../../client/common/Utils.js";
-import {Metadata} from "../../../client/common/metadata/Metadata.js";
-import {Ids} from "../../../client/common/metadata/Ids.js";
 import {BlockBreakingUpdatePacket} from "../packet/BlockBreakingUpdatePacket.js";
-import {PacketIds} from "../../../client/common/metadata/PacketIds.js";
 import {DisconnectPacket} from "../packet/DisconnectPacket.js";
 import {EntityUpdatePacket} from "../packet/EntityUpdatePacket.js";
 import {BlockUpdatePacket} from "../packet/BlockUpdatePacket.js";
 import {PingPacket} from "../packet/PingPacket.js";
 import {InventoryUpdatePacket} from "../packet/InventoryUpdatePacket.js";
-import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
 import {InventorySetIndexPacket} from "../packet/InventorySetIndexPacket.js";
-import {
-    getBlockDigSound,
-    getBlockHardness,
-    getBlockMetaMod,
-    isBlockItem
-} from "../../../client/common/metadata/Blocks.js";
 import {SetPositionPacket} from "../packet/SetPositionPacket.js";
-import {findCrafting} from "../../../client/common/metadata/Crafts.js";
 import {SendMessagePacket} from "../packet/SendMessagePacket.js";
 import {OpenContainerPacket} from "../packet/OpenContainerPacket.js";
 import {CloseContainerPacket} from "../packet/CloseContainerPacket.js";
 import {SetAttributesPacket} from "../packet/SetAttributesPacket.js";
 import {EntityRemovePacket} from "../packet/EntityRemovePacket.js";
 import {SetHandIndexPacket} from "../packet/SetHandIndexPacket.js";
-import {S_TNTEntity} from "../entity/TNTEntity.js";
 import {ContainerStatePacket} from "../packet/ContainerStatePacket.js";
-import {Item} from "../../../client/common/item/Item.js";
-import {FurnaceTile} from "../tile/FurnaceTile.js";
 import {UpdatePlayerListPacket} from "../packet/UpdatePlayerListPacket.js";
 import {EntityRotatePacket} from "../packet/EntityRotatePacket.js";
 import {EntityAnimationPacket} from "../packet/EntityAnimationPacket.js";
-import {AnimationIds} from "../../../client/common/metadata/AnimationIds.js";
 import {PlaySoundPacket} from "../packet/PlaySoundPacket.js";
 import {StopAmbientPacket} from "../packet/StopAmbientPacket.js";
 import {PlayAmbientPacket} from "../packet/PlayAmbientPacket.js";
 import {AddParticlePacket} from "../packet/AddParticlePacket.js";
-import {randomUUID} from "crypto";
+import {ApplyVelocityPacket} from "../packet/ApplyVelocityPacket.js";
+
+import {PacketIds} from "../../../client/common/metadata/PacketIds.js";
+import {Ids} from "../../../client/common/metadata/Ids.js";
+import {SUB_CHUNK_AMOUNT} from "../../../client/common/world/World.js";
+import {_T, _TA} from "../../../client/common/Utils.js";
+import {Metadata} from "../../../client/common/metadata/Metadata.js";
+import {AnimationIds} from "../../../client/common/metadata/AnimationIds.js";
+import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
+import {getBlockHardness, getBlockMetaMod, isBlockItem} from "../../../client/common/metadata/Blocks.js";
+import {findCrafting} from "../../../client/common/metadata/Crafts.js";
+import {S_TNTEntity} from "../entity/TNTEntity.js";
+import {Item} from "../../../client/common/item/Item.js";
+import {FurnaceTile} from "../tile/FurnaceTile.js";
+import {S_Living} from "../entity/Living.js";
+import {S_Player} from "../entity/Player.js";
+import {SpawnerTile} from "../tile/SpawnerTile.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {Int8Tag} from "../../../client/common/compound/int/Int8Tag.js";
+import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
+import {StringTag} from "../../../client/common/compound/StringTag.js";
+import {getEntityByName} from "../../../client/common/metadata/Entities.js";
 
 const PacketMap = {
     [PacketIds.BATCH]: "handleBatchPacket",
@@ -59,7 +63,8 @@ const PacketMap = {
     [PacketIds.CLIENT_ITEM_TRANSFER]: "handleItemTransferPacket",
     [PacketIds.CLIENT_OBTAIN_ITEM]: "handleObtainItemPacket",
     [PacketIds.CLIENT_CONSUME_ITEM]: "handleConsumeItemPacket",
-    [PacketIds.CLIENT_UPDATE_ROTATION]: "handleUpdateRotationPacket"
+    [PacketIds.CLIENT_UPDATE_ROTATION]: "handleUpdateRotationPacket",
+    [PacketIds.CLIENT_TOUCH_ENTITY]: "handleTouchEntityPacket"
 };
 
 const BlockInteractMap = {
@@ -78,6 +83,7 @@ const BlockInteractMap = {
         if (network.player.externalInventory) return false;
         network.player.world.checkTile(x, y);
         const tile = network.player.world.getTile(x, y);
+        if (!tile) return;
         network.player.externalInventory = tile.container;
         tile.viewers.add(network.player);
         network.subscribedTiles.add(tile);
@@ -90,21 +96,52 @@ const BlockInteractMap = {
         const handItem = network.player.getHandItem();
         if (!handItem || handItem.id !== Ids.FLINT_AND_STEEL) return false;
         network.player.world.setBlock(x, y, Ids.AIR);
-        const entity = new S_TNTEntity(randomUUID(), network.player.world);
+        const entity = new S_TNTEntity(network.player.world);
         entity.x = x;
         entity.y = y;
         entity.parentEntityUUID = network.player.uuid;
         network.player.world.addEntity(entity);
+        network.player.world.playSound("assets/sounds/random/fuse.ogg", x, y);
         return true;
+    },
+    [Ids.ENTITY_SPAWNER](network, x, y, item) {
+        if (!item || item.id !== Ids.SPAWN_EGG) return;
+        const ch = network.player.world.getTile(x, y);
+        if (ch) return;
+        const tile = new SpawnerTile(network.player.world, new ObjectTag({
+            x: new Float32Tag(x),
+            y: new Float32Tag(y),
+            entityName: new StringTag(item.nbt.entityName),
+            entityType: new Int8Tag(item.nbt.entityType),
+            entityNBT: new StringTag(JSON.stringify(item.nbt.entityNBT))
+        }));
+        if (tile.init()) tile.add();
     }
 };
 BlockInteractMap[Ids.CHEST] = BlockInteractMap[Ids.FURNACE];
 
+const ItemInteractMap = {
+    [Ids.SPAWN_EGG](network, x, y, item) {
+        return !!network.player.world.summonEntity(
+            item.nbt.entityName ? getEntityByName(item.nbt.entityName) : item.nbt.entityType,
+            x, y,
+            item.nbt.entityNBT || {}
+        );
+    },
+    [Ids.FLINT_AND_STEEL](network, x, y) {
+        const block = network.player.world.getBlock(x, y);
+        if (block[0] !== Ids.AIR) return false;
+        network.player.world.placeBlock(x, y, Ids.FIRE);
+        network.player.damageHandItem();
+        return true;
+    }
+};
+
 const PING_INTERVAL = 2000; // the time it takes the server to send the new ping
-const PING_TIMEOUT = 3000; // the timeout that will result player getting kicked
+const PING_TIMEOUT = 5000; // the timeout that will result player getting kicked
 
 export class NetworkSession {
-    sentChunks = [];
+    sentChunks = new Set;
     pingTimeout = null;
     pingStart = null;
     ping = 0;
@@ -154,7 +191,12 @@ export class NetworkSession {
 
     sendPacket(pk, immediate = false) {
         if (immediate) {
-            this.ws.send(JSON.stringify(pk));
+            try {
+                this.ws.send(JSON.stringify(pk));
+            } catch (e) {
+                console.error("Couldn't throw the packet: ", pk);
+                throw e;
+            }
         } else this.queuedPackets.push(pk);
     };
 
@@ -172,18 +214,18 @@ export class NetworkSession {
     };
 
     sendChunk(x, force = false) {
-        if (this.sentChunks.includes(x) && !force) return;
+        if (this.sentChunks.has(x) && !force) return;
         const chunk = this.player.world.loadChunk(x);
         for (let y = 0; y < SUB_CHUNK_AMOUNT; y++) {
             const subChunk = chunk[y];
             this.sendPacket(SubChunkPacket(x, y, subChunk));
         }
-        const chunkEntities = this.player.world.chunkEntities[x];
-        if (chunkEntities) for (const e of chunkEntities) {
+        const chunkEntities = this.player.world.getChunkEntities(x);
+        for (const e of chunkEntities) {
             if (e.id === this.player.id || e.isInvisible()) continue;
             this.showEntity(e);
         }
-        if (!this.sentChunks.includes(x)) this.sentChunks.push(x);
+        if (!this.sentChunks.has(x)) this.sentChunks.add(x);
     };
 
     sendWelcomePacket() {
@@ -241,8 +283,7 @@ export class NetworkSession {
         entity.currentViewers.add(this.player);
         if (this.doesSeeEntity(entity)) return;
         entity.savePublicNBT();
-        const data = entity.__public_nbt.value;
-        data.type = entity.type;
+        const data = entity.publicNBT.serialize();
         this.sendPacket(EntityUpdatePacket(data));
         this.viewingEntities.add(entity);
     };
@@ -282,6 +323,10 @@ export class NetworkSession {
 
     sendParticle(id, x, y, extra = {}) {
         this.sendPacket(AddParticlePacket(id, x, y, extra));
+    };
+
+    sendVelocity(vx, vy) {
+        this.sendPacket(ApplyVelocityPacket(vx, vy));
     };
 
     handleBatchPacket(pk) {
@@ -328,14 +373,7 @@ export class NetworkSession {
                 if (!this.player.breaking) return this.sendBlock(x, y);
                 if (this.player.breakingEndAt - Date.now() > 200 * Math.max(100, this.ping) / 100) return this.sendBlock(x, y);
             }
-            if (handItem && handItem.id in Metadata.durabilities) {
-                const durability = Metadata.durabilities[handItem.id];
-                handItem.nbt.damage ??= 0;
-                const damage = ++handItem.nbt.damage;
-                if (damage >= durability) {
-                    this.player.playerInventory.removeIndex(this.player.handIndex);
-                }
-            }
+            this.player.damageHandItem();
         } else {
             this.player.broadcastPacketToViewers(EntityAnimationPacket(this.player.id, AnimationIds.HAND_SWING));
         }
@@ -361,23 +399,15 @@ export class NetworkSession {
 
         let {id, meta} = handItem;
 
-        if (this.player.getGamemode() !== 1) {
-            handItem.count--;
-            this.player.updateHandItem();
-        }
+        if (this.player.getGamemode() !== 1) this.player.decreaseHandItem();
 
         this.player.broadcastPacketToViewers(EntityAnimationPacket(this.player.id, AnimationIds.HAND_SWING));
-
-        const sound = getBlockDigSound(id);
-        if (sound) this.player.world.playSound(sound, x, y);
 
         if (Metadata.slab.includes(id) || Metadata.stairs.includes(id)) {
             meta += (pk.rotation % 4) * getBlockMetaMod(id);
         }
 
-        this.player.world.setBlock(x, y, id, meta);
-
-        this.player.world.checkTile(x, y);
+        this.player.world.placeBlock(x, y, id, meta);
     };
 
     handleBlockBreakingUpdatePacket(packet) {
@@ -689,7 +719,7 @@ export class NetworkSession {
 
         const {id, index, count} = packet;
 
-        if (count <= 0) return;
+        if (this.player.getGamemode() === 3 || count <= 0) return;
 
         const inv = this.player.getInventory(id);
         if (!inv) return;
@@ -710,7 +740,7 @@ export class NetworkSession {
         else inv.updateIndex(index);
 
         const drop = item.clone(count);
-        this.player.world.dropItem(this.player.x, this.player.y + this.player.baseBB.y2, drop, 1, (this.player.rotation > -90 && this.player.rotation < 90 ? 1 : -1) * 15, 0);
+        this.player.world.dropItem(this.player.x, this.player.y + this.player.baseBB.y2, drop, 1, (this.player.rotation > -90 && this.player.rotation < 90 ? 1 : -1) * 3, 0);
     };
 
     handleSendMessagePacket(pk) {
@@ -734,9 +764,15 @@ export class NetworkSession {
         if (!this.player.world.canInteractBlockAt(this.player, x, y)) return;
 
         const block = this.player.world.getBlock(x, y);
+        const item = this.player.getHandItem();
 
         const interaction = BlockInteractMap[block[0]];
-        if (!interaction || !interaction(this, x, y)) return;
+        if (!interaction) {
+            if (!item) return;
+            const itemInteraction = ItemInteractMap[item.id];
+            if (!itemInteraction || !itemInteraction(this, x, y, item)) return;
+            if (this.player.getGamemode() !== 1) this.player.decreaseHandItem();
+        } else if (!interaction(this, x, y, item)) return;
 
         this.player.broadcastPacketToViewers(EntityAnimationPacket(this.player.id, AnimationIds.HAND_SWING));
     };
@@ -800,8 +836,7 @@ export class NetworkSession {
             if (currentFood >= maxFood) return;
             this.player.setFood(Math.min(maxFood, currentFood + food))
             // this.player.setSaturation(this.player.getSaturation() + Math.ceil(food * 1.5));
-            item.count--;
-            this.player.updateHandItem();
+            this.player.decreaseHandItem();
             return;
         }
         const armor = Metadata.armorTypes[item.id];
@@ -817,6 +852,25 @@ export class NetworkSession {
         this.player.rotation = pk.rotation;
 
         this.player.broadcastPacketToViewers(EntityRotatePacket(this.player.id, pk.rotation));
+    };
+
+    handleTouchEntityPacket(pk) {
+        _TA(
+            pk.entityId, "uint",
+            pk.button, "uint"
+        );
+
+        const entity = this.player.world.entityMap[pk.entityId];
+        if (!entity || entity === this.player || ![0, 2].includes(pk.button)) return;
+
+        if (pk.button === 0) {
+            if (!(entity instanceof S_Living)) return;
+            entity.applyVelocity(entity.x > this.player.x ? 2 : -2, 5);
+            entity.damage(!this.player.isFlying() && !this.player.isOnGround() && this.player.y < this.player.fallY ? 2 : 1);
+            return;
+        } else {
+            // player decided to right-click an entity for some reason, doing nothing (for now)
+        }
     };
 
     handlePacket(pk) {

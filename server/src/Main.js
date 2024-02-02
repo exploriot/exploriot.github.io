@@ -92,7 +92,7 @@ wss.on("connection", (ws, req) => {
     });
 
     let authInt = setTimeout(() => {
-        if (!hasAuth) kick("Timed out.");
+        if (!hasAuth) kick("§cAuthentication timed out.");
     }, 5000);
 
     ws.on("close", ws.onDisconnect);
@@ -105,7 +105,10 @@ wss.on("connection", (ws, req) => {
             return kick("Invalid packet.");
         }
         try {
-            if (player) appendFileSync("./logs/" + player.username + "-" + T + ".txt", "\n" + JSON.stringify(pk));
+            if (player) {
+                if (!existsSync("./logs")) mkdirSync("./logs");
+                appendFileSync("./logs/" + player.username + "-" + T + ".txt", "\n" + JSON.stringify(pk));
+            }
             if (!hasAuth) {
                 if (pk.type !== PacketIds.CLIENT_AUTH) return kick("Expected an auth packet.");
                 _TA(
@@ -118,6 +121,7 @@ wss.on("connection", (ws, req) => {
                 ws.username = pk.username;
                 hasAuth = true;
                 Terminal.info(`§7[${ws.username} ${ws.ipAddress} connected]`);
+                if (!existsSync("./players")) mkdirSync("./players");
                 if (existsSync("./players/" + ws.username + ".nbt")) {
                     const nbt = Tag.readAny(readFileSync("./players/" + ws.username + ".nbt"), 0)[1];
                     ws.player = player = new S_Player(ws, nbt);
@@ -169,17 +173,20 @@ function update() {
         player.session.cleanPackets();
         const cx = player.x >> 4;
         const chunkDistance = Server.getChunkDistance();
+        for (const X of player.session.sentChunks) {
+            if (X < cx - chunkDistance || X > cx + chunkDistance) player.session.sentChunks.delete(X);
+        }
         for (let x = cx - chunkDistance; x < cx + chunkDistance; x++) {
             player.session.sendChunk(x);
-            if (x in player.world.chunkEntities) for (const entity of player.world.chunkEntities[x]) updatingEntities.add(entity);
-            if (x in player.world.chunkTiles) for (const tile of player.world.chunkTiles[x]) updatingTiles.add(tile);
+            if (x in player.world.chunkEntities) for (const entity of player.world.getChunkEntities(x)) updatingEntities.add(entity);
+            if (x in player.world.chunkTiles) for (const tile of player.world.getChunkTiles(x)) updatingTiles.add(tile);
         }
     }
     for (const entity of updatingEntities) entity.update(dt);
     for (const tile of updatingTiles) {
-        tile.__updateCounter += dt;
-        if (tile.__updateCounter >= tile.updatePeriod) {
-            tile.__updateCounter = 0;
+        tile.updateCounter += dt;
+        if (tile.updateCounter >= tile.updatePeriod) {
+            tile.updateCounter = 0;
             tile.update(dt);
         }
     }

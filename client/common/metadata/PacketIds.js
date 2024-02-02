@@ -8,7 +8,6 @@ export const PacketIds = {
     SERVER_WELCOME: s(),
     SERVER_PING: s(),
     SERVER_SUB_CHUNK: s(),
-    SERVER_ADD_ENTITY: s(),
     SERVER_ENTITY_UPDATE: s(),
     SERVER_ENTITY_REMOVE: s(),
     SERVER_ENTITY_MOVEMENT: s(),
@@ -32,6 +31,8 @@ export const PacketIds = {
     SERVER_ENTITY_ROTATE: s(),
     SERVER_ENTITY_ANIMATION: s(),
     SERVER_ADD_PARTICLE: s(),
+    SERVER_APPLY_VELOCITY: s(),
+    SERVER_ENTITY_VELOCITY: s(),
 
     CLIENT_AUTH: c(),
     CLIENT_PING: c(),
@@ -51,6 +52,7 @@ export const PacketIds = {
     CLIENT_OBTAIN_ITEM: c(),
     CLIENT_CONSUME_ITEM: c(),
     CLIENT_UPDATE_ROTATION: c(),
+    CLIENT_TOUCH_ENTITY: c(),
 
     BATCH: 300,
 };

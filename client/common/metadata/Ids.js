@@ -58,6 +58,7 @@ export const Ids = {
     GOLD_BLOCK: _(),
     DIAMOND_BLOCK: _(),
     ANVIL: _(),
+    ENTITY_SPAWNER: _(),
 
     __MAX_BLOCK: __id - 1,
 
@@ -84,6 +85,7 @@ export const Ids = {
     COOKED_MUTTON: _(),
     RAW_CHICKEN: _(),
     COOKED_CHICKEN: _(),
+    SPAWN_EGG: _(),
 
 
     WOODEN_SWORD: _(),

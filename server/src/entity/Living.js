@@ -1,6 +1,7 @@
 import {S_Entity} from "./Entity.js";
 import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
 import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
+import {randInt} from "../../../client/common/Utils.js";
 
 /**
  * @property {number} voidTicks
@@ -22,7 +23,18 @@ export class S_Living extends S_Entity {
         return super.update(dt);
     };
 
+    getHealth() {
+        return 1;
+    };
+
+    setHealth(hp) {
+    };
+
     damage(hp) {
+        const newHealth = this.getHealth() - hp;
+        this.setHealth(newHealth);
+        this.world.playSound("assets/sounds/damage/hit" + randInt(1, 3) + ".ogg", this.x, this.y);
+        if (newHealth <= 0) this.remove(true);
     };
 
     getDrops() {

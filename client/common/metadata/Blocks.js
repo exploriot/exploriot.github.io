@@ -1,9 +1,10 @@
 import {Ids} from "./Ids.js";
 import {Metadata, TOOL_LEVEL, TOOL_MULTIPLIERS, TOOL_TYPES} from "./Metadata.js";
-import {ItemTextures} from "./Items.js";
 import {Item, ItemDescriptor as ID} from "../item/Item.js";
 import {BoundingBox} from "../entity/BoundingBox.js";
 import {randInt} from "../Utils.js";
+import {Texture} from "../../loader/Texture.js";
+import {getTextureURL} from "./Items.js";
 
 export const BlockTextures = {};
 
@@ -35,9 +36,9 @@ export const STAIRS_BB = [
 ];
 
 export function getBlockTexture(id, meta) {
-    const texture = BlockTextures[id];
-    if (Array.isArray(texture)) return texture[meta % texture.length];
-    return texture;
+    const f = id + ":" + meta;
+    if (f in BlockTextures) return BlockTextures[f];
+    return BlockTextures[f] = Texture.get(getTextureURL(id, meta));
 }
 
 export function getBlockDrops(id, meta, handItem) {
@@ -103,7 +104,7 @@ export function getBlockStepSound(id) {
     const soundType = Metadata.step[id];
     if (!soundType) return null;
     const num = randInt(1, soundType[1]);
-    return "./assets/sounds/dig/" + soundType[0] + num + ".ogg";
+    return "./assets/sounds/step/" + soundType[0] + num + ".ogg";
 }
 
 export const STEPS = {
@@ -148,8 +149,8 @@ export const DIGS = {
  * @param {number} toolType
  * @param {boolean} isExplodeable
  * @param {number} toolLevel
- * @param {string} step
- * @param {string} dig
+ * @param {[string, number]} step
+ * @param {[string, number]} dig
  * @param {(number | [number, number])[] | Object | null} drops
  * @param {boolean} interactable
  * @param {boolean} neverBreakable
@@ -171,7 +172,7 @@ export function registerBlock(id, {
     slab = false, stairs = false
 } = blockOpts) {
     if (Metadata.block.includes(id)) throw new Error("ID is already in use: " + id);
-    BlockTextures[id] = ItemTextures[id] = texture || "assets/blocks/" + Object.keys(Ids).find(k => k[0] !== "_" && Ids[k] === id).toLowerCase() + ".png";
+    Metadata.textures[id] = texture || "assets/blocks/" + Object.keys(Ids).find(k => k[0] !== "_" && Ids[k] === id).toLowerCase() + ".png";
     Metadata.block.push(id);
     Metadata.hardness[id] = hardness;
     Metadata.step[id] = step;
@@ -247,10 +248,12 @@ export function initBlocks() {
         ...blockOpts, hardness: 0.5, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.SHOVEL
     });
     registerBlock(Ids.DIRT_SLAB, {
-        ...blockOpts, hardness: 0.5, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.SHOVEL, slab: true
+        ...blockOpts, hardness: 0.5, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.SHOVEL, slab: true,
+        isTransparent: true
     });
     registerBlock(Ids.DIRT_STAIRS, {
-        ...blockOpts, hardness: 0.5, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.SHOVEL, stairs: true
+        ...blockOpts, hardness: 0.5, step: STEPS.GRASS, dig: DIGS.GRASS, toolType: TOOL_TYPES.SHOVEL, stairs: true,
+        isTransparent: true
     });
     registerBlock(Ids.GOLD_ORE, {
         ...blockOpts, hardness: 5, step: STEPS.STONE, dig: DIGS.STONE, toolType: TOOL_TYPES.PICKAXE,
@@ -262,11 +265,11 @@ export function initBlocks() {
     });
     registerBlock(Ids.GRASS_BLOCK_SLAB, {
         ...blockOpts, drops: [new ID(Ids.DIRT_SLAB)], hardness: 0.6, step: STEPS.GRASS, dig: DIGS.GRASS,
-        toolType: TOOL_TYPES.SHOVEL, slab: true
+        toolType: TOOL_TYPES.SHOVEL, slab: true, isTransparent: true
     });
     registerBlock(Ids.GRASS_BLOCK_STAIRS, {
         ...blockOpts, drops: [new ID(Ids.DIRT_STAIRS)], hardness: 0.6, step: STEPS.GRASS, dig: DIGS.GRASS,
-        toolType: TOOL_TYPES.SHOVEL, stairs: true
+        toolType: TOOL_TYPES.SHOVEL, stairs: true, isTransparent: true
     });
     registerBlock(Ids.SNOWY_GRASS_BLOCK, {
         ...blockOpts, drops: [new ID(Ids.DIRT)], hardness: 0.6, step: STEPS.GRASS, dig: DIGS.GRASS
@@ -534,4 +537,8 @@ export function initBlocks() {
     registerBlock(Ids.IRON_BLOCK, {...oreOptions, hardness: 5});
     registerBlock(Ids.GOLD_BLOCK, {...oreOptions, hardness: 3});
     registerBlock(Ids.DIAMOND_BLOCK, {...oreOptions, hardness: 5});
+    registerBlock(Ids.ENTITY_SPAWNER, {
+        ...blockOpts, isTransparent: true, toolLevel: TOOL_LEVEL.WOODEN, toolType: TOOL_TYPES.PICKAXE, hardness: 5,
+        drops: [], xpDrops: [15, 43], step: STEPS.STONE, dig: DIGS.STONE
+    });
 }

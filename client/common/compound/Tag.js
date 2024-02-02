@@ -21,13 +21,18 @@ export const TagBytes = {
     STRING: 15,
     STRING_LONG: 16,
     ITEM: 17,
-    INVENTORY: 18
+    INVENTORY: 18,
+    LEGACY_STRING: 19
 };
 
 /*** @property {any} value */
 export class Tag {
     getSize() {
         return 0;
+    };
+
+    serialize() {
+        return this.value;
     };
 
     /**
@@ -39,9 +44,16 @@ export class Tag {
         return j;
     };
 
+    toBuffer() {
+        const buffer = Buffer.alloc(this.getSize());
+        this.write(buffer, 0);
+        return buffer;
+    };
+
     /*** @param {any} any */
     apply(any) {
         this.value = any;
+        return this;
     };
 
     /*** @return {this} */
@@ -53,12 +65,17 @@ export class Tag {
     /**
      * @param {Buffer} buffer
      * @param {number} j
-     * @returns {[number, Tag]}
+     * @returns {[number, this]}
      */
     static read(buffer, j) {
         throw new Error("Invalid operation.");
     }
 
+    /**
+     * @param {Buffer} buffer
+     * @param {number} j
+     * @return {[number, Tag | ObjectTag | ListTag | StringTag | BoolTag | BaseNumberTag | InventoryTag | ItemTag]}
+     */
     static readAny(buffer, j) {
         return TagMatch[buffer[j++]].read(buffer, j);
     };

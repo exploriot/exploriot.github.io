@@ -43,7 +43,7 @@ function renderMouseBlockAround() {
 
 function renderBlockAt(x, y, id, meta) {
     const pos = getCanvasPosition(x - 0.5, y + 0.5);
-    const texture = Texture.get(getBlockTexture(id, meta));
+    const texture = getBlockTexture(id, meta);
     let img = texture.image;
     if (Metadata.slab.includes(id) || Metadata.stairs.includes(id)) {
         const mod = getBlockMetaMod(id);
@@ -60,7 +60,7 @@ export function animate() {
     _fps.push(Date.now());
     _fps = _fps.filter(i => i + 1000 > Date.now());
 
-    recalculateMouse();
+    if(CServer.canUpdateMouse)recalculateMouse();
 
     ctx.clearRect(0, 0, innerWidth, innerHeight);
 
@@ -95,7 +95,8 @@ export function animate() {
     const handItemId = handItem ? handItem.id : 0;
     const handItemMeta = handItem ? handItem.meta : 0;
     for (let x = renderChunkMinX; x <= renderChunkMaxX; x++) {
-        const entities = CServer.world.chunkEntities[x];
+        /*** @type {C_Entity[]} */
+        const entities = CServer.world.getChunkEntities(x);
         if (entities) for (const entity of entities) {
             if (
                 Math.abs(entity.x - CServer.player.x) < C_OPTIONS.renderDistance + 4 &&
@@ -178,7 +179,7 @@ export function animate() {
         lastHandIndex = CServer.handIndex;
         lastHandItemId = handItemId;
         lastHandItemMeta = handItemMeta;
-        if (handItem) showActionbar(getItemName(handItemId, handItemMeta));
+        if (handItem) showActionbar(getItemName(handItemId, handItemMeta, handItem.nbt));
     }
     playerListDiv.style.opacity = Keyboard["tab"] ? "1" : "0";
 
@@ -188,7 +189,7 @@ export function animate() {
             x: CServer.player.x,
             y: CServer.player.y,
             fps: _fps.length,
-            entities: (CServer.world.chunkEntities[CServer.player.x >> 4] ?? []).length
+            entities: CServer.world.getChunkEntities(CServer.player.x >> 4).length
         };
         for (const inf of infos) {
             inf.innerText = data[inf.getAttribute("data-info")];

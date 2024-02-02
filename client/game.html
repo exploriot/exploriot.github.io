@@ -1,7 +1,7 @@
 <head>
     <meta
             http-equiv="Content-Security-Policy"
-            content="default-src 'self'; img-src 'self' data:; child-src 'none'; style-src 'self'; worker-src 'self'" />
+            content="default-src 'self'; img-src 'self' data:; child-src 'none'; style-src 'self'; worker-src 'self'"/>
     <meta name="viewport"
           content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="./style/Game.css">
 </head>
 <body>
-<canvas></canvas>
+<canvas class="game"></canvas>
 <div class="info">
     X: <span data-info="x"></span><br>
     Y: <span data-info="y"></span><br>
@@ -49,6 +49,7 @@
 </div>
 <div class="inventory-ui gone" id="player-inventory-ui">
     <div class="container">
+        <canvas class="player-inventory-canvas"></canvas>
         <div
                 class="armor-inventory"
                 data-inv="armor"
@@ -187,4 +188,6 @@
     </div>
 </div>
 </body>
-<script type="module" src="./main/Game.js"></script>
+<script type="module">
+    import "./main/Game.js";
+</script>

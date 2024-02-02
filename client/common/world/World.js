@@ -43,10 +43,10 @@ export class World {
 
     /**
      * @param {number} chunkX
-     * @return {Entity[]}
+     * @return {(Entity | C_Entity | S_Entity)[]}
      */
     getChunkEntities(chunkX) {
-        return this.chunkEntities[chunkX];
+        return this.chunkEntities[chunkX] ?? [];
     };
 
     isInWorld(x, y) {
@@ -138,6 +138,14 @@ export class World {
         return true;
     };
 
+    canPlaceAt(x, y) {
+        for (const pos of Around) {
+            const id = this.getBlock(x + pos[0], y + pos[1])[0];
+            if (Metadata.canPlaceBlockOnIt.includes(id)) return true;
+        }
+        return false;
+    };
+
     canInteractBlockAt(player, x, y, mode = player.getGamemode(), item = player.getHandItem()) {
         if (
             mode === 3
@@ -145,15 +153,15 @@ export class World {
             || !player.canReachBlock(x, y)
             || this.isBlockCovered(x, y)
         ) return false;
+        if (item && Metadata.interactableItems.includes(item.id)) return this.canPlaceAt(x, y);
         const id = player.world.getBlock(x, y)[0];
         return Metadata.interactable.includes(id) && (id !== Ids.TNT || (item && item.id === Ids.FLINT_AND_STEEL));
     };
 
     canPlaceBlockAt(player, x, y, mode = player.getGamemode(), item = player.getHandItem()) {
-        const chunkEntities = this.chunkEntities[x >> 4];
+        const chunkEntities = this.getChunkEntities(x >> 4);
         let bb2;
-        if (
-            mode > 1
+        return !(mode > 1
             || !this.isInWorld(x, y)
             || !player.canReachBlock(x, y)
             || !Metadata.replaceable.includes(this.getBlock(x, y)[0])
@@ -169,17 +177,8 @@ export class World {
                     )
                 )
             )
-        )
-            return false;
-        let canPlaceOnAny = false;
-        for (const pos of Around) {
-            const id = this.getBlock(x + pos[0], y + pos[1])[0];
-            if (Metadata.canPlaceBlockOnIt.includes(id)) {
-                canPlaceOnAny = true;
-                break;
-            }
-        }
-        return canPlaceOnAny;
+            || !this.canPlaceAt(x, y));
+
     };
 
     canBreakBlockAt(player, x, y, mode = player.getGamemode(), handItem = player.getHandItem()) {
@@ -191,6 +190,6 @@ export class World {
         if (y > 0 && y < MAX_WORLD_HEIGHT - 1 && this.isBlockCovered(x, y)) return false;
         const existing = this.getBlock(x, y);
         if (Metadata.neverBreakable.includes(existing[0])) return false;
-        return mode === 1 || getBlockHardness(existing[0], handItem ? handItem.id : 0, 0, 0);
+        return mode === 1 || getBlockHardness(existing[0], handItem ? handItem.id : 0, 0, 0) >= 0;
     };
 }

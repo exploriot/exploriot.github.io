@@ -44,6 +44,10 @@ export class BoundingBox {
         );
     };
 
+    isCollidingWithDot(x, y) {
+        return x > this.x1 && x < this.x2 && y > this.y1 && y < this.y2;
+    };
+
     clone() {
         return new BoundingBox(this.x1, this.y1, this.x2, this.y2);
     };

@@ -1,4 +1,5 @@
 import {Ids} from "../metadata/Ids.js";
+import {getItemMaxStack} from "../metadata/Items.js";
 
 export class Item {
     /**
@@ -12,7 +13,7 @@ export class Item {
         this.meta = meta;
         this.count = count;
         this.nbt = nbt;
-        this.maxStack = _getItemMaxStack(id);
+        this.maxStack = getItemMaxStack(id);
     };
 
     equals(item, count = true, nbt = true) {

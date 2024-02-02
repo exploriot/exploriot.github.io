@@ -216,10 +216,34 @@ export function tokenize(text) {
     return program.children;
 }
 
-function applySelectorFilters(entities, sel) {
+function applySelectorFilters(self, entities, sel) {
     if ("type" in sel) {
-        const t = EntityIds[sel.type];
+        const t = EntityIds[sel.type.toUpperCase()];
         entities = entities.filter(i => i.type === t);
+    }
+    if ("limit" in sel) {
+        entities = entities.slice(0, sel.limit);
+    }
+    if ("sort" in sel) {
+        switch (sel.sort) {
+            case "nearest":
+                if (self !== _ConsoleCommandSender) break;
+                entities = entities.filter(i => i !== _ConsoleCommandSender);
+                entities.sort((a, b) => a.distance(self.x, self.y) - b.distance(self.x, self.y));
+                break;
+            case "furthest":
+                if (self !== _ConsoleCommandSender) break;
+                entities = entities.filter(i => i !== _ConsoleCommandSender);
+                entities.sort((a, b) => b.distance(self.x, self.y) - a.distance(self.x, self.y));
+                break;
+            case "random":
+                if (self !== _ConsoleCommandSender) break;
+                entities.sort(() => Math.random() - 0.5);
+                break;
+        }
+    }
+    if ("xp_min" in sel) {
+
     }
     if ("op" in sel) {
         const isIt = ["yes", "true"].includes(sel.op);
@@ -263,7 +287,7 @@ const SelectorComputer = {
 };
 
 function computeSelector(self, sel, selT) {
-    return applySelectorFilters(SelectorComputer[selT](self), sel);
+    return applySelectorFilters(self, SelectorComputer[selT](self), sel);
 }
 
 function testSelector(self, entity, sel, selT) {
@@ -328,10 +352,11 @@ const Pos = {
                 pos.push(t.value);
                 continue;
             }
+            const m = i === 0 ? self.x : self.y;
+            if (isNaN(m)) return "Cannot relate position.";
             if (t.type === "symbol" && t.value === "~") {
                 const n = tokens[ind];
-                const m = i === 0 ? self.x : self.y;
-                if (!n || n.type !== "number") {
+                if (!n || n.type !== "number" || n.index !== t.index + 1) {
                     pos.push(m);
                 } else {
                     ind++;
@@ -340,14 +365,16 @@ const Pos = {
                 continue;
             }
             if (t.type === "symbol" && t.value === "^") {
+                if (typeof self.rotation !== "number") {
+                    pos.push(m);
+                    continue;
+                }
                 const n = tokens[ind];
-                const m = i === 0 ? self.x : self.y;
-                // TODO: add this after adding head rotation.
-                if (!n || n.type !== "number") {
+                if (!n || n.type !== "number" || n.index !== t.index + 1) {
                     pos.push(m);
                 } else {
                     ind++;
-                    pos.push(m + n.value);
+                    pos.push(m + Math[i === 0 ? "sin" : "cos"](self.rotation) * n.value);
                 }
                 continue;
             }

@@ -1,8 +1,15 @@
 import {Tile} from "./Tile.js";
 import {Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
 import {Item} from "../../../client/common/item/Item.js";
+import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
+import {InventoryTag} from "../../../client/common/compound/InventoryTag.js";
 
 export class ContainerTile extends Tile {
+    static NBT_STRUCTURE = new ObjectTag({
+        container: new InventoryTag(new Inventory(100, InventoryIds.EXTERNAL))
+    }).combine(Tile.NBT_STRUCTURE);
+    static NBT_IGNORE = ["type", "container"];
+
     /*** @type {Set<S_Player>} */
     viewers = new Set;
 
@@ -13,11 +20,14 @@ export class ContainerTile extends Tile {
             x: this.x,
             y: this.y
         });
+        this.nbt.tags.container.tags.size.value = this.size;
         this.container._tile = this;
-        if (this._contents) {
-            this.container.contents = this._contents.map(Item.deserialize);
-            delete this._contents;
+        const contents = this.nbt.tags.container.tags.contents.value.map(Item.deserialize);
+        const len = Math.min(contents.length, this.size);
+        for (let i = 0; i < len; i++) {
+            this.container.contents[i] = contents[i];
         }
+        return true;
     };
 
     getClientState() {
@@ -65,12 +75,6 @@ export class ContainerTile extends Tile {
         for (const player of this.viewers) {
             player.session.sendInventory(this.container);
         }
-    };
-
-    serialize() {
-        return {
-            ...super.serialize(), contents: this.container.serialize()
-        };
     };
 
     remove() {

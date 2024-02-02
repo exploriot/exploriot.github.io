@@ -17,7 +17,7 @@ import {Ids} from "../../../client/common/metadata/Ids.js";
  * @property {boolean} pickedUp
  */
 export class S_ItemEntity extends S_Entity {
-    static TYPE = EntityIds.FALLING_BLOCK;
+    static TYPE = EntityIds.ITEM;
     static BOUNDING_BOX = FALLING_BLOCK_BB;
 
     static NBT_PRIVATE_STRUCTURE = new ObjectTag({
@@ -32,11 +32,19 @@ export class S_ItemEntity extends S_Entity {
         item: new ItemTag(new Item(Ids.AIR))
     }).combine(S_Entity.NBT_PUBLIC_STRUCTURE);
 
+    wasOnGround = false;
+
     update(dt) {
-        if ((this.despawnTimer -= dt) <= 0) {
+        if (!this.item.id || !this.item.count) return this.remove();
+        if (this.y < -64 || (this.despawnTimer -= dt) <= 0) {
             this.despawnTimer = 0;
             this.remove();
             return false;
+        }
+        const onGround = this.isOnGround();
+        if (this.wasOnGround !== onGround) {
+            this.wasOnGround = onGround;
+            this.broadcastMovement();
         }
         this.combineTimer += dt;
         if (this.combineTimer > 1) {
@@ -53,19 +61,21 @@ export class S_ItemEntity extends S_Entity {
             }
         }
         this.applyGravity(dt);
-        this.vx *= 0.9;
-        if ((this.holdTimer -= dt) <= 0) for (const player of this.getPlayerViewers()) {
+        if ((this.holdTimer -= dt) <= 0) {
             this.holdTimer = 0;
-            if (player.distance(this.x, this.y) < 0.75) {
-                player.playerInventory.add(this.item);
-                if (this.item.count <= 0) {
-                    this.pickedUp = true;
-                    this.remove();
-                    this.world.playSound("./assets/sounds/random/pop.ogg", this.x, this.y);
-                    this.broadcastPacketToViewers(EntityAnimationPacket(this.id, AnimationIds.ITEM_PICKUP, {
-                        playerId: player.id
-                    }))
-                    return false;
+            for (const player of this.currentViewers) {
+                if (player.getGamemode() === 3) continue;
+                if (player.distance(this.x, this.y) < 0.75) {
+                    player.playerInventory.add(this.item);
+                    if (this.item.count <= 0) {
+                        this.pickedUp = true;
+                        this.remove();
+                        this.world.playSound("assets/sounds/random/pop.ogg", this.x, this.y);
+                        this.broadcastPacketToViewers(EntityAnimationPacket(this.id, AnimationIds.PICKUP, {
+                            playerId: player.id
+                        }))
+                        return false;
+                    }
                 }
             }
         }

@@ -1,11 +1,12 @@
 import {C_Entity} from "./Entity.js";
 import {EntityIds, FALLING_BLOCK_BB} from "../common/metadata/Entities.js";
 import {getBlockTexture} from "../common/metadata/Blocks.js";
-import {Texture} from "../loader/Texture.js";
 import {BASE_BLOCK_SIZE, getCanvasPosition} from "../Utils.js";
 import {Ids} from "../common/metadata/Ids.js";
 
 export class C_TNTEntity extends C_Entity {
+    HAS_RENDER_POS = false;
+
     aliveTime = 0;
 
     constructor(id, world, item) {
@@ -14,6 +15,7 @@ export class C_TNTEntity extends C_Entity {
     };
 
     render(ctx) {
+        super.render(ctx);
         if (this.aliveTime % 1 > 0.5) {
             const pos = getCanvasPosition(this.x - 0.5, this.y + 0.5);
             ctx.fillStyle = "white";
@@ -21,7 +23,7 @@ export class C_TNTEntity extends C_Entity {
         } else {
             const texture = getBlockTexture(Ids.TNT, 0);
             const pos = getCanvasPosition(this.x - 0.5, this.y + 0.5);
-            ctx.drawImage(Texture.get(texture).image, pos.x, pos.y, BASE_BLOCK_SIZE, BASE_BLOCK_SIZE);
+            ctx.drawImage(texture.image, pos.x, pos.y, BASE_BLOCK_SIZE, BASE_BLOCK_SIZE);
         }
     };
 

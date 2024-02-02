@@ -5,11 +5,6 @@ import {BaseNumberTag} from "./BaseNumberTag.js";
 const SIZE = 8;
 
 export class UInt64Tag extends BaseNumberTag {
-    constructor(value) {
-        super();
-        this.apply(value);
-    };
-
     check(num) {
         return typeof num === "bigint" && num >= 0 && num <= (2n ** 64n);
     };
