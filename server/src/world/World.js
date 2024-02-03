@@ -50,7 +50,8 @@ const INTERACTION_RESPONSE = {
 };
 
 const BlockUpdaterTime = {
-    [Ids.WATER]: 0.2
+    [Ids.WATER]: 0.2,
+    [Ids.LAVA]: 0.2
 };
 
 /*** @type {{[key: number]: function(world: S_World, x: number, y: number, self: [number, number]): void}} */
