@@ -76,6 +76,15 @@ export function initCrafts() {
             [new ID(Ids.PLANKS, meta)],
             new ID(Ids.WOODEN_STAIRS, meta, 4)
         );
+        registerCraft(
+            [
+                "0  ",
+                "00 ",
+                "000"
+            ],
+            [new ID(Ids.PLANKS, meta)],
+            new ID(Ids.WOODEN_STAIRS, meta, 4)
+        );
     }
 
     registerCraft(
@@ -118,15 +127,26 @@ export function initCrafts() {
         [Ids.IRON_INGOT, Ids.IRON_AXE],
         [Ids.GOLD_INGOT, Ids.GOLDEN_AXE],
         [Ids.DIAMOND, Ids.DIAMOND_AXE]
-    ]) registerCraft(
-        [
-            "00",
-            "01",
-            " 1"
-        ],
-        [new ID(o[0]), new ID(Ids.STICK)],
-        new ID(o[1])
-    );
+    ]) {
+        registerCraft(
+            [
+                "00",
+                "01",
+                " 1"
+            ],
+            [new ID(o[0]), new ID(Ids.STICK)],
+            new ID(o[1])
+        );
+        registerCraft(
+            [
+                " 00",
+                " 10",
+                " 1 "
+            ],
+            [new ID(o[0]), new ID(Ids.STICK)],
+            new ID(o[1])
+        );
+    }
 
     for (const o of [
         [Ids.PLANKS, Ids.WOODEN_PICKAXE],
@@ -166,15 +186,26 @@ export function initCrafts() {
         [Ids.IRON_INGOT, Ids.IRON_HOE],
         [Ids.GOLD_INGOT, Ids.GOLDEN_HOE],
         [Ids.DIAMOND, Ids.DIAMOND_HOE]
-    ]) registerCraft(
-        [
-            "00",
-            " 1",
-            " 1"
-        ],
-        [new ID(o[0]), new ID(Ids.STICK)],
-        new ID(o[1])
-    );
+    ]) {
+        registerCraft(
+            [
+                "00",
+                " 1",
+                " 1"
+            ],
+            [new ID(o[0]), new ID(Ids.STICK)],
+            new ID(o[1])
+        );
+        registerCraft(
+            [
+                " 00",
+                " 1",
+                " 1"
+            ],
+            [new ID(o[0]), new ID(Ids.STICK)],
+            new ID(o[1])
+        );
+    }
 
     for (const o of [
         [Ids.IRON_INGOT, Ids.IRON_HELMET],
@@ -285,6 +316,14 @@ export function initCrafts() {
             [
                 "  0",
                 " 00",
+                "000"
+            ], [new ID(o[0])],
+            new ID(o[2])
+        );
+        registerCraft(
+            [
+                "0  ",
+                "00 ",
                 "000"
             ], [new ID(o[0])],
             new ID(o[2])

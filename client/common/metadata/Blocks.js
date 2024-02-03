@@ -42,6 +42,7 @@ export function getBlockTexture(id, meta) {
 }
 
 export function getBlockDrops(id, meta, handItem) {
+    if (id === Ids.GRAVEL && Math.random() < 0.1) return [new Item(Ids.FLINT)];
     const itemToolType = Metadata.toolTypeItems[handItem ? handItem.id : 0] ?? TOOL_TYPES.NONE;
     const itemToolLevel = Metadata.toolLevelItems[handItem ? handItem.id : 0] ?? TOOL_LEVEL.NONE;
     const blockToolType = Metadata.toolType[id] ?? TOOL_TYPES.NONE;
@@ -51,12 +52,10 @@ export function getBlockDrops(id, meta, handItem) {
     if (blockToolLevel && (!isCorrectTool || !isCorrectLevel)) return [];
 
     let drops = Metadata.blockDrops[id];
-    if (!drops) {
-        return [new Item(
-            id,
-            meta % getBlockMetaMod(id)
-        )];
-    }
+    if (!drops) return [new Item(
+        id,
+        meta % getBlockMetaMod(id)
+    )];
     if (Array.isArray(drops[0])) drops = drops[meta % drops.length];
     return drops.map(i => i.evaluate()).filter(Boolean);
 }
@@ -94,17 +93,18 @@ export function getBlockHardness(id, itemId, efficiencyLevel, hasteLevel) {
 }
 
 export function getBlockDigSound(id) {
+    if (id === Ids.FIRE) return "assets/sounds/random/fizz.ogg";
     const soundType = Metadata.dig[id];
     if (!soundType) return null;
     const num = randInt(1, soundType[1]);
-    return "./assets/sounds/dig/" + soundType[0] + num + ".ogg";
+    return "assets/sounds/dig/" + soundType[0] + num + ".ogg";
 }
 
 export function getBlockStepSound(id) {
     const soundType = Metadata.step[id];
     if (!soundType) return null;
     const num = randInt(1, soundType[1]);
-    return "./assets/sounds/step/" + soundType[0] + num + ".ogg";
+    return "assets/sounds/step/" + soundType[0] + num + ".ogg";
 }
 
 export const STEPS = {

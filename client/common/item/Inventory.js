@@ -169,14 +169,24 @@ export class Inventory {
         this.contents.fill(null);
     };
 
-    damageItemAt(index, amount = 1) {
+    /**
+     * @param {number} index
+     * @param {number} amount
+     * @param {S_World | null} world
+     * @param {number} x
+     * @param {number} y
+     * @return {boolean}
+     */
+    damageItemAt(index, amount = 1, world = null, x = 0, y = 0) {
         const item = this.contents[index];
         if (item && item.id in Metadata.durabilities) {
             const durability = Metadata.durabilities[item.id];
             item.nbt.damage ??= 0;
             if ((item.nbt.damage += amount) >= durability) {
                 this.removeIndex(index);
-                return true;
+                if (world) {
+                    world.playSound("assets/sounds/random/break.ogg", x, y);
+                }
             } else this.updateIndex(index);
         }
     };

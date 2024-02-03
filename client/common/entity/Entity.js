@@ -224,19 +224,19 @@ export class Entity {
     };
 
     isOnGround() {
-        return !!this.world.getCollidingBlocks(this.downBB, false, 1)[0];
+        return this.world.isCollidingBlocks(this.downBB, false, 1);
     };
 
     isTouchingFire() {
-        return !!this.world.getCollidingBlocks(this.bb, true, 1, [[Ids.FIRE, -1]])[0];
+        return this.world.isCollidingBlocks(this.bb, true, 1, [[Ids.FIRE, -1]]);
     };
 
     isTouchingWater() {
-        return !!this.world.getCollidingBlocks(this.bb, true, 1, [[Ids.WATER, -1]])[0];
+        return this.world.isCollidingBlocks(this.bb, true, 1, [[Ids.WATER, -1]]);
     };
 
     isTouchingLava() {
-        return !!this.world.getCollidingBlocks(this.bb, true, 1, [[Ids.LAVA, -1]])[0];
+        return this.world.isCollidingBlocks(this.bb, true, 1, [[Ids.LAVA, -1]]);
     };
 
     isTouchingLiquid() {
@@ -244,7 +244,7 @@ export class Entity {
     };
 
     isExposedToAir() {
-        return !this.world.getCollidingBlocks(this.bb, true, 1, [[Ids.AIR, -1]])[0];
+        return !this.world.isCollidingBlocks(this.bb, true, 1, [[Ids.AIR, -1]]);
     };
 
     isUnderwater() {

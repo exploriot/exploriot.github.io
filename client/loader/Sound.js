@@ -94,7 +94,7 @@ export class Sound {
         Sound.stopAmbientAsync(src, volume).then(cb);
     };
 
-    /*** @returns {Promise<SoundContext>} */
+    /*** @return {Promise<SoundContext>} */
     async playAsync(volume = 1, play = true) {
         if (!Sound.canCreateContext) return new Promise(() => console.warn("Audio context creation failed."));
         if (!this.loaded) await this.wait();
