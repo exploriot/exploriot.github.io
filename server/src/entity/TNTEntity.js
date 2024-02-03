@@ -53,19 +53,18 @@ export class S_TNTEntity extends S_Entity {
         const item = new Item(Ids.DIAMOND_PICKAXE);
         if (this.world.getGameRule(GameRules.TNT_EXPLODES)) {
             for (const entity of this.getViewers()) {
+                const dx = entity.x - this.x;
+                const dy = entity.y - this.y;
+                const dist = Math.sqrt(dx ** 2 + dy ** 2);
                 if (!(entity instanceof S_Living)) {
-                    if (entity.type === EntityIds.ITEM) entity.remove();
+                    if (entity.type === EntityIds.ITEM) {
+                        entity.remove();
+                    }
                     if (entity.type === EntityIds.TNT) {
-                        const dx = entity.x - this.x;
-                        const dy = entity.y - this.y;
-                        const dist = Math.sqrt(dx ** 2 + dy ** 2);
                         this.throwEntity(entity, dx, dy, dist);
                     }
                     continue;
                 }
-                const dx = entity.x - this.x;
-                const dy = entity.y - this.y;
-                const dist = Math.sqrt(dx ** 2 + dy ** 2);
                 if (dist > this.damageRadius) continue;
                 entity.damage(this.damageRadius - dist);
                 this.throwEntity(entity, dx, dy, dist);
@@ -84,7 +83,11 @@ export class S_TNTEntity extends S_Entity {
                             entity.parentEntityUUID = this.parentEntityUUID;
                             this.world.addEntity(entity);
                         } else { // todo: check if it's touching water
-                            this.world.breakBlock(x, y, item);
+                            this.world.breakBlockAt(
+                                x, y, {
+                                    entity: this, item, damageItem: false
+                                }
+                            );
                         }
                     }
                 }

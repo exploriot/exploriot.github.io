@@ -83,7 +83,7 @@ export const Metadata = {
     toolLevel: {},
     armors: [],
     interactable: [],
-    interactableItems: [],
+    canInteractWith: {},
     toolTypeItems: {},
     toolLevelItems: {},
     liquid: [],
@@ -96,5 +96,6 @@ export const Metadata = {
     armorLevels: {},
     armorTypes: {},
     armorPoints: {},
-    textures: {}
+    textures: {},
+    canReplaceBlocks: []
 };

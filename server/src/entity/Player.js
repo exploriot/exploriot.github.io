@@ -105,12 +105,23 @@ export class S_Player extends S_Living {
         }
     };
 
+    getMainInventory() {
+        return this.playerInventory;
+    };
+
+    getHandIndex() {
+        return this.handIndex;
+    };
+
     decreaseHandItem(amount = 1) {
         this.playerInventory.decreaseItemAt(this.handIndex, amount);
     };
 
     damageHandItem(amount = 1) {
-        this.playerInventory.damageItemAt(this.handIndex, amount);
+        const isBroken = this.playerInventory.damageItemAt(this.handIndex, amount);
+        if (isBroken) {
+            this.world.playSound("assets/sounds/random/break.ogg", this.x, this.y);
+        }
     };
 
     applyVelocity(vx, vy) {
@@ -262,10 +273,6 @@ export class S_Player extends S_Living {
 
     getBlockReach() {
         return this.getGamemode() % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
-    };
-
-    canReachBlock(x, y) {
-        return (x - this.x) ** 2 + (y - this.y) ** 2 <= this.getBlockReach() ** 2;
     };
 
     kick(reason, immediate = false) {

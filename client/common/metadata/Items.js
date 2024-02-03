@@ -59,12 +59,12 @@ export function getItemIdByName(name) {
  * @param {number} armorType
  * @param {number} armorLevel
  * @param {number} armorPoints
- * @param {boolean} interactable
+ * @param {number[] | true | null} canInteract
  */
 function registerItem(id, {
     texture = 0, name = 0, edible = 0, durability = 0, maxStack = 0,
     isArmor = false, toolType = -1, toolLevel = -1, fuel = 0, smeltsTo = 0, smeltXP = 0,
-    armorType = -1, armorLevel = -1, armorPoints = 0, interactable = false
+    armorType = -1, armorLevel = -1, armorPoints = 0, canInteract = null
 } = {}) {
     if (Metadata.item.includes(id)) throw new Error("ID is already in use: " + id);
     Metadata.textures[id] = texture || "assets/items/" + Object.keys(Ids).find(k => k[0] !== "_" && Ids[k] === id).toLowerCase() + ".png";
@@ -83,7 +83,7 @@ function registerItem(id, {
     // https://minecraft.fandom.com/wiki/Smelting#Foods
     if (smeltsTo) Metadata.smeltsTo[id] = smeltsTo;
     if (smeltXP) Metadata.smeltXP[id] = smeltXP;
-    if (interactable) Metadata.interactableItems.push(id);
+    if (canInteract) Metadata.canInteractWith[id] = canInteract;
     // console.debug("%cRegistered item with the ID " + id, "color: #00ff00");
 }
 
@@ -96,7 +96,7 @@ export function initItems() {
     ]) registerItem(id);
 
     registerItem(Ids.SPAWN_EGG, {
-        interactable: true, texture: "assets/items/spawn_eggs/base_spawn_egg.png"
+        canInteract: true, texture: "assets/items/spawn_eggs/base_spawn_egg.png"
     });
 
     Metadata.fuel[Ids.CHARCOAL] = Metadata.fuel[Ids.COAL] = 8;
@@ -146,7 +146,7 @@ export function initItems() {
     });
 
 // TOOLS
-    registerItem(Ids.FLINT_AND_STEEL, {maxStack: 1, durability: 64});
+    registerItem(Ids.FLINT_AND_STEEL, {maxStack: 1, durability: 64, canInteract: [Ids.AIR]});
 
     const toolTypeInd = [TOOL_TYPES.SWORD, TOOL_TYPES.AXE, TOOL_TYPES.PICKAXE, TOOL_TYPES.SHOVEL, TOOL_TYPES.HOE];
 

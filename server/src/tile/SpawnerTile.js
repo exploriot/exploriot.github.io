@@ -55,7 +55,7 @@ export class SpawnerTile extends Tile {
             this.updateTry = 0;
             if (this.canSpawnEntities()) {
                 const entity = this.world.summonEntity(this.entityType, this.x + randInt(-4, 4), this.y + randInt(-4, 1), JSON.parse(this.entityNBT));
-                if (entity && entity.world.getCollidingBlock(entity.bb)) entity.remove();
+                if (entity && entity.world.getCollidingBlocks(entity.bb, false, 1)[0]) entity.remove();
             }
         } else this.updateTry++;
         return super.update(dt);

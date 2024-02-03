@@ -1,8 +1,8 @@
 import {Metadata} from "../metadata/Metadata.js";
 import {Around} from "../Utils.js";
 import {EntityIds} from "../metadata/Entities.js";
-import {getBlockHardness, getBoundingBoxesOf} from "../metadata/Blocks.js";
-import {Ids} from "../metadata/Ids.js";
+import {getBlockHardness, getBoundingBoxesOf, isBlockItem} from "../metadata/Blocks.js";
+import {Item} from "../item/Item.js";
 
 export const MAX_WORLD_HEIGHT = 256; // 0 to 255
 export const CHUNK_SIZE = 16;
@@ -105,29 +105,58 @@ export class World {
         return 0;
     };
 
-    getBlockCollisionAt(x, y) {
+    /**
+     * @param {BoundingBox} bb
+     * @param {number} x
+     * @param {number} y
+     * @param {boolean} phaseable
+     * @param {[number, number][] | null} filter
+     * @return {{bb: (BoundingBox | BoundingBox[]), collisions: BoundingBox[], x: number, y: number} | null}
+     */
+    getBlockCollisionAt(bb, x, y, phaseable = false, filter = null) {
         const block = this.getBlock(x, y);
-        if (Metadata.phaseable.includes(block[0])) return null;
-        return getBoundingBoxesOf(block[0], block[1]);
+        if (
+            (!phaseable && Metadata.phaseable.includes(block[0]))
+            || (filter && !filter.some(i => block[0] === i[0] && (i[1] === -1 || block[1] === i[1])))
+        ) return null;
+        const bb2 = getBoundingBoxesOf(block[0], block[1]);
+        const col = bb.getCollidingBoxesTranslated(bb2, x, y);
+        if (col.length) return {x, y, bb: bb2, collisions: col};
     };
 
-    getCollidingBlock(bb) {
+    /**
+     * @param {BoundingBox} bb
+     * @param {boolean} phaseable
+     * @param {number} amount
+     * @param {[number, number][] | null} filter
+     * @return {{bb: (BoundingBox | BoundingBox[]), collisions: BoundingBox[], x: number, y: number}[]}
+     */
+    getCollidingBlocks(bb, phaseable = false, amount = 1, filter = null) {
         const left = Math.floor(bb.x1 - 0.5);
         const right = Math.ceil(bb.x2 + 0.5);
         const bottom = Math.floor(bb.y1 - 0.5);
         const top = Math.ceil(bb.y2 + 0.5);
 
+        const collisions = [];
+
         for (let x = left; x <= right; x++) {
             for (let y = bottom; y <= top; y++) {
-                const bb2 = this.getBlockCollisionAt(x, y);
-                if (!bb2) continue;
-                const col = bb.getCollidingBoxesTranslated(bb2, x, y);
-                if (col.length) return {x, y, bb: bb2, collisions: col};
+                const col = this.getBlockCollisionAt(bb, x, y, phaseable, filter);
+                if (col) {
+                    collisions.push(col);
+                    if (collisions.length >= amount) return collisions;
+                }
             }
         }
-        return null;
+
+        return collisions;
     };
 
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @return {boolean}
+     */
     isBlockCovered(x, y) {
         for (const pos of Around) {
             const id = this.getBlock(x + pos[0], y + pos[1])[0];
@@ -138,6 +167,11 @@ export class World {
         return true;
     };
 
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @return {boolean}
+     */
     canPlaceAt(x, y) {
         for (const pos of Around) {
             const id = this.getBlock(x + pos[0], y + pos[1])[0];
@@ -146,50 +180,83 @@ export class World {
         return false;
     };
 
-    canInteractBlockAt(player, x, y, mode = player.getGamemode(), item = player.getHandItem()) {
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {Item | null} item
+     * @param {Entity | null} entity
+     * @return {boolean}
+     */
+    canInteractBlockAt(x, y, item, entity = null) {
         if (
-            mode === 3
-            || !this.isInWorld(x, y)
-            || !player.canReachBlock(x, y)
+            !this.isInWorld(x, y)
             || this.isBlockCovered(x, y)
+            || (entity && (
+                entity.getGamemode() === 3
+                || !entity.canReachBlock(x, y)
+            ))
         ) return false;
-        if (item && Metadata.interactableItems.includes(item.id)) return this.canPlaceAt(x, y);
-        const id = player.world.getBlock(x, y)[0];
-        return Metadata.interactable.includes(id) && (id !== Ids.TNT || (item && item.id === Ids.FLINT_AND_STEEL));
+        const block = this.getBlock(x, y);
+        if (Metadata.interactable.includes(block[0])) return true;
+        if (!item) return false;
+        const list = Metadata.canInteractWith[item.id] ?? [];
+        return item && (list === true || list.includes(block[0])) && this.canPlaceAt(x, y);
     };
 
-    canPlaceBlockAt(player, x, y, mode = player.getGamemode(), item = player.getHandItem()) {
-        const chunkEntities = this.getChunkEntities(x >> 4);
-        let bb2;
-        return !(mode > 1
-            || !this.isInWorld(x, y)
-            || !player.canReachBlock(x, y)
-            || !Metadata.replaceable.includes(this.getBlock(x, y)[0])
-            || !item
-            || !Metadata.block.includes(item.id)
-            || (
-                !Metadata.phaseable.includes(item.id)
-                && (bb2 = getBoundingBoxesOf(item.id, item.meta))
-                && (
-                    player.bb.isCollidingWithTranslated(bb2, x, y)
-                    || Array.from(chunkEntities).some(
-                        i => i.type !== EntityIds.ITEM && i.bb.isCollidingWithTranslated(bb2, x, y)
-                    )
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {number} id
+     * @param {number} meta
+     * @param {Entity | null} entity
+     * @return {boolean}
+     */
+    canPlaceBlockAt(x, y, id, meta, entity = null) {
+        if (
+            entity && (
+                entity.getGamemode() === 3
+                || !entity.canReachBlock(x, y)
+            )
+        ) return false;
+        let bb;
+        let block;
+        return isBlockItem(id)
+            && this.isInWorld(x, y)
+            && Metadata.replaceable.includes((block = this.getBlock(x, y))[0])
+            && (block[0] !== id || block[1] !== meta)
+            && Metadata.block.includes(id)
+            && (
+                Metadata.phaseable.includes(id)
+                || !(bb = getBoundingBoxesOf(id, meta))
+                || !Array.from(this.getChunkEntities(x >> 4)).some(
+                    i => i.type !== EntityIds.ITEM && i.bb.isCollidingWithTranslated(bb, x, y)
                 )
             )
-            || !this.canPlaceAt(x, y));
-
+            && this.canPlaceAt(x, y)
+            && (
+                Metadata.canStayOnPhaseables.includes(id)
+                || !Metadata.phaseable.includes(this.getBlock(x, y - 1)[0])
+            );
     };
 
-    canBreakBlockAt(player, x, y, mode = player.getGamemode(), handItem = player.getHandItem()) {
-        if (
-            mode > 1
-            || !this.isInWorld(x, y)
-            || !player.canReachBlock(x, y)
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {Item} item
+     * @param {boolean} instant
+     * @param {Entity | null} entity
+     * @return {boolean}
+     */
+    canBreakBlockAt(x, y, item, instant, entity = null) {
+        if (!this.isInWorld(x, y)
+            || (entity && (
+                entity.getGamemode() === 3
+                || !entity.canReachBlock(x, y)
+            ))
         ) return false;
         if (y > 0 && y < MAX_WORLD_HEIGHT - 1 && this.isBlockCovered(x, y)) return false;
         const existing = this.getBlock(x, y);
         if (Metadata.neverBreakable.includes(existing[0])) return false;
-        return mode === 1 || getBlockHardness(existing[0], handItem ? handItem.id : 0, 0, 0) >= 0;
+        return instant || getBlockHardness(existing[0], item ? item.id : 0, 0, 0) >= 0;
     };
 }

@@ -334,7 +334,7 @@ export function initMainUI() {
 // addEventListener("blur", () => openEscMenu());
 
     function onClick(e) {
-        if (isAnyUIOn() || !Mouse.entity || Mouse.entity === CServer.player) return;
+        if (isAnyUIOn() || !Mouse.entity || Mouse.entity === CServer.player || !CServer.player.canTouchEntity(Mouse.entity)) return;
         ClientSession.sendTouchEntityPacket(Mouse.entity.id, e.button);
     }
 
