@@ -1,6 +1,5 @@
 import {BoundingBox} from "./BoundingBox.js";
 import {getEntityName, GRAVITY_FORCE} from "../metadata/Entities.js";
-import {SLAB_BB, STAIRS_BB} from "../metadata/Blocks.js";
 
 export class Entity {
     /*** @type {number | null} */
@@ -9,6 +8,7 @@ export class Entity {
     y = 0;
     vx = 0;
     vy = 0;
+    eyeHeight = 0;
 
     /**
      * @param {number} id
@@ -65,6 +65,10 @@ export class Entity {
         this.vy = vy;
     };
 
+    knockFrom(x) {
+        this.applyVelocity(x > this.x ? -2 : 2, 3);
+    };
+
     move(dx, dy) {
         if (dx === 0 && dy === 0) return false;
         const already = this.world.getCollidingBlock(this.bb);
@@ -80,19 +84,15 @@ export class Entity {
             this.recalculateBoundingBox();
             const b = this.world.getCollidingBlock(this.bb);
             if (!already && b) {
-                const maxY = b.collisions.sort((a, b) => b.y2 - a.y2)[0].y2 + b.y;
-                const dy = maxY - this.bb.y1;
-                if (
-                    onGround
-                    && b.collisions.length === 1
-                    && (SLAB_BB.includes(b.bb) || STAIRS_BB.includes(b.bb))
-                    && dy < 0.5
-                ) {
-                    this.y += dy + 0.002;
+                //const maxY = b.collisions.sort((a, b) => b.y2 - a.y2)[0].y2 + b.y;
+                //const dy = maxY - this.bb.y1;
+                const dy = 0.5002;
+                if (onGround) {
+                    this.y += dy;
                     this.recalculateBoundingBox();
                     // check if it will bump into something if it steps up
                     if (this.world.getCollidingBlock(this.bb)) {
-                        this.y -= dy
+                        this.y -= dy;
                         this.x -= dx;
                         this.recalculateBoundingBox();
                         this.vx = 0;
@@ -131,17 +131,8 @@ export class Entity {
             if (this.lastChunkX !== null) this.world.dirtyChunks.add(this.lastChunkX);
             this.world.dirtyChunks.add(newCX);
         }
-        const oldChunk = this.world.getChunkEntities(this.lastChunkX);
-        if (oldChunk) {
-            const index = oldChunk.indexOf(this);
-            if (index !== -1) {
-                oldChunk.splice(index, 1);
-            }
-        }
-        const newEntities = this.world.chunkEntities[newCX] ??= [];
-        if (!newEntities.includes(this)) {
-            newEntities.push(this);
-        }
+        this.world.getChunkEntities(this.lastChunkX).delete(this);
+        this.world.getChunkEntities(newCX).add(this);
         this.lastChunkX = newCX;
         return true;
     };
@@ -152,11 +143,7 @@ export class Entity {
 
     remove() {
         if (this.lastChunkX !== null) {
-            const chunk = this.world.getChunkEntities(this.lastChunkX);
-            if (chunk) {
-                const index = chunk.indexOf(this);
-                if (index !== -1) chunk.splice(index, 1);
-            }
+            this.world.getChunkEntities(this.lastChunkX).delete(this);
         }
         delete this.world.entityMap[this.id];
     };
@@ -171,6 +158,10 @@ export class Entity {
 
     distanceBasic(x, y) {
         return Math.abs(this.x - x) + Math.abs(this.y - y);
+    };
+
+    distanceEye(x, y) {
+        return Math.sqrt((this.x - x) ** 2 + (this.y + this.eyeHeight - y) ** 2);
     };
 
     serialize() {

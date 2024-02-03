@@ -3,6 +3,7 @@ import {EntityIds, FALLING_BLOCK_BB} from "../common/metadata/Entities.js";
 import {getBlockTexture} from "../common/metadata/Blocks.js";
 import {BASE_BLOCK_SIZE, getCanvasPosition} from "../Utils.js";
 import {Ids} from "../common/metadata/Ids.js";
+import {ctx} from "../main/Game.js";
 
 export class C_TNTEntity extends C_Entity {
     HAS_RENDER_POS = false;
@@ -14,8 +15,8 @@ export class C_TNTEntity extends C_Entity {
         this.item = item;
     };
 
-    render(ctx) {
-        super.render(ctx);
+    render() {
+        super.render();
         if (this.aliveTime % 1 > 0.5) {
             const pos = getCanvasPosition(this.x - 0.5, this.y + 0.5);
             ctx.fillStyle = "white";

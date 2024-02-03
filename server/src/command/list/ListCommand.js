@@ -1,6 +1,6 @@
-import {Command} from "../Command.js";
+import {AdvancedCommand} from "../AdvancedCommand.js";
 
-export class ListCommand extends Command {
+export class ListCommand extends AdvancedCommand {
     constructor() {
         super(
             "list",
@@ -9,8 +9,10 @@ export class ListCommand extends Command {
         );
     };
 
-    execute(sender, args) {
-        const players = Server.getPlayers();
-        sender.sendMessage(`Player${players.size > 1 ? "s" : ""}(${players.size}): ${Array.from(players).map(i => i.username).join(", ")}`);
+    executor = {
+        ""(sender) {
+            const players = Server.getPlayers();
+            sender.sendMessage(`Player${players.size > 1 ? "s" : ""}(${players.size}): ${Array.from(players).map(i => i.username).join(", ")}`);
+        }
     };
 }

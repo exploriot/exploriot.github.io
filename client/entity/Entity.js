@@ -1,5 +1,6 @@
 import {Entity} from "../common/entity/Entity.js";
 import {BASE_BLOCK_SIZE, getCanvasPosition} from "../Utils.js";
+import {ctx} from "../main/Game.js";
 
 export class C_Entity extends Entity {
     renderX = 0;
@@ -18,7 +19,7 @@ export class C_Entity extends Entity {
         this.downBB.y2 = this.bb.y1 - 0.01;
     };
 
-    render(ctx) {
+    render() {
         if (this.HAS_RENDER_POS) {
             const dx = (this.x - this.renderX) / 5;
             const dy = (this.y - this.renderY) / 5;
@@ -42,7 +43,7 @@ export class C_Entity extends Entity {
         );
     };
 
-    renderBoundingBox(ctx) {
+    renderBoundingBox() {
         const pos = getCanvasPosition(this.x, this.y);
         const w = (this.baseBB.x2 - this.baseBB.x1) * BASE_BLOCK_SIZE;
         const h = (this.baseBB.y2 - this.baseBB.y1) * BASE_BLOCK_SIZE;

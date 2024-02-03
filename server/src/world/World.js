@@ -27,6 +27,7 @@ import {ListTag} from "../../../client/common/compound/ListTag.js";
 import {SpawnerTile} from "../tile/SpawnerTile.js";
 import {S_TNTEntity} from "../entity/TNTEntity.js";
 import {S_ZombieEntity} from "../entity/ZombieEntity.js";
+import {ParticleIds} from "../../../client/common/metadata/ParticleIds.js";
 
 export const ENTITY_MAP = {
     [EntityIds.ITEM]: S_ItemEntity,
@@ -197,12 +198,17 @@ export class S_World extends World {
         this.gameRules[id] = value;
     };
 
-    breakBlock(x, y, breakItem = null, instant = false, sound = true) {
+    breakBlock(x, y, breakItem = null, instant = false, sound = true, particle = true) {
+        const block = this.getBlock(x, y);
+        if (block[0] === Ids.AIR) return;
         if (!instant) this.summonBlockDrops(x, y, breakItem);
         if (sound) {
             const id = this.getBlock(x, y)[0];
             const sound = getBlockDigSound(id);
             if (sound) this.playSound(sound, x, y);
+        }
+        if (particle) {
+            this.addParticle(ParticleIds.BLOCK_BREAK, x, y, {id: block[0], meta: block[1]});
         }
         this.setBlock(x, y, Ids.AIR);
         this.checkTile(x, y);
@@ -353,7 +359,7 @@ export class S_World extends World {
         const viewers = [];
         const chunkDistance = Server.getChunkDistance();
         for (let X = chunkX - chunkDistance; X <= chunkX + chunkDistance; X++) {
-            for (const entity of (this.chunkEntities[X] ?? [])) {
+            for (const entity of this.getChunkEntities(X)) {
                 viewers.push(entity);
             }
         }
@@ -407,7 +413,7 @@ export class S_World extends World {
         }
     };
 
-    addParticle(id, x, y, extra = {}) {
+    addParticle(id, x, y, extra = null) {
         for (const player of this.getChunkPlayerViewers(x >> 4)) {
             if (player instanceof S_Player) player.session.sendParticle(id, x, y, extra);
         }
@@ -432,8 +438,8 @@ export class S_World extends World {
 
     saveChunk(x) {
         const chunk = this.chunks[x];
-        /*** @type {S_Entity[]} */
-        const entities = this.chunkEntities[x] ?? [];
+        /*** @type {Set<S_Entity>} */
+        const entities = this.getChunkEntities(x);
         const tiles = this.chunkTiles[x] ?? [];
 
         const subChunksNbt = new ObjectTag;

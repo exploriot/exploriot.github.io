@@ -30,7 +30,7 @@ export const S_Server = {
         if (this.ops.size === 1 && !Array.from(this.ops)[0]) this.ops.clear();
 
         const overworld = new S_World(0, "overworld", new ObjectTag({
-            generatorName: new StringTag("flat")
+            generatorName: new StringTag("default")
         }));
 
         this.worlds.push(overworld);

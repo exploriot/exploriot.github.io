@@ -11,7 +11,7 @@ export class OpCommand extends AdvancedCommand {
     };
 
     executor = {
-        "<player: selector>"(sender, [players]) {
+        "<players>"(sender, [players]) {
             for (const player of players) {
                 if (Server.isOp(player)) return sender.sendMessage("Player " + player.username + " is already not an operator.");
                 player.sendMessage("§7You have been opped.");

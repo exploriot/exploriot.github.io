@@ -1,6 +1,6 @@
-import {Command} from "../Command.js";
+import {AdvancedCommand} from "../AdvancedCommand.js";
 
-export class StopCommand extends Command {
+export class StopCommand extends AdvancedCommand {
     constructor() {
         super(
             "stop",
@@ -11,7 +11,9 @@ export class StopCommand extends Command {
         );
     };
 
-    execute(sender, args) {
-        Server.stop();
+    executor = {
+        ""() {
+            Server.stop();
+        }
     };
 }

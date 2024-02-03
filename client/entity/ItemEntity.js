@@ -1,6 +1,7 @@
 import {C_Entity} from "./Entity.js";
 import {EntityIds, ITEM_BB} from "../common/metadata/Entities.js";
 import {getItemTexture} from "../common/metadata/Items.js";
+import {ctx} from "../main/Game.js";
 
 export class C_ItemEntity extends C_Entity {
     HAS_RENDER_POS = false;
@@ -14,8 +15,8 @@ export class C_ItemEntity extends C_Entity {
         this.item = item;
     };
 
-    render(ctx) {
-        super.render(ctx);
+    render() {
+        super.render();
         const texture = getItemTexture(this.item.id, this.item.meta);
         this.renderImage(texture.image, ctx);
     };

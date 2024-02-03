@@ -346,10 +346,28 @@ img {
     position: absolute;
     bottom: 25px;
     text-shadow: 0 0 5px black;
+    width: 100%;
+    max-height: calc(100% - 25px);
+    overflow-y: auto;
+    scrollbar-color: rgba(255, 255, 255, 0.5) transparent;
+    scrollbar-gutter: stable;
+    scroll-behavior: smooth;
+    scroll-snap-align: end end;
 }
 
 .chat > .messages > .msg {
     font-family: Minecraft, serif;
+    animation: message-sent forwards 0.3s;
+}
+
+@keyframes message-sent {
+    0% {
+        translate: -100%;
+    }
+
+    100% {
+        translate: 0;
+    }
 }
 
 .crafting-inventory-in {

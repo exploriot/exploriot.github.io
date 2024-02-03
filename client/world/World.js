@@ -25,8 +25,18 @@ let lastSpace = 0;
 export class C_World extends World {
     breakChunks = {};
     lastUpdate = Date.now() - 1;
-    /*** @type {Record<number, C_Entity[]>} */
+    /*** @type {Record<number, Set<C_Entity>>} */
     chunkEntities = {};
+    /*** @type {Record<number, Set<Particle>>} */
+    chunkParticles = {};
+
+    /**
+     * @param {number} x
+     * @return {Set<Particle>}
+     */
+    getChunkParticles(x) {
+        return this.chunkParticles[x] ??= new Set;
+    };
 
     update() {
         setTimeout(() => this.update());

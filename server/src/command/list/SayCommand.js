@@ -1,17 +1,18 @@
-import {Command} from "../Command.js";
+import {AdvancedCommand} from "../AdvancedCommand.js";
 
-export class SayCommand extends Command {
+export class SayCommand extends AdvancedCommand {
     constructor() {
         super(
             "say",
             "Broadcasts a message.",
-            "",
             [],
             true
         );
     };
 
-    execute(sender, args) {
-        Server.broadcastMessage("§d[" + sender.username + "] " + args.join(" "));
+    executor = {
+        "<spread_text>"(sender, [text]) {
+            Server.broadcastMessage("§d[" + sender.username + "] " + text);
+        }
     };
 }

@@ -32,8 +32,11 @@ export class AdvancedCommand extends Command {
                 sel, selT,
                 pos: spl.map(k => {
                     const s = k[0].slice(1, -1).split(":");
-                    return [s[0], s[1].split(",")];
-                }), rule: spl.map(k => k[0].split(":").join(": ")).join(" ")
+                    return [s[0], (s[1] ?? s[0]).replace("?", "").split(",")];
+                }), rule: spl.map(k => {
+                    const s = k[0].split(":");
+                    return s[0] + (s[1] ? `: ${s[1]}` : "");
+                }).join(" ")
             };
         });
         this.usageMessage = this.__usage.map(i => "/" + this.name + " " + i.rule).join("\n");

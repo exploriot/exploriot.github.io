@@ -11,7 +11,7 @@ export class ClearCommand extends AdvancedCommand {
     };
 
     executor = {
-        "<player: selector_p>"(sender, [players]) {
+        "<players>"(sender, [players]) {
             for (const player of players) {
                 player.clearAllInventories();
                 sender.sendMessage(`Player ${player.username}'s inventory has been cleared.`);

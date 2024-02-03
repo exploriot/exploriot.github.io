@@ -13,7 +13,7 @@ export class GiveCommand extends AdvancedCommand {
     };
 
     executor = {
-        "<player: selector_p> <item: item> <count?: uint> <nbt?: json>"(sender, [players, baseItem, _count, _nbt]) {
+        "<players> <item> <count?: uint> <nbt?: json>"(sender, [players, baseItem, _count, _nbt]) {
             const count = _count ?? 1;
             const nbt = _nbt ?? {};
 
@@ -23,6 +23,9 @@ export class GiveCommand extends AdvancedCommand {
                 "Added " + (count - item.count) + " " + getItemName(baseItem.id, baseItem.meta, baseItem.nbt)
                 + " to " + players.map(i => i.username).join(" and ") + "." + (item.count > 0 ? "(Couldn't give " + item.count + " of it)" : "")
             );
+        },
+        "<players> <item> <nbt?: json>"(sender, [players, baseItem, _nbt]) {
+            this["<players> <item> <count?: uint> <nbt?: json>"](sender, [players, baseItem, 1, _nbt]);
         }
     };
 }

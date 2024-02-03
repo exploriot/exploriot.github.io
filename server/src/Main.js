@@ -169,6 +169,7 @@ function update() {
     }
     const updatingEntities = new Set;
     const updatingTiles = new Set;
+    const coveredChunks = new Set;
     for (const player of Server.getPlayers()) {
         player.session.cleanPackets();
         const cx = player.x >> 4;
@@ -178,8 +179,11 @@ function update() {
         }
         for (let x = cx - chunkDistance; x < cx + chunkDistance; x++) {
             player.session.sendChunk(x);
-            if (x in player.world.chunkEntities) for (const entity of player.world.getChunkEntities(x)) updatingEntities.add(entity);
-            if (x in player.world.chunkTiles) for (const tile of player.world.getChunkTiles(x)) updatingTiles.add(tile);
+            if (!coveredChunks.has(x)) {
+                coveredChunks.add(x);
+                for (const entity of player.world.getChunkEntities(x)) updatingEntities.add(entity);
+                for (const tile of player.world.getChunkTiles(x)) updatingTiles.add(tile);
+            }
         }
     }
     for (const entity of updatingEntities) entity.update(dt);

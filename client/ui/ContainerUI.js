@@ -7,6 +7,8 @@ import {ClientSession} from "../network/ClientSession.js";
 import {ContainerIds, InventoryIds} from "../common/item/Inventory.js";
 import {isEscMenuOn} from "./MainUI.js";
 import {renderPlayerModel} from "../Utils.js";
+import {PLAYER_BB} from "../common/metadata/Entities.js";
+import {Mouse} from "../input/Mouse.js";
 
 const invUI = document.getElementById("player-inventory-ui");
 const craftingTableUI = document.getElementById("crafting-table-ui");
@@ -28,29 +30,53 @@ function onPlayerInvResize() {
     const container = playerInvCanvas.getBoundingClientRect();
     playerInvCanvas.width = container.width;
     playerInvCanvas.height = container.height;
-    playerInvCanvas.imageSmoothingEnabled = false;
+    piCtx.imageSmoothingEnabled = false;
 }
 
 function animatePlayerInvCanvas() {
     requestAnimationFrame(animatePlayerInvCanvas);
     if (!isInventoryUIOn()) return;
+    const container = playerInvCanvas.getBoundingClientRect();
     // aspect ratio: 3 / 4
     const W = playerInvCanvas.width;
+    const H = playerInvCanvas.height;
+    piCtx.clearRect(0, 0, W, H);
+    const pos = {x: W * 0.5, y: H * 0.71};
+    const SIZE = W / 2;
+
+    const head = [
+        pos.x + PLAYER_BB.x1 * SIZE, pos.y - (PLAYER_BB.y2 + 0.125) * SIZE,
+        SIZE * 0.5, SIZE * 0.5
+    ];
+
+    const dx = Mouse.pageX - container.x - head[0] - head[2] / 2;
+    const dy = Mouse.pageY - container.y - head[1] - head[3] / 2;
+
     renderPlayerModel(
         piCtx, {
-            SIZE: W / 2,
-            renderX: 1,
-            renderY: 1,
+            SIZE,
+            pos,
             skin: CServer.player.skin,
-            bodyRotation: true,
-            renderLeftArmRotation: 0,
-            renderLeftLegRotation: 0,
-            renderRightLegRotation: 0,
-            renderRightArmRotation: 0,
-            renderHeadRotation: 0,
+            bodyRotation: dx > 0,
+            leftArmRotation: 0,
+            leftLegRotation: 0,
+            rightLegRotation: 0,
+            rightArmRotation: 0,
+            headRotation: Math.atan2(dy, dx) / Math.PI * 180,
             handItem: CServer.getHandItem()
         }
     );
+
+    /* head center pointer:
+    piCtx.fillStyle = "white";
+    piCtx.fillRect(head[0] + head[2] / 2 - 1, head[1] + head[3] / 2 - 1, 2, 2);
+    */
+
+    /* center lines:
+    piCtx.fillStyle = "white";
+    piCtx.fillRect(W / 2 - 1, 0, 2, H);
+    piCtx.fillRect(0, H / 2 - 1, W, 2);
+    */
 }
 
 export function initContainers() {

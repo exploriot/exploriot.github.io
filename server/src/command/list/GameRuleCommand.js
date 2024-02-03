@@ -11,11 +11,11 @@ export class GameRuleCommand extends AdvancedCommand {
     };
 
     executor = {
-        "<world: world> <rule: gamerule> <value: boolean>"(sender, [world, rule, value]) {
+        "<world> <gamerule> <value: boolean>"(sender, [world, rule, value]) {
             world.setGameRule(rule.id, value);
             sender.sendMessage(`The game rule ${rule.name} was set to ${value} in the world ${world.name}.`);
         },
-        "@p <rule: gamerule> <value: boolean>"(player, [rule, value]) {
+        "@p <gamerule> <value: boolean>"(player, [rule, value]) {
             player.world.setGameRule(rule.id, value);
             player.sendMessage(`The game rule ${rule.name} was set to ${value}.`);
         }

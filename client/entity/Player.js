@@ -1,11 +1,11 @@
 import {Texture} from "../loader/Texture.js";
 import {CREATIVE_REACH, EntityIds, PLAYER_BB, SURVIVAL_REACH} from "../common/metadata/Entities.js";
-import {CServer} from "../main/Game.js";
+import {CServer, ctx} from "../main/Game.js";
 import {BASE_BLOCK_SIZE, getCanvasPosition, renderPlayerModel} from "../Utils.js";
 import {C_Entity} from "./Entity.js";
 import DefaultSkin from "../main/DefaultSkin.js";
 
-function getSwing() {
+export function getCurrentSwing() {
     const p = 400;
     const mod = performance.now() % p;
     return (mod > p / 2 ? -1 : 1) * Math.PI / 2.5
@@ -49,8 +49,11 @@ export class C_Player extends C_Entity {
         if (this === CServer.player) {
             CServer.canUpdateMovement = true;
             CServer.canUpdateMouse = true;
+            if (this.lastX !== this.x) {
+                this.lastX = this.x;
+                this.walkingRemaining = 0.3;
+            }
         }
-        this.walkingRemaining = this === CServer.player ? 0.1 : 0.3;
         super.handleMovement();
     };
 
@@ -70,8 +73,8 @@ export class C_Player extends C_Entity {
         return (x - this.x) ** 2 + (y - this.y) ** 2 <= this.getBlockReach() ** 2;
     };
 
-    render(ctx) {
-        super.render(ctx);
+    render() {
+        super.render();
         ctx.textAlign = "center";
         // this.renderHeadRotation += (this.rotation - this.renderHeadRotation) / 3;
         this.renderHeadRotation = this.rotation;
@@ -98,7 +101,7 @@ export class C_Player extends C_Entity {
         const isBreaking = this.breaking;
 
         if (isWalking) {
-            const f = getSwing();
+            const f = getCurrentSwing();
             if (isSwinging) {
                 this.leftArmRotation = 0;
                 this.rightArmRotation = (bodyRotation ? -1 : 1) * Math.PI / 2.5;
@@ -117,7 +120,7 @@ export class C_Player extends C_Entity {
             if (isSwinging) {
                 this.rightArmRotation = (bodyRotation ? -1 : 1) * Math.PI / 2.5;
             } else if (isBreaking) {
-                this.rightArmRotation = Math.max(0, getSwing()) * (bodyRotation ? -1 : 1);
+                this.rightArmRotation = Math.max(0, getCurrentSwing()) * (bodyRotation ? -1 : 1);
             } else this.rightArmRotation = 0;
             this.leftArmRotation = 0;
             this.rightLegRotation = this.leftLegRotation = 0;
@@ -125,15 +128,16 @@ export class C_Player extends C_Entity {
 
         if (this.skin) renderPlayerModel(ctx, {
             SIZE: BASE_BLOCK_SIZE,
+            pos: getCanvasPosition(this.renderX, this.renderY),
             renderX: this.renderX,
             renderY: this.renderY,
             skin: this.skin,
             bodyRotation,
-            renderLeftArmRotation: this.renderLeftArmRotation,
-            renderLeftLegRotation: this.renderLeftLegRotation,
-            renderRightLegRotation: this.renderRightLegRotation,
-            renderRightArmRotation: this.renderRightArmRotation,
-            renderHeadRotation: this.renderHeadRotation,
+            leftArmRotation: this.renderLeftArmRotation,
+            leftLegRotation: this.renderLeftLegRotation,
+            rightLegRotation: this.renderRightLegRotation,
+            rightArmRotation: this.renderRightArmRotation,
+            headRotation: this.renderHeadRotation,
             handItem: this === CServer.player ? CServer.getHandItem() : this.handItem
         });
     };

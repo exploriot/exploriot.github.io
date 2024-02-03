@@ -22,6 +22,12 @@ import {AnimationIds} from "../common/metadata/AnimationIds.js";
 import {Sound} from "../loader/Sound.js";
 import {clearDiv, colorizeTextHTML} from "../Utils.js";
 import {C_ZombieEntity} from "../entity/ZombieEntity.js";
+import {ParticleIds} from "../common/metadata/ParticleIds.js";
+import {BlockParticle} from "../particle/BlockParticle.js";
+import {ExplosionParticle} from "../particle/ExplosionParticle.js";
+
+const playerListDiv = document.querySelector(".player-list");
+const playerConnections = {};
 
 const EntityCreator = {
     [EntityIds.PLAYER]: data => {
@@ -148,8 +154,12 @@ export function C_handleEntityUpdatePacket(pk) {
 export function C_handleEntityMovementPacket(pk) {
     const entity = CServer.world.entityMap[pk.id];
     if (!entity) return;
+    if (entity.x === pk.x && entity.y === pk.y) return;
     entity.x = pk.x;
     entity.y = pk.y;
+    if (entity.x !== pk.x) {
+        entity.walkingRemaining = entity === CServer.player ? 0.1 : 0.3;
+    }
     entity.handleMovement();
 }
 
@@ -219,6 +229,7 @@ export function C_handleSendMessagePacket(pk) {
     clearDiv(msg);
     msg.appendChild(colorizeTextHTML(pk.message));
     messages.appendChild(msg);
+    messages.scrollTop = messages.scrollHeight;
 }
 
 export function C_handleSetAttributesPacket(pk) {
@@ -291,22 +302,30 @@ export function C_handleContainerStatePacket(pk) {
 }
 
 export function C_handleUpdatePlayerListPacket(pk) {
-    const playerList = document.querySelector(".player-list");
-    let pingRate = 5;
-    if (pk.ping < 3000) pingRate = 1;
-    if (pk.ping > 1000) pingRate = 2;
-    if (pk.ping > 500) pingRate = 3;
-    if (pk.ping > 250) pingRate = 4;
     for (const player of pk.list) {
-        const p = document.createElement("div");
-        const name = document.createElement("div");
-        const connection = document.createElement("div");
-        p.classList.add("player");
-        name.classList.add("name");
-        connection.classList.add("connection");
-        name.innerText = player.username;
-        connection.style.backgroundImage = `url("./assets/gui/connection/connection_${pingRate}.png")`;
-        playerList.appendChild(p);
+        let pingRate = 5;
+        if (pk.ping > 3000) pingRate = 1;
+        if (pk.ping > 1000) pingRate = 2;
+        if (pk.ping > 500) pingRate = 3;
+        if (pk.ping > 250) pingRate = 4;
+
+        if (playerConnections[player.username]) {
+            const pl = playerConnections[player.username];
+            pl.style.backgroundImage = `url("./assets/gui/connection/connection_${pingRate}.png")`;
+        } else {
+            const p = document.createElement("div");
+            const name = document.createElement("div");
+            const connection = document.createElement("div");
+            p.classList.add("player");
+            name.classList.add("name");
+            connection.classList.add("connection");
+            name.innerText = player.username;
+            connection.style.backgroundImage = `url("./assets/gui/connection/connection_${pingRate}.png")`;
+            p.appendChild(name);
+            p.appendChild(connection);
+            playerListDiv.appendChild(p);
+            playerConnections[player.username] = connection;
+        }
     }
 }
 
@@ -337,6 +356,16 @@ export function C_handleEntityVelocityPacket(pk) {
     entity.handleMovement();
 }
 
+export function C_handleAddParticlePacket(pk) {
+    const clas = {
+        [ParticleIds.BLOCK_BREAK]: BlockParticle,
+        [ParticleIds.EXPLOSION]: ExplosionParticle
+    }[pk.particleId];
+    if (!clas) return;
+    const particle = new clas(pk.x, pk.y, pk.extra);
+    CServer.world.getChunkParticles(pk.x >> 4).add(particle);
+}
+
 const PacketMap = {
     [PacketIds.SERVER_WELCOME]: C_handleWelcomePacket,
     [PacketIds.BATCH]: C_handleBatchPacket,
@@ -365,7 +394,8 @@ const PacketMap = {
     [PacketIds.SERVER_UPDATE_PLAYER_LIST]: C_handleUpdatePlayerListPacket,
     [PacketIds.SERVER_ENTITY_ANIMATION]: C_handleEntityAnimationPacket,
     [PacketIds.SERVER_APPLY_VELOCITY]: C_handleApplyVelocityPacket,
-    [PacketIds.SERVER_ENTITY_VELOCITY]: C_handleEntityVelocityPacket
+    [PacketIds.SERVER_ENTITY_VELOCITY]: C_handleEntityVelocityPacket,
+    [PacketIds.SERVER_ADD_PARTICLE]: C_handleAddParticlePacket
 };
 
 export function C_handlePacket(pk) {
