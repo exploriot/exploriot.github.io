@@ -101,7 +101,6 @@ const BlockInteractMap = {
         entity.y = y;
         entity.parentEntityUUID = network.player.uuid;
         network.player.world.addEntity(entity);
-        network.player.world.playSound("assets/sounds/random/fuse.ogg", x, y);
         return true;
     },
     [Ids.ENTITY_SPAWNER](network, x, y, item) {
@@ -220,8 +219,7 @@ export class NetworkSession {
             const subChunk = chunk[y];
             this.sendPacket(SubChunkPacket(x, y, subChunk));
         }
-        const chunkEntities = this.player.world.getChunkEntities(x);
-        for (const e of chunkEntities) {
+        for (const e of this.player.world.getChunkEntities(x)) {
             if (e.id === this.player.id || e.isInvisible()) continue;
             this.showEntity(e);
         }
@@ -321,8 +319,8 @@ export class NetworkSession {
         this.sendPacket(StopAmbientPacket(file));
     };
 
-    sendParticle(id, x, y, extra = {}) {
-        this.sendPacket(AddParticlePacket(id, x, y, extra));
+    sendParticle(particleId, x, y, extra = null) {
+        this.sendPacket(AddParticlePacket(particleId, x, y, extra));
     };
 
     sendVelocity(vx, vy) {
@@ -865,7 +863,7 @@ export class NetworkSession {
 
         if (pk.button === 0) {
             if (!(entity instanceof S_Living)) return;
-            entity.applyVelocity(entity.x > this.player.x ? 2 : -2, 5);
+            entity.knockFrom(this.player.x);
             entity.damage(!this.player.isFlying() && !this.player.isOnGround() && this.player.y < this.player.fallY ? 2 : 1);
             return;
         } else {

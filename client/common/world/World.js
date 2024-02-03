@@ -31,7 +31,7 @@ const EmptyGenerator = {
 export class World {
     /*** @type {Record<string, Record<string, Int8Array>>} */
     chunks = {};
-    /*** @type {Record<number, Entity[]>} */
+    /*** @type {Record<number, Set<Entity>>} */
     chunkEntities = {};
     entityMap = {};
     id = 0;
@@ -43,10 +43,10 @@ export class World {
 
     /**
      * @param {number} chunkX
-     * @return {(Entity | C_Entity | S_Entity)[]}
+     * @return {Set<Entity | C_Entity | S_Entity>}
      */
     getChunkEntities(chunkX) {
-        return this.chunkEntities[chunkX] ?? [];
+        return this.chunkEntities[chunkX] ??= new Set;
     };
 
     isInWorld(x, y) {
@@ -171,9 +171,9 @@ export class World {
                 !Metadata.phaseable.includes(item.id)
                 && (bb2 = getBoundingBoxesOf(item.id, item.meta))
                 && (
-                    player.bb.isCollidingWithTranslated(bb2, x, y) || (
-                        chunkEntities
-                        && chunkEntities.some(i => i.type !== EntityIds.ITEM && i.bb.isCollidingWithTranslated(bb2, x, y))
+                    player.bb.isCollidingWithTranslated(bb2, x, y)
+                    || Array.from(chunkEntities).some(
+                        i => i.type !== EntityIds.ITEM && i.bb.isCollidingWithTranslated(bb2, x, y)
                     )
                 )
             )

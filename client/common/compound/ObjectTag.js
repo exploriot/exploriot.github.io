@@ -40,10 +40,12 @@ export class ObjectTag extends Tag {
 
     setTag(key, value) {
         this.tags[key] = value;
+        return this;
     };
 
     removeTag(key) {
         delete this.tags[key];
+        return this;
     };
 
     getSize() {

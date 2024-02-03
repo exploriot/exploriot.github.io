@@ -304,7 +304,13 @@ const GamemodeMap = {
 const GamemodeNames = ["survival", "creative", "adventure", "spectator"];
 
 const Pos = {
-    selector(ind, tokens, self) {
+    entity(ind, tokens, self) {
+        const res = this.entities(ind, tokens, self);
+        if (typeof res === "string") return res;
+        if (res[1].length !== 1) return "Expected exactly one entity.";
+        return res[0];
+    },
+    entities(ind, tokens, self) {
         const t = tokens[ind];
         if (t.type === "string" || (t.type === "word" && t.value[0] !== "@")) {
             const p = Server.getPlayerByName(t.value);
@@ -323,13 +329,19 @@ const Pos = {
             ind++;
         }
         const entities = computeSelector(self, sel, selT);
+        if (entities.length === 0) return "Selector failed.";
         return [ind + 1, entities];
     },
-    selector_p(ind, tokens, self) {
-        const res = this.selector(ind, tokens, self);
-        if (Array.isArray(res) && res[1].some(i => !(i instanceof S_Player))) {
-            return "Expected player entities, instead got non-players.";
-        }
+    player(ind, tokens, self) {
+        const res = this.players(ind, tokens, self);
+        if (typeof res === "string") return res;
+        if (res[1].length !== 1) return "Expected exactly one player.";
+        return res;
+    },
+    players(ind, tokens, self) {
+        const res = this.entities(ind, tokens, self);
+        if (typeof res === "string") return res;
+        res[1] = res[1].filter(i => i instanceof S_Player);
         return res;
     },
     gamemode(ind, tokens) {
@@ -487,6 +499,12 @@ const Pos = {
         if (t.type !== "word" && t.type !== "string") return "Invalid gamerule.";
         if (!(t.value in GameRules)) return "Invalid gamerule: " + t.value + ".";
         return [ind + 1, {id: GameRules[t.value], name: t.value}];
+    },
+    text(ind, tokens) {
+        return [ind + 1, tokens[ind]];
+    },
+    spread_text(ind, tokens, _, __, text) {
+        return [tokens.length, text.substring(tokens[ind].index)]
     }
 };
 

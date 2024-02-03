@@ -24,10 +24,11 @@ export class S_Living extends S_Entity {
     };
 
     getHealth() {
-        return 1;
+        return this.health;
     };
 
     setHealth(hp) {
+        this.health = hp;
     };
 
     damage(hp) {

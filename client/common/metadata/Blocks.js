@@ -20,7 +20,7 @@ export const LEFT_TOP_HALF_BB = new BoundingBox(-0.5, 0, 0, 0.5);
 export const RIGHT_TOP_HALF_BB = new BoundingBox(0, 0, 0.5, 0.5);
 
 export const LEFT_BOTTOM_HALF_BB = new BoundingBox(-0.5, -0.5, 0, 0);
-export const RIGHT_BOTTOM_HALF_BB = new BoundingBox(0, 0, 0.5, -0.5);
+export const RIGHT_BOTTOM_HALF_BB = new BoundingBox(0, -0.5, 0.5, 0.5);
 
 export const SLAB_BB = [
     BOTTOM_HALF_BB,
@@ -66,8 +66,8 @@ export function isBlockItem(id) {
 }
 
 export function getBlockMetaMod(id) {
-    const t = BlockTextures[id];
-    if (typeof t !== "object") return 1;
+    const t = Metadata.textures[id];
+    if (!Array.isArray(t)) return 1;
     return t.length;
 }
 

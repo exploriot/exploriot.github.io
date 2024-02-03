@@ -12,12 +12,14 @@ import {initItems} from "../common/metadata/Items.js";
 import {clearDiv, colorizeTextHTML, initTextures, onResize} from "../Utils.js";
 import {initMainUI} from "../ui/MainUI.js";
 import {ClientSession} from "../network/ClientSession.js";
-import {initContainers, initContainerUI, openInventoryUI} from "../ui/ContainerUI.js";
+import {initContainers, initContainerUI} from "../ui/ContainerUI.js";
 import {initMouse} from "../input/Mouse.js";
 import {initKeyboard} from "../input/Keyboard.js";
 import DefaultSkin from "./DefaultSkin.js";
 
-export let C_OPTIONS, CServer, canvas, ctx = null;
+export let C_OPTIONS, CServer, canvas;
+/*** @type {CanvasRenderingContext2D} */
+export let ctx;
 
 export function initGame() {
     // todo: mobile support
@@ -54,8 +56,10 @@ export function initGame() {
         externalInventory: null,
         containerState: null,
         handIndex: 0,
+        /*** @type {C_Player | null} */
         player: null,
         dummyPlayer: null,
+        /*** @type {C_World | null} */
         world: null,
         attributes: {},
         getHandItem() {
@@ -127,7 +131,6 @@ export function initGame() {
 
     clearDiv(connectionText);
     connectionText.appendChild(colorizeTextHTML("§aConnecting..."));
-    setTimeout(() => openInventoryUI(), 300);
 }
 
 if (["game", "game.html"].includes(location.pathname.split("/").at(-1))) initGame();

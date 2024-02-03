@@ -10,8 +10,10 @@ import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
 import {StringTag} from "../../../client/common/compound/StringTag.js";
 import {ParticleIds} from "../../../client/common/metadata/ParticleIds.js";
 import {S_Living} from "./Living.js";
+import {BoolTag} from "../../../client/common/compound/BoolTag.js";
 
 /**
+ * @property {boolean} hasFused
  * @property {number} fuse
  * @property {number} explodeRadius
  * @property {number} damageRadius
@@ -23,6 +25,7 @@ export class S_TNTEntity extends S_Entity {
     static BOUNDING_BOX = FALLING_BLOCK_BB;
 
     static NBT_PRIVATE_STRUCTURE = new ObjectTag({
+        hasFused: new BoolTag(false),
         fuse: new Float32Tag(3),
         explodeRadius: new Float32Tag(5),
         damageRadius: new Float32Tag(5),
@@ -34,6 +37,10 @@ export class S_TNTEntity extends S_Entity {
 
     update(dt) {
         if (this.y < -64) return this.remove();
+        if (!this.hasFused) {
+            this.world.playSound("assets/sounds/random/fuse.ogg", this.x, this.y);
+            this.hasFused = true;
+        }
         if ((this.fuse -= dt) <= 0) this.explode();
         return super.update(dt);
     };

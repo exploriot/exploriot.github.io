@@ -49,10 +49,10 @@ export class S_Entity extends Entity {
         this.uuid ||= randomUUID();
     };
 
-    findClosestPlayer() {
+    findClosestPlayer(modes = [0, 1, 2]) {
         let closest = null;
         for (const player of this.currentViewers) {
-            if (player.getGamemode() === 3) continue;
+            if (!modes.includes(player.getGamemode())) continue;
             const dist = player.distance(this.x, this.y);
             if (!closest || dist < closest[0]) closest = [dist, player];
         }

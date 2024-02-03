@@ -8,12 +8,12 @@ export function recalculateMouse() {
     Mouse.y = (-Mouse.pageY + innerHeight / 2) / BASE_BLOCK_SIZE + CServer.player.y + CServer.player.baseBB.y2 - CServer.player.baseBB.y1 - 0.5;
     Mouse.rx = Math.round(Mouse.x);
     Mouse.ry = Math.round(Mouse.y);
-    const chunkEntities = CServer.world.getChunkEntities(Mouse.x >> 4);
-    Mouse.entity = chunkEntities ? chunkEntities.find(i => {
+    const chunkEntities = Array.from(CServer.world.getChunkEntities(Mouse.x >> 4));
+    Mouse.entity = chunkEntities.find(i => {
         if (i === CServer.player) return;
         i.recalculateBoundingBox();
         return i.bb.isCollidingWithDot(Mouse.x, Mouse.y);
-    }) : null;
+    });
 }
 
 export function getMouseRotation() {

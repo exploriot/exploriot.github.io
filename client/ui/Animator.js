@@ -24,7 +24,8 @@ const playerListDiv = document.querySelector(".player-list");
 const infoDiv = document.querySelector(".info");
 const infos = document.querySelectorAll(".info > span[data-info]");
 let lastRender = Date.now() - 1;
-let _fps = [];
+let fpsList = [];
+let fps = 60;
 
 export let AnimatorFrame = 0;
 let lastHandIndex = 0;
@@ -57,32 +58,33 @@ export function animate() {
     const dt = (Date.now() - lastRender) / 1000;
     dg += dt * 100;
     lastRender = Date.now();
-    _fps.push(Date.now());
-    _fps = _fps.filter(i => i + 1000 > Date.now());
+    fpsList.push([Date.now() + 1000, 1 / dt]);
+    fpsList = fpsList.filter(i => i[0] > Date.now());
+    fps = fpsList.reduce((a, b) => a + b[1], 0) / fpsList.length;
+    if (BASE_BLOCK_SIZE <= 0) return;
 
-    if(CServer.canUpdateMouse)recalculateMouse();
+    if (CServer.canUpdateMouse) recalculateMouse();
 
     ctx.clearRect(0, 0, innerWidth, innerHeight);
 
     const fx = Math.floor(CServer.player.x);
     const fy = Math.floor(CServer.player.y);
 
-    if (BASE_BLOCK_SIZE > 0) {
-        const widthHalf = Math.ceil((innerWidth / BASE_BLOCK_SIZE - 1) / 2);
-        const heightHalf = Math.ceil((innerHeight / BASE_BLOCK_SIZE - 1) / 2);
-        for (let x = -widthHalf; x < widthHalf + 2; x++) {
-            for (let y = -heightHalf + 1; y < heightHalf + 3; y++) {
-                const rx = fx + x;
-                const ry = fy + y;
-                const id = CServer.world.getBlock(rx, ry);
-                if (id[0] === Ids.AIR) continue;
-                if (!C_OPTIONS.showCoveredBlocks && CServer.world.isBlockCovered(rx, ry)) {
-                    const pos = getCanvasPosition(rx - 0.5, ry + 0.5);
-                    ctx.fillStyle = "black";
-                    ctx.fillRect(pos.x - 0.5, pos.y - 0.5, BASE_BLOCK_SIZE + 1, BASE_BLOCK_SIZE + 1);
-                } else {
-                    renderBlockAt(rx, ry, id[0], id[1]);
-                }
+    const widthHalf = Math.ceil((innerWidth / BASE_BLOCK_SIZE - 1) / 2);
+    const heightHalf = Math.ceil((innerHeight / BASE_BLOCK_SIZE - 1) / 2);
+
+    for (let x = -widthHalf; x < widthHalf + 2; x++) {
+        for (let y = -heightHalf + 1; y < heightHalf + 3; y++) {
+            const rx = fx + x;
+            const ry = fy + y;
+            const id = CServer.world.getBlock(rx, ry);
+            if (id[0] === Ids.AIR) continue;
+            if (!C_OPTIONS.showCoveredBlocks && CServer.world.isBlockCovered(rx, ry)) {
+                const pos = getCanvasPosition(rx - 0.5, ry + 0.5);
+                ctx.fillStyle = "black";
+                ctx.fillRect(pos.x - 0.5, pos.y - 0.5, BASE_BLOCK_SIZE + 1, BASE_BLOCK_SIZE + 1);
+            } else {
+                renderBlockAt(rx, ry, id[0], id[1]);
             }
         }
     }
@@ -95,17 +97,29 @@ export function animate() {
     const handItemId = handItem ? handItem.id : 0;
     const handItemMeta = handItem ? handItem.meta : 0;
     for (let x = renderChunkMinX; x <= renderChunkMaxX; x++) {
-        /*** @type {C_Entity[]} */
+        /*** @type {Set<C_Entity>} */
         const entities = CServer.world.getChunkEntities(x);
-        if (entities) for (const entity of entities) {
-            if (
-                Math.abs(entity.x - CServer.player.x) < C_OPTIONS.renderDistance + 4 &&
-                Math.abs(entity.y - CServer.player.y) < C_OPTIONS.renderDistance + 4
-            ) {
-                entity.render(ctx);
-                if (C_OPTIONS.showBoundingBoxes) entity.renderBoundingBox(ctx);
-            }
+        for (const entity of entities) if (
+            Math.abs(entity.x - CServer.player.x) < widthHalf + 0.5 &&
+            Math.abs(entity.y - CServer.player.y) < heightHalf + 1.5
+        ) {
+            entity.render();
+            if (C_OPTIONS.showBoundingBoxes) entity.renderBoundingBox();
         }
+
+        /*** @type {Set<Particle>} */
+        const particles = CServer.world.getChunkParticles(x);
+        for (const particle of particles) {
+            if (particle.canDespawn()) {
+                particles.delete(particle);
+                continue;
+            }
+            if (
+                Math.abs(particle.x - CServer.player.x) < widthHalf + 0.5 &&
+                Math.abs(particle.y - CServer.player.y) < heightHalf + 1.5
+            ) particle.render();
+        }
+
         const breaks = CServer.world.breakChunks[x];
         if (breaks) for (const entity of breaks) {
             const blockId = entity.world.getBlock(entity.breaking.x, entity.breaking.y)[0];
@@ -161,8 +175,8 @@ export function animate() {
     }
     CServer.canUpdateRotation = false;
 
-    CServer.player.render(ctx);
-    if (C_OPTIONS.showBoundingBoxes) CServer.player.renderBoundingBox(ctx);
+    CServer.player.render();
+    if (C_OPTIONS.showBoundingBoxes) CServer.player.renderBoundingBox();
 
     document.documentElement.style.setProperty("--mouse-x", Mouse.pageX + "px");
     document.documentElement.style.setProperty("--mouse-y", Mouse.pageY + "px");
@@ -188,8 +202,8 @@ export function animate() {
         const data = {
             x: CServer.player.x,
             y: CServer.player.y,
-            fps: _fps.length,
-            entities: CServer.world.getChunkEntities(CServer.player.x >> 4).length
+            fps: Math.floor(fps),
+            entities: CServer.world.getChunkEntities(CServer.player.x >> 4).size
         };
         for (const inf of infos) {
             inf.innerText = data[inf.getAttribute("data-info")];

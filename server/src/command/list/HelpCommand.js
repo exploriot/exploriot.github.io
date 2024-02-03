@@ -17,7 +17,7 @@ export class HelpCommand extends AdvancedCommand {
                 sender.sendMessage(`§b/${command.name} - ${command.description}`);
             }
         },
-        "<command: command>"(sender, [cmd]) {
+        "<command>"(sender, [cmd]) {
             sender.sendMessage("§e--- Help /" + cmd.name + " ---");
             sender.sendMessage("§bName: §a" + cmd.name);
             sender.sendMessage("§bDescription: §a" + cmd.description);

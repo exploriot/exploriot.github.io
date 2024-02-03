@@ -11,7 +11,7 @@ export class PingCommand extends AdvancedCommand {
     };
 
     executor = {
-        "<player: selector_p>"(sender, [players]) {
+        "<players>"(sender, [players]) {
             for (const player of players) {
                 sender.sendMessage(`Player ${player.username}'s ping is ${player.session.ping}.`);
             }

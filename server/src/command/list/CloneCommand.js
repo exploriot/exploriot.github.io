@@ -37,7 +37,7 @@ export class CloneCommand extends AdvancedCommand {
             if (!r) return sender.sendMessage("§cCannot clone more than " + MAX_CLONE + " blocks!");
             sender.sendMessage(`The blocks from (${from.x}, ${from.y}) to (${to.x}, ${to.y}) was cloned to (${dest.x}, ${dest.y}).`);
         },
-        "<world: world> <from: position> <to: position> <destination: position>"(sender, [world, from, to, dest]) {
+        "<world> <from: position> <to: position> <destination: position>"(sender, [world, from, to, dest]) {
             const r = doClone(world, from, to, dest);
             if (!r) return sender.sendMessage("§cCannot clone more than " + MAX_CLONE + " blocks!");
             sender.sendMessage(`The blocks from (${from.x}, ${from.y}) to (${to.x}, ${to.y}) in the world ${world.name} was cloned to (${dest.x}, ${dest.y}).`);

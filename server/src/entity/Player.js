@@ -81,6 +81,7 @@ export class S_Player extends S_Living {
     breakingEndAt = null;
     /*** @type {Inventory | null} */
     externalInventory = null;
+    eyeHeight = 1.5;
 
     /**
      * @param ws
@@ -347,6 +348,7 @@ export class S_Player extends S_Living {
     };
 
     exhaust(amount) {
+        if (this.getGamemode() % 2 === 1) return;
         const food = this.getFood();
         if (food <= 0) return;
         this.setFood(Math.max(0, food - amount));
