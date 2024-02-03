@@ -118,10 +118,7 @@ export class S_Player extends S_Living {
     };
 
     damageHandItem(amount = 1) {
-        const isBroken = this.playerInventory.damageItemAt(this.handIndex, amount);
-        if (isBroken) {
-            this.world.playSound("assets/sounds/random/break.ogg", this.x, this.y);
-        }
+        this.playerInventory.damageItemAt(this.handIndex, amount, this.world, this.x, this.y);
     };
 
     applyVelocity(vx, vy) {

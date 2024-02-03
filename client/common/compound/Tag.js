@@ -65,7 +65,7 @@ export class Tag {
     /**
      * @param {Buffer} buffer
      * @param {number} j
-     * @returns {[number, this]}
+     * @return {[number, this]}
      */
     static read(buffer, j) {
         throw new Error("Invalid operation.");

@@ -153,6 +153,17 @@ export class World {
     };
 
     /**
+     * @param {BoundingBox} bb
+     * @param {boolean} phaseable
+     * @param {number} amount
+     * @param {[number, number][] | null} filter
+     * @return {boolean}
+     */
+    isCollidingBlocks(bb, phaseable = false, amount = 1, filter = null) {
+        return this.getCollidingBlocks(bb, phaseable, amount, filter).length === amount;
+    };
+
+    /**
      * @param {number} x
      * @param {number} y
      * @return {boolean}

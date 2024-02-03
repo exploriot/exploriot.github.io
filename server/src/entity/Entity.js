@@ -64,7 +64,7 @@ export class S_Entity extends Entity {
 
     interactBlockAt(x, y) {
         return this.world.interactBlockAt(x, y, this.getHandItem(), {
-            entity: this, inventory: this.getMainInventory(), index: this.getHandIndex(), damageItem: !this.isCreative()
+            entity: this, inventory: this.getMainInventory(), index: this.getHandIndex(), affectItem: !this.isCreative()
         });
     };
 

@@ -1,5 +1,5 @@
 import {makeSubChunk, World} from "../../../client/common/world/World.js";
-import {randInt, SelfAround} from "../../../client/common/Utils.js";
+import {Around, randInt} from "../../../client/common/Utils.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
 import {Metadata} from "../../../client/common/metadata/Metadata.js";
 import {BlockUpdatePacket} from "../packet/BlockUpdatePacket.js";
@@ -40,6 +40,17 @@ export const ENTITY_MAP = {
     [EntityIds.TNT]: S_TNTEntity,
     [EntityIds.XP_ORB]: S_XPOrbEntity,
     [EntityIds.ZOMBIE]: S_ZombieEntity
+};
+
+const INTERACTION_RESPONSE = {
+    FAIL: 0,
+    SUCCESS: 1,
+    DECREASE: 2,
+    DAMAGE: 3
+};
+
+const BlockUpdaterTime = {
+    [Ids.WATER]: 0.2
 };
 
 /*** @type {{[key: number]: function(world: S_World, x: number, y: number, self: [number, number]): void}} */
@@ -123,46 +134,46 @@ const BlockUpdater = {
 BlockUpdater[Ids.GRAVEL] = BlockUpdater[Ids.ANVIL] = BlockUpdater[Ids.SAND];
 
 const BlockInteractMap = {
-    [Ids.CRAFTING_TABLE](network, x, y) {
-        let ext = network.player.externalInventory;
-        if (ext) return false;
-        ext = network.player.externalInventory = new Inventory(10, InventoryIds.EXTERNAL, {
+    [Ids.CRAFTING_TABLE](world, x, y, entity) {
+        if (!entity || !(entity instanceof S_Player) || entity.externalInventory) return INTERACTION_RESPONSE.FAIL;
+        const ext = entity.externalInventory = new Inventory(10, InventoryIds.EXTERNAL, {
             containerId: ContainerIds.CRAFTING_TABLE, x, y
         });
-        network.sendPacket(OpenContainerPacket({
+        entity.session.sendPacket(OpenContainerPacket({
             containerId: ext.extra.containerId, x, y
         }));
-        return true;
+        return INTERACTION_RESPONSE.SUCCESS;
     },
-    [Ids.FURNACE](network, x, y) {
-        if (network.player.externalInventory) return false;
-        network.player.world.checkTile(x, y);
-        const tile = network.player.world.getTile(x, y);
-        if (!tile) return;
-        network.player.externalInventory = tile.container;
-        tile.viewers.add(network.player);
+    [Ids.FURNACE](world, x, y, entity) {
+        if (!entity || !(entity instanceof S_Player) || entity.externalInventory) return INTERACTION_RESPONSE.FAIL;
+        world.checkTile(x, y);
+        const tile = world.getTile(x, y);
+        if (!tile) return INTERACTION_RESPONSE.FAIL;
+        entity.externalInventory = tile.container;
+        tile.viewers.add(entity);
+
+        const network = entity.session;
         network.subscribedTiles.add(tile);
         network.sendPacket(OpenContainerPacket(tile.getClientExtra()));
         network.sendContainerState(tile.getClientState());
-        network.sendInventory(network.player.externalInventory);
-        return true;
+        network.sendInventory(entity.externalInventory);
+        return INTERACTION_RESPONSE.SUCCESS;
     },
-    [Ids.TNT](network, x, y) {
-        const handItem = network.player.getHandItem();
-        if (!handItem || handItem.id !== Ids.FLINT_AND_STEEL) return false;
-        network.player.world.setBlock(x, y, Ids.AIR);
-        const entity = new S_TNTEntity(network.player.world);
-        entity.x = x;
-        entity.y = y;
-        entity.parentEntityUUID = network.player.uuid;
-        network.player.world.addEntity(entity);
-        return true;
+    [Ids.TNT](world, x, y, entity, item) {
+        if (!item || item.id !== Ids.FLINT_AND_STEEL) return INTERACTION_RESPONSE.FAIL;
+        world.setBlock(x, y, Ids.AIR);
+        const tnt = new S_TNTEntity(world);
+        tnt.x = x;
+        tnt.y = y;
+        tnt.parentEntityUUID = entity ? entity.uuid : null;
+        world.addEntity(tnt);
+        return INTERACTION_RESPONSE.DAMAGE;
     },
-    [Ids.ENTITY_SPAWNER](network, x, y, item) {
-        if (!item || item.id !== Ids.SPAWN_EGG) return;
-        const ch = network.player.world.getTile(x, y);
-        if (ch) return;
-        const tile = new SpawnerTile(network.player.world, new ObjectTag({
+    [Ids.ENTITY_SPAWNER](world, x, y, entity, item) {
+        if (!item || item.id !== Ids.SPAWN_EGG) return INTERACTION_RESPONSE.FAIL;
+        const ch = world.getTile(x, y);
+        if (ch) return INTERACTION_RESPONSE.FAIL;
+        const tile = new SpawnerTile(world, new ObjectTag({
             x: new Float32Tag(x),
             y: new Float32Tag(y),
             entityName: new StringTag(item.nbt.entityName),
@@ -170,27 +181,30 @@ const BlockInteractMap = {
             entityNBT: new StringTag(JSON.stringify(item.nbt.entityNBT))
         }));
         if (tile.init()) tile.add();
+        return INTERACTION_RESPONSE.DECREASE;
     }
 };
 BlockInteractMap[Ids.CHEST] = BlockInteractMap[Ids.FURNACE];
 
 const ItemInteractMap = {
     [Ids.SPAWN_EGG](world, x, y, entity, item) {
-        const res = !!world.summonEntity(
+        if (!world.summonEntity(
             item.nbt.entityName ? getEntityByName(item.nbt.entityName) : item.nbt.entityType,
             x, y,
             item.nbt.entityNBT || {}
-        );
-        if (!res) return false;
-        if (this.player.getGamemode() !== 1) this.player.decreaseHandItem();
-        return true;
+        )) return INTERACTION_RESPONSE.FAIL;
+        return INTERACTION_RESPONSE.DECREASE;
     },
-    [Ids.FLINT_AND_STEEL](world, x, y, entity, item) {
+    [Ids.FLINT_AND_STEEL](world, x, y, entity) {
         const block = world.getBlock(x, y);
-        if (block[0] !== Ids.AIR || Metadata.phaseable.includes(world.getBlock(x, y - 1))) return false;
-        world.placeBlockAt(x, y, new Item(Ids.FIRE), {entity});
-        if (entity.getGamemode() !== 1) player.damageHandItem();
-        return true;
+        if (block[0] !== Ids.AIR || Metadata.phaseable.includes(world.getBlock(x, y - 1))) {
+            return INTERACTION_RESPONSE.FAIL;
+        }
+        world.placeBlockAt(x, y, new Item(Ids.FIRE), {
+            entity, sound: false
+        });
+        world.playSound("assets/sounds/random/ignite.ogg", x, y);
+        return INTERACTION_RESPONSE.DAMAGE;
     }
 };
 
@@ -220,7 +234,7 @@ export class S_World extends World {
 
     dirtyChunks = new Set;
     data = {};
-    dirtyUpdateBlocks = new Set;
+    dirtyUpdateBlocks = {};
 
     // worldX, worldY
     /*** @type {Record<number, S_Entity[]>} */
@@ -308,9 +322,11 @@ export class S_World extends World {
         if (sound) {
             const id = this.getBlock(x, y)[0];
             const sound = getBlockDigSound(id);
-            if (sound) this.playSound(sound, x, y, 1);
+            if (sound) this.playSound(sound, x, y);
         }
-        if (damageItem && inventory) inventory.damageItemAt(index);
+        if (damageItem && inventory && Metadata.hardness[block[0]] !== 0) {
+            inventory.damageItemAt(index, 1, entity && this, entity && entity.x, entity && entity.y);
+        }
         if (particle) {
             this.addParticle(ParticleIds.BLOCK_BREAK, x, y, {id: block[0], meta: block[1]});
         }
@@ -344,7 +360,7 @@ export class S_World extends World {
         }
         if (sound) {
             const sound = getBlockDigSound(item.id);
-            if (sound) this.playSound(sound, x, y, 1);
+            if (sound) this.playSound(sound, x, y);
         }
         let meta = item.meta;
         if (Metadata.slab.includes(item.id) || Metadata.stairs.includes(item.id)) {
@@ -367,21 +383,26 @@ export class S_World extends World {
      */
     interactBlockAt(x, y, item, {
         entity = null,
-        damageItem = true,
+        affectItem = true,
         inventory = null,
         index = 0
-    }) {
+    } = {}) {
         if (!this.canInteractBlockAt(x, y, item, entity)) return false;
         if (entity) {
             entity.broadcastPacketToViewers(EntityAnimationPacket(entity.id, AnimationIds.HAND_SWING));
         }
         const block = this.getBlock(x, y);
-        const interaction = BlockInteractMap[block[0]];
-        if (!interaction) {
-            const itemInteraction = ItemInteractMap[item.id];
-            if (!itemInteraction || !itemInteraction(this, x, y, entity, item, inventory, index)) return false;
-        } else if (!interaction(entity, x, y, item, inventory, index)) return false;
-        if (damageItem && inventory) inventory.damageItemAt(index);
+        const interaction = BlockInteractMap[block[0]] ?? ItemInteractMap[item.id];
+        if (!interaction) return false;
+        const response = interaction(this, x, y, entity, item, inventory, index);
+        if (response === INTERACTION_RESPONSE.FAIL) return false;
+
+        if (affectItem && inventory) {
+            if (response === INTERACTION_RESPONSE.DAMAGE) {
+                inventory.damageItemAt(index, 1, entity && this, entity && entity.x, entity && entity.y);
+            } else if (response === INTERACTION_RESPONSE.DECREASE) inventory.decreaseItemAt(index);
+        }
+
         return true;
     };
 
@@ -448,7 +469,8 @@ export class S_World extends World {
     setBlock(worldX, worldY, id, meta = 0, updateAround = true, broadcast = true, except = null) {
         this.dirtyChunks.add(worldX >> 4);
         if (updateAround) {
-            this.dirtyUpdateBlocks.add(worldX + " " + worldY);
+            this.updateBlocksAround(worldX, worldY);
+            this.scheduleBlockUpdateAt(worldX, worldY);
         }
         if (broadcast) {
             this.broadcastBlockUpdate(worldX, worldY, id, meta, except);
@@ -456,21 +478,30 @@ export class S_World extends World {
         return super.setBlock(worldX, worldY, id, meta);
     };
 
-    onBlockUpdate(x, y) {
-        for (const pos of SelfAround) {
+    updateBlocksAround(x, y) {
+        for (const pos of Around) {
             const X = x + pos[0];
             const Y = y + pos[1];
-            const block = this.getBlock(X, Y);
-            if (!Metadata.canStayOnPhaseables.includes(block[0])) {
-                const down = this.getBlock(X, Y - 1);
-                if (Metadata.phaseable.includes(down[0])) {
-                    this.setBlock(X, Y, Ids.AIR);
-                    continue;
-                }
-            }
-            const updater = BlockUpdater[block[0]];
-            if (updater) updater(this, X, Y, block);
+            this.scheduleBlockUpdateAt(X, Y);
         }
+    };
+
+    scheduleBlockUpdateAt(x, y) {
+        const block = this.getBlock(x, y);
+        this.dirtyUpdateBlocks[x + " " + y] = BlockUpdaterTime[block[0]] ?? 0;
+    };
+
+    onBlockUpdate(x, y) {
+        const block = this.getBlock(x, y);
+        if (!Metadata.canStayOnPhaseables.includes(block[0])) {
+            const down = this.getBlock(x, y - 1);
+            if (Metadata.phaseable.includes(down[0])) {
+                this.setBlock(x, y, Ids.AIR);
+                return;
+            }
+        }
+        const updater = BlockUpdater[block[0]];
+        if (updater) updater(this, x, y, block);
     };
 
     broadcastBlockUpdate(x, y, id, meta, except = null) {
@@ -656,11 +687,14 @@ export class S_World extends World {
         this.nbt.apply(this);
     };
 
-    update() {
-        for (const b of this.dirtyUpdateBlocks) {
-            const t = b.split(" ");
-            this.onBlockUpdate(Number(t[0]), Number(t[1]));
+    update(dt) {
+        const keys = Object.keys(this.dirtyUpdateBlocks);
+        for (let i = 0; i < keys.length; i++) {
+            const k = keys[i];
+            if ((this.dirtyUpdateBlocks[k] -= dt) > 0) continue;
+            delete this.dirtyUpdateBlocks[k];
+            const key = k.split(" ");
+            this.onBlockUpdate(key[0] * 1, key[1] * 1);
         }
-        this.dirtyUpdateBlocks.clear();
     };
 }
