@@ -538,6 +538,7 @@ export class S_World extends World {
             return;
         }
         const tileType = TileBlockIdMap[id];
+        console.log(id)
         const clas = {
             [TileIds.FURNACE]: FurnaceTile,
             [TileIds.CHEST]: ChestTile,
