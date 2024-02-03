@@ -6,9 +6,9 @@ import {BlockUpdatePacket} from "../packet/BlockUpdatePacket.js";
 import {S_FallingBlockEntity} from "../entity/FallingBlockEntity.js";
 import {S_ItemEntity} from "../entity/ItemEntity.js";
 import {existsSync, mkdirSync, readFileSync, writeFileSync} from "fs";
-import {EntityIds} from "../../../client/common/metadata/Entities.js";
+import {EntityIds, getEntityByName} from "../../../client/common/metadata/Entities.js";
 import {Generators} from "./GeneratorManager.js";
-import {FlowerIds, getBlockDigSound, getBlockDrops} from "../../../client/common/metadata/Blocks.js";
+import {FlowerIds, getBlockDigSound, getBlockDrops, getBlockMetaMod} from "../../../client/common/metadata/Blocks.js";
 import {TileBlockIdMap, TileIds} from "../tile/Tile.js";
 import {FurnaceTile} from "../tile/FurnaceTile.js";
 import {ChestTile} from "../tile/ChestTile.js";
@@ -27,7 +27,12 @@ import {ListTag} from "../../../client/common/compound/ListTag.js";
 import {SpawnerTile} from "../tile/SpawnerTile.js";
 import {S_TNTEntity} from "../entity/TNTEntity.js";
 import {S_ZombieEntity} from "../entity/ZombieEntity.js";
+import {EntityAnimationPacket} from "../packet/EntityAnimationPacket.js";
+import {AnimationIds} from "../../../client/common/metadata/AnimationIds.js";
+import {Item} from "../../../client/common/item/Item.js";
 import {ParticleIds} from "../../../client/common/metadata/ParticleIds.js";
+import {ContainerIds, Inventory, InventoryIds} from "../../../client/common/item/Inventory.js";
+import {OpenContainerPacket} from "../packet/OpenContainerPacket.js";
 
 export const ENTITY_MAP = {
     [EntityIds.ITEM]: S_ItemEntity,
@@ -81,7 +86,7 @@ const BlockUpdater = {
         const down = world.getBlock(X, Y - 1);
         if (waterCanBreak.includes(down[0])) { // move down
             if (down[0] !== Ids.AIR) {
-                world.breakBlock(X, Y - 1);
+                world.breakBlockAt(X, Y - 1);
             }
             world.setBlock(X, Y - 1, self[0], 8);
         } else if (down[0] === self[0]) {
@@ -95,7 +100,7 @@ const BlockUpdater = {
             [1, -1].forEach(dx => {
                 const b = world.getBlock(X + dx, Y);
                 if (waterCanBreak.includes(b[0])) {
-                    if (b[0] !== Ids.AIR) world.breakBlock(X + dx, Y);
+                    if (b[0] !== Ids.AIR) world.breakBlockAt(X + dx, Y);
                 } else if (b[0] === self[0]) {
                     if (b[1] <= nextMeta || b[1] === 8) return;
                 } else return;
@@ -116,6 +121,78 @@ const BlockUpdater = {
 };
 
 BlockUpdater[Ids.GRAVEL] = BlockUpdater[Ids.ANVIL] = BlockUpdater[Ids.SAND];
+
+const BlockInteractMap = {
+    [Ids.CRAFTING_TABLE](network, x, y) {
+        let ext = network.player.externalInventory;
+        if (ext) return false;
+        ext = network.player.externalInventory = new Inventory(10, InventoryIds.EXTERNAL, {
+            containerId: ContainerIds.CRAFTING_TABLE, x, y
+        });
+        network.sendPacket(OpenContainerPacket({
+            containerId: ext.extra.containerId, x, y
+        }));
+        return true;
+    },
+    [Ids.FURNACE](network, x, y) {
+        if (network.player.externalInventory) return false;
+        network.player.world.checkTile(x, y);
+        const tile = network.player.world.getTile(x, y);
+        if (!tile) return;
+        network.player.externalInventory = tile.container;
+        tile.viewers.add(network.player);
+        network.subscribedTiles.add(tile);
+        network.sendPacket(OpenContainerPacket(tile.getClientExtra()));
+        network.sendContainerState(tile.getClientState());
+        network.sendInventory(network.player.externalInventory);
+        return true;
+    },
+    [Ids.TNT](network, x, y) {
+        const handItem = network.player.getHandItem();
+        if (!handItem || handItem.id !== Ids.FLINT_AND_STEEL) return false;
+        network.player.world.setBlock(x, y, Ids.AIR);
+        const entity = new S_TNTEntity(network.player.world);
+        entity.x = x;
+        entity.y = y;
+        entity.parentEntityUUID = network.player.uuid;
+        network.player.world.addEntity(entity);
+        return true;
+    },
+    [Ids.ENTITY_SPAWNER](network, x, y, item) {
+        if (!item || item.id !== Ids.SPAWN_EGG) return;
+        const ch = network.player.world.getTile(x, y);
+        if (ch) return;
+        const tile = new SpawnerTile(network.player.world, new ObjectTag({
+            x: new Float32Tag(x),
+            y: new Float32Tag(y),
+            entityName: new StringTag(item.nbt.entityName),
+            entityType: new Int8Tag(item.nbt.entityType),
+            entityNBT: new StringTag(JSON.stringify(item.nbt.entityNBT))
+        }));
+        if (tile.init()) tile.add();
+    }
+};
+BlockInteractMap[Ids.CHEST] = BlockInteractMap[Ids.FURNACE];
+
+const ItemInteractMap = {
+    [Ids.SPAWN_EGG](world, x, y, entity, item) {
+        const res = !!world.summonEntity(
+            item.nbt.entityName ? getEntityByName(item.nbt.entityName) : item.nbt.entityType,
+            x, y,
+            item.nbt.entityNBT || {}
+        );
+        if (!res) return false;
+        if (this.player.getGamemode() !== 1) this.player.decreaseHandItem();
+        return true;
+    },
+    [Ids.FLINT_AND_STEEL](world, x, y, entity, item) {
+        const block = world.getBlock(x, y);
+        if (block[0] !== Ids.AIR || Metadata.phaseable.includes(world.getBlock(x, y - 1))) return false;
+        world.placeBlockAt(x, y, new Item(Ids.FIRE), {entity});
+        if (entity.getGamemode() !== 1) player.damageHandItem();
+        return true;
+    }
+};
 
 export function generateSeed() {
     return randInt(0, 9999999999999);
@@ -198,29 +275,114 @@ export class S_World extends World {
         this.gameRules[id] = value;
     };
 
-    breakBlock(x, y, breakItem = null, instant = false, sound = true, particle = true) {
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {S_Entity | null} entity
+     * @param {Item} item
+     * @param {Inventory | null} inventory
+     * @param {number} index
+     * @param {boolean} dropItems
+     * @param {boolean} damageItem
+     * @param {boolean} sound
+     * @param {boolean} particle
+     * @return {boolean}
+     */
+    breakBlockAt(x, y, {
+        entity = null,
+        item = null,
+        inventory = null,
+        index = 0,
+        dropItems = true,
+        damageItem = true,
+        sound = true,
+        particle = true
+    } = {}) {
+        if (!this.canBreakBlockAt(x, y, item, entity.isCreative(), entity)) return false;
+        if (entity) {
+            entity.broadcastPacketToViewers(EntityAnimationPacket(entity.id, AnimationIds.HAND_SWING));
+        }
         const block = this.getBlock(x, y);
-        if (block[0] === Ids.AIR) return;
-        if (!instant) this.summonBlockDrops(x, y, breakItem);
+        if (block[0] === Ids.AIR) return false;
+        if (dropItems) this.summonBlockDrops(x, y, item);
         if (sound) {
             const id = this.getBlock(x, y)[0];
             const sound = getBlockDigSound(id);
-            if (sound) this.playSound(sound, x, y);
+            if (sound) this.playSound(sound, x, y, 1);
         }
+        if (damageItem && inventory) inventory.damageItemAt(index);
         if (particle) {
             this.addParticle(ParticleIds.BLOCK_BREAK, x, y, {id: block[0], meta: block[1]});
         }
         this.setBlock(x, y, Ids.AIR);
         this.checkTile(x, y);
+        return true;
     };
 
-    placeBlock(x, y, id, meta = 0, sound = true) {
-        if (sound) {
-            const sound = getBlockDigSound(id);
-            if (sound) this.playSound(sound, x, y);
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {Item} item
+     * @param {Inventory | null} inventory
+     * @param {number} index
+     * @param {number} rotation
+     * @param {S_Entity | null} entity
+     * @param {boolean} sound
+     * @return {boolean}
+     */
+    placeBlockAt(x, y, item, {
+        inventory = null,
+        index = 0,
+        rotation = 0,
+        entity = null,
+        sound = true
+    } = {}) {
+        if (!item || !this.canPlaceBlockAt(x, y, item.id, item.meta, entity)) return false;
+        if (entity) {
+            entity.broadcastPacketToViewers(EntityAnimationPacket(entity.id, AnimationIds.HAND_SWING));
+            if (!entity.isCreative() && inventory) inventory.decreaseItemAt(index);
         }
-        this.setBlock(x, y, id, meta);
+        if (sound) {
+            const sound = getBlockDigSound(item.id);
+            if (sound) this.playSound(sound, x, y, 1);
+        }
+        let meta = item.meta;
+        if (Metadata.slab.includes(item.id) || Metadata.stairs.includes(item.id)) {
+            meta += (rotation % 4) * getBlockMetaMod(id);
+        }
+        this.setBlock(x, y, item.id, meta);
         this.checkTile(x, y);
+        return true;
+    };
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @param {Item} item
+     * @param {S_Entity | null} entity
+     * @param {boolean} damageItem
+     * @param {Inventory | null} inventory
+     * @param {number} index
+     * @return {boolean}
+     */
+    interactBlockAt(x, y, item, {
+        entity = null,
+        damageItem = true,
+        inventory = null,
+        index = 0
+    }) {
+        if (!this.canInteractBlockAt(x, y, item, entity)) return false;
+        if (entity) {
+            entity.broadcastPacketToViewers(EntityAnimationPacket(entity.id, AnimationIds.HAND_SWING));
+        }
+        const block = this.getBlock(x, y);
+        const interaction = BlockInteractMap[block[0]];
+        if (!interaction) {
+            const itemInteraction = ItemInteractMap[item.id];
+            if (!itemInteraction || !itemInteraction(this, x, y, entity, item, inventory, index)) return false;
+        } else if (!interaction(entity, x, y, item, inventory, index)) return false;
+        if (damageItem && inventory) inventory.damageItemAt(index);
+        return true;
     };
 
     summonBlockDrops(x, y, breakItem = null) {
@@ -299,6 +461,13 @@ export class S_World extends World {
             const X = x + pos[0];
             const Y = y + pos[1];
             const block = this.getBlock(X, Y);
+            if (!Metadata.canStayOnPhaseables.includes(block[0])) {
+                const down = this.getBlock(X, Y - 1);
+                if (Metadata.phaseable.includes(down[0])) {
+                    this.setBlock(X, Y, Ids.AIR);
+                    continue;
+                }
+            }
             const updater = BlockUpdater[block[0]];
             if (updater) updater(this, X, Y, block);
         }

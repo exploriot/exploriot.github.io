@@ -1,5 +1,6 @@
 import {BoundingBox} from "./BoundingBox.js";
 import {getEntityName, GRAVITY_FORCE} from "../metadata/Entities.js";
+import {Ids} from "../metadata/Ids.js";
 
 export class Entity {
     /*** @type {number | null} */
@@ -23,6 +24,91 @@ export class Entity {
         this.baseBB = bb;
         this.bb = bb?.clone();
         this.downBB = bb?.clone();
+    };
+
+    getHandItem() {
+        return null;
+    };
+
+    getMainInventory() {
+        return null;
+    };
+
+    getHandIndex() {
+        return 0;
+    };
+
+    getGamemode() {
+        return 0;
+    };
+
+    isSurvival() {
+        return this.getGamemode() === 0;
+    };
+
+    isCreative() {
+        return this.getGamemode() === 1;
+    };
+
+    isAdventure() {
+        return this.getGamemode() === 2;
+    };
+
+    isSpectator() {
+        return this.getGamemode() === 3;
+    };
+
+    getBlockReach() {
+        return 0;
+    };
+
+    getTouchReach() {
+        return 0;
+    };
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @return {boolean}
+     */
+    canReachBlock(x, y) {
+        return (x - this.x) ** 2 + (y - this.y) ** 2 <= this.getBlockReach() ** 2;
+    };
+
+    /**
+     * @param {Entity} entity
+     * @return {boolean}
+     */
+    canTouchEntity(entity) {
+        return this.distance(entity.x, entity.y) <= this.getTouchReach();
+    };
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @return {boolean}
+     */
+    canInteractBlockAt(x, y) {
+        return this.world.canInteractBlockAt(x, y, this.getHandItem(), this);
+    };
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @return {boolean}
+     */
+    canPlaceBlockAt(x, y) {
+        const item = this.getHandItem();
+        return item && this.world.canPlaceBlockAt(x, y, item.id, item.meta, this);
+    };
+
+    /**
+     * @param {number} x
+     * @param {number} y
+     * @return {boolean}
+     */
+    canBreakBlockAt(x, y) {
+        return this.world.canBreakBlockAt(x, y, this.getHandItem(), this.isCreative(), this);
     };
 
     getName() {
@@ -71,7 +157,7 @@ export class Entity {
 
     move(dx, dy) {
         if (dx === 0 && dy === 0) return false;
-        const already = this.world.getCollidingBlock(this.bb);
+        const already = this.world.getCollidingBlocks(this.bb, false, 1)[0];
         if (already) {
             this.vy = 0;
             this.y += 0.05;
@@ -82,7 +168,7 @@ export class Entity {
             this.x += dx;
             const onGround = this.isOnGround();
             this.recalculateBoundingBox();
-            const b = this.world.getCollidingBlock(this.bb);
+            const b = this.world.getCollidingBlocks(this.bb, false, 1)[0];
             if (!already && b) {
                 //const maxY = b.collisions.sort((a, b) => b.y2 - a.y2)[0].y2 + b.y;
                 //const dy = maxY - this.bb.y1;
@@ -91,7 +177,7 @@ export class Entity {
                     this.y += dy;
                     this.recalculateBoundingBox();
                     // check if it will bump into something if it steps up
-                    if (this.world.getCollidingBlock(this.bb)) {
+                    if (this.world.getCollidingBlocks(this.bb, false, 1)[0]) {
                         this.y -= dy;
                         this.x -= dx;
                         this.recalculateBoundingBox();
@@ -107,7 +193,7 @@ export class Entity {
         if (!already && Math.abs(dy) > 0.0000001) {
             this.y += dy;
             this.recalculateBoundingBox();
-            const b = this.world.getCollidingBlock(this.bb);
+            const b = this.world.getCollidingBlocks(this.bb, false, 1)[0];
             if (b) {
                 this.y -= dy;
                 this.recalculateBoundingBox();
@@ -138,7 +224,31 @@ export class Entity {
     };
 
     isOnGround() {
-        return !!this.world.getCollidingBlock(this.downBB);
+        return !!this.world.getCollidingBlocks(this.downBB, false, 1)[0];
+    };
+
+    isTouchingFire() {
+        return !!this.world.getCollidingBlocks(this.bb, true, 1, [[Ids.FIRE, -1]])[0];
+    };
+
+    isTouchingWater() {
+        return !!this.world.getCollidingBlocks(this.bb, true, 1, [[Ids.WATER, -1]])[0];
+    };
+
+    isTouchingLava() {
+        return !!this.world.getCollidingBlocks(this.bb, true, 1, [[Ids.LAVA, -1]])[0];
+    };
+
+    isTouchingLiquid() {
+        return this.isTouchingWater() || this.isTouchingLava();
+    };
+
+    isExposedToAir() {
+        return !this.world.getCollidingBlocks(this.bb, true, 1, [[Ids.AIR, -1]])[0];
+    };
+
+    isUnderwater() {
+        return this.isTouchingWater() && !this.isExposedToAir();
     };
 
     remove() {

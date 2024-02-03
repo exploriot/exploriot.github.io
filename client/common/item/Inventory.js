@@ -174,7 +174,10 @@ export class Inventory {
         if (item && item.id in Metadata.durabilities) {
             const durability = Metadata.durabilities[item.id];
             item.nbt.damage ??= 0;
-            if ((item.nbt.damage += amount) >= durability) this.removeIndex(index);
+            if ((item.nbt.damage += amount) >= durability) {
+                this.removeIndex(index);
+                return true;
+            } else this.updateIndex(index);
         }
     };
 

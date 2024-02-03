@@ -49,6 +49,25 @@ export class S_Entity extends Entity {
         this.uuid ||= randomUUID();
     };
 
+    breakBlockAt(x, y) {
+        return this.world.breakBlockAt(x, y, {
+            entity: this, item: this.getHandItem(), inventory: this.getMainInventory(), index: this.getHandIndex(),
+            damageItem: !this.isCreative(), dropItems: !this.isCreative()
+        });
+    };
+
+    placeBlockAt(x, y, rotation = 0) {
+        return this.world.placeBlockAt(x, y, this.getHandItem(), {
+            entity: this, inventory: this.getMainInventory(), index: this.getHandIndex(), rotation
+        });
+    };
+
+    interactBlockAt(x, y) {
+        return this.world.interactBlockAt(x, y, this.getHandItem(), {
+            entity: this, inventory: this.getMainInventory(), index: this.getHandIndex(), damageItem: !this.isCreative()
+        });
+    };
+
     findClosestPlayer(modes = [0, 1, 2]) {
         let closest = null;
         for (const player of this.currentViewers) {

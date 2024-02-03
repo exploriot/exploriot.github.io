@@ -45,6 +45,14 @@ export class C_Player extends C_Entity {
         texture.wait().then(() => this.skin = texture.skin());
     };
 
+    getGamemode() {
+        return CServer.getGamemode();
+    };
+
+    getHandItem() {
+        return CServer.player === this ? CServer.getHandItem() : this.handItem;
+    };
+
     handleMovement() {
         if (this === CServer.player) {
             CServer.canUpdateMovement = true;
@@ -67,10 +75,6 @@ export class C_Player extends C_Entity {
 
     getBlockReach() {
         return CServer.getGamemode() % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
-    };
-
-    canReachBlock(x, y) {
-        return (x - this.x) ** 2 + (y - this.y) ** 2 <= this.getBlockReach() ** 2;
     };
 
     render() {

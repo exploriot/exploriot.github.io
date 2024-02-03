@@ -162,6 +162,7 @@ export const DIGS = {
  * @param {number} smeltXP
  * @param {boolean} slab
  * @param {boolean} stairs
+ * @param {boolean} canReplaceBlocks
  */
 export function registerBlock(id, {
     texture = 0, name = 0, isTransparent = false, canBePlacedOn = 0, cannotBePlacedOn = [],
@@ -169,7 +170,7 @@ export function registerBlock(id, {
     canPlaceBlockOnIt = false, isExplodeable = false, drops = null, hardness = -1, toolLevel = 0,
     toolType = -1, step = STEPS.STONE, dig = DIGS.STONE, interactable = false, neverBreakable = false,
     liquid = false, liquidCanBreak = false, fuel = 0, smeltsTo = null, xpDrops = null, smeltXP = 0,
-    slab = false, stairs = false
+    slab = false, stairs = false, canReplaceBlocks = true
 } = blockOpts) {
     if (Metadata.block.includes(id)) throw new Error("ID is already in use: " + id);
     Metadata.textures[id] = texture || "assets/blocks/" + Object.keys(Ids).find(k => k[0] !== "_" && Ids[k] === id).toLowerCase() + ".png";
@@ -200,6 +201,7 @@ export function registerBlock(id, {
     if (smeltXP) Metadata.smeltXP[id] = smeltXP;
     if (slab) Metadata.slab.push(id);
     if (stairs) Metadata.stairs.push(id);
+    if (canReplaceBlocks) Metadata.canReplaceBlocks.push(id);
     // console.debug("%cRegistered block with the ID " + id, "color: #00ff00");
 }
 
@@ -313,10 +315,11 @@ export function initBlocks() {
     });
 
     registerBlock(Ids.TNT, {
-        ...blockOpts, step: STEPS.GRASS, dig: DIGS.GRASS, name: "TNT", interactable: true
+        ...blockOpts, step: STEPS.GRASS, dig: DIGS.GRASS, name: "TNT"
     });
     registerBlock(Ids.FIRE, {
-        ...blockOpts, isTransparent: true, canStayOnPhaseables: false, drops: [], isPhaseable: true
+        ...blockOpts, isTransparent: true, canStayOnPhaseables: false, drops: [], isPhaseable: true,
+        isReplaceable: true, canReplaceBlocks: false
     });
 
     const logOptions = {

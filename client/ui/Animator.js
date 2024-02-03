@@ -61,7 +61,7 @@ export function animate() {
     fpsList.push([Date.now() + 1000, 1 / dt]);
     fpsList = fpsList.filter(i => i[0] > Date.now());
     fps = fpsList.reduce((a, b) => a + b[1], 0) / fpsList.length;
-    if (BASE_BLOCK_SIZE <= 0) return;
+    if (BASE_BLOCK_SIZE <= 0 || !CServer.isWelcome || !CServer.loadedChunks.has(CServer.player.x >> 4)) return;
 
     if (CServer.canUpdateMouse) recalculateMouse();
 
@@ -140,15 +140,12 @@ export function animate() {
     }
 
     if (!isAnyUIOn()) {
-        const place = CServer.world.canPlaceBlockAt(
-            CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem
-        );
-        if (!place && (CServer.world.canBreakBlockAt(
-            CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem
-        ) || CServer.world.canInteractBlockAt(
-            CServer.player, Mouse.rx, Mouse.ry, CServer.getGamemode(), handItem
-        ))) renderMouseBlockAround();
-        if (place) {
+        const canPlace = CServer.player.canPlaceBlockAt(Mouse.rx, Mouse.ry);
+        if (!canPlace && (
+            CServer.player.canBreakBlockAt(Mouse.rx, Mouse.ry)
+            || CServer.player.canInteractBlockAt(Mouse.rx, Mouse.ry))
+        ) renderMouseBlockAround();
+        if (canPlace) {
             let meta = handItemMeta;
             if (Metadata.slab.includes(handItemId) || Metadata.stairs.includes(handItemId)) {
                 meta += getMouseRotation() * getBlockMetaMod(handItemId);
