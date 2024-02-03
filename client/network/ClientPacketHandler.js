@@ -155,11 +155,11 @@ export function C_handleEntityMovementPacket(pk) {
     const entity = CServer.world.entityMap[pk.id];
     if (!entity) return;
     if (entity.x === pk.x && entity.y === pk.y) return;
-    entity.x = pk.x;
-    entity.y = pk.y;
     if (entity.x !== pk.x) {
         entity.walkingRemaining = entity === CServer.player ? 0.1 : 0.3;
     }
+    entity.x = pk.x;
+    entity.y = pk.y;
     entity.handleMovement();
 }
 
