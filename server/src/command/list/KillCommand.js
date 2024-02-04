@@ -12,12 +12,16 @@ export class KillCommand extends AdvancedCommand {
     };
 
     executor = {
-        "<entities>"(sender, [entities]) {
-            for (const entity of entities) entity.remove(true);
+        "<world> <entities;0>"(sender, [_, entities]) {
+            for (const entity of entities) entity.kill();
+            sender.sendMessage(`${entities.map(i => i.username ?? i.constructor.name).join(" and ")} was killed.`);
+        },
+        "@e <entities>"(sender, [entities]) {
+            for (const entity of entities) entity.kill();
             sender.sendMessage(`${entities.map(i => i.username ?? i.constructor.name).join(" and ")} was killed.`);
         },
         "@e"(entity) {
-            entity.remove(true);
+            entity.kill();
             if (entity instanceof CommandSender) {
                 entity.sendMessage(`${entity.username ?? entity.constructor.name} was killed.`);
             }

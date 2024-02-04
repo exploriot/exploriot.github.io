@@ -1,4 +1,4 @@
-import {Entity} from "../common/entity/Entity.js";
+import {Entity, ENTITY_DOWN_Y} from "../common/entity/Entity.js";
 import {BASE_BLOCK_SIZE, getCanvasPosition} from "../Utils.js";
 import {ctx} from "../main/Game.js";
 
@@ -14,9 +14,9 @@ export class C_Entity extends Entity {
         this.bb.y2 = this.renderY + this.baseBB.y2;
 
         this.downBB.x1 = this.bb.x1;
-        this.downBB.y1 = this.bb.y1 - 0.01 - 0.01;
+        this.downBB.y1 = this.bb.y1 - ENTITY_DOWN_Y - ENTITY_DOWN_Y;
         this.downBB.x2 = this.bb.x2;
-        this.downBB.y2 = this.bb.y1 - 0.01;
+        this.downBB.y2 = this.bb.y1 - ENTITY_DOWN_Y;
     };
 
     render() {

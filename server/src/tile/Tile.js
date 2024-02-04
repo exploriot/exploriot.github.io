@@ -45,7 +45,7 @@ export class Tile {
         this.type = this.constructor.TYPE;
         this.world = world;
         /*** @type {ObjectTag} */
-        this.nbt = this.constructor.NBT_STRUCTURE.clone().apply(nbt.value);
+        this.nbt = this.constructor.NBT_STRUCTURE.clone().applyThis(nbt.value);
         this.nbt.applyTo(this, this.constructor.NBT_IGNORE);
         this.uuid ||= randomUUID();
     };
@@ -63,25 +63,10 @@ export class Tile {
         };
     };
 
-    serialize() {
-        return {
-            type: this.type,
-            x: this.x,
-            y: this.y
-        };
-    };
-
-    add() {
-        const holder = this.world.tiles[this.x] ??= {};
-        holder[this.y] = this;
-        (this.world.chunkTiles[this.x >> 4] ??= []).push(this);
-    };
-
     remove() {
+        this.world.getChunkTiles(this.x >> 4).delete(this);
         const holder = this.world.tiles[this.x] ??= {};
         delete holder[this.y];
-        const tiles = this.world.chunkTiles[this.x >> 4] ??= [];
-        if (tiles.includes(this)) tiles.splice(tiles.indexOf(this), 1);
     };
 
     saveNBT() {

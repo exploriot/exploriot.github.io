@@ -61,13 +61,13 @@ const chatHistory = [];
 let chatHistoryIndex = 0;
 
 export function dropHands() {
-    const cursorItem = CServer.cursorInventory.contents[0];
+    const cursorItem = CServer.cursorInventory.get(0);
     if (cursorItem) {
         ClientSession.sendItemTransferPacket(InventoryIds.CURSOR, InventoryIds.PLAYER, 0, cursorItem.count);
         ClientSession.sendDropItemPacket(InventoryIds.CURSOR, 0, cursorItem.count);
     }
     for (let i = 0; i < 4; i++) {
-        const it = CServer.craftInventory.contents[i];
+        const it = CServer.craftInventory.get(i);
         if (it) {
             ClientSession.sendItemTransferPacket(InventoryIds.CRAFT, InventoryIds.PLAYER, i, it.count);
             ClientSession.sendDropItemPacket(InventoryIds.CRAFT, i, it.count);
@@ -172,10 +172,10 @@ export function renderArmorBar() {
     }
     armorDiv.hidden = false;
     let armor = 0;
-    CServer.armorInventory.contents.forEach(item => {
-        if (!item) return;
+    for (const item of CServer.armorInventory.getContents()) {
+        if (!item) continue;
         armor += Metadata.armorPoints[item.id] ?? 0;
-    });
+    }
     if (lastArmor === armor) return;
     lastArmor = armor;
 
@@ -262,8 +262,8 @@ export function initMainUI() {
             const index2 = key * 1 - 1;
             const inv2 = CServer.playerInventory;
             if (index1 === index2 && inv1 === inv2) return;
-            const item1 = inv1.contents[index1];
-            const item2 = inv2.contents[index2];
+            const item1 = inv1.get(index1);
+            const item2 = inv2.get(index2);
             if (!item1 && !item2) return;
             if (!item2) ClientSession.sendInventoryTransactionPacket(
                 inv1.type, inv2.type,

@@ -135,6 +135,7 @@ wss.on("connection", (ws, req) => {
                 player.session.requestPing();
                 player.session.sendInventories();
                 player.session.sendHandItemIndex();
+                player.session.sendTime();
                 player.session.sendWelcomePacket();
 
                 player.world.addEntity(player);

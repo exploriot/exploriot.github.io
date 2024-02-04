@@ -43,8 +43,8 @@ export class S_Entity extends Entity {
         this.downBB = this.constructor.BOUNDING_BOX.clone();
 
         const nbtValue = nbt.value;
-        this.nbt = this.constructor.NBT_PRIVATE_STRUCTURE.clone().apply(nbtValue);
-        this.publicNBT = this.constructor.NBT_PUBLIC_STRUCTURE.clone().apply(nbtValue);
+        this.nbt = this.constructor.NBT_PRIVATE_STRUCTURE.clone().applyThis(nbtValue);
+        this.publicNBT = this.constructor.NBT_PUBLIC_STRUCTURE.clone().applyThis(nbtValue);
         this.nbt.applyTo(this, this.constructor.NBT_IGNORE);
         this.uuid ||= randomUUID();
     };

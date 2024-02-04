@@ -5,8 +5,8 @@ import {Int8Tag} from "./int/Int8Tag.js";
 import {ListTag} from "./ListTag.js";
 import {Inventory} from "../item/Inventory.js";
 import {Item} from "../item/Item.js";
-import {Ids} from "../metadata/Ids.js";
 import {ItemTag} from "./ItemTag.js";
+import {NullTag} from "./NullTag.js";
 
 export class InventoryTag extends ObjectTag {
     static SIGN = TagBytes.INVENTORY;
@@ -30,23 +30,24 @@ export class InventoryTag extends ObjectTag {
     // noinspection JSCheckFunctionSignatures
     get value() {
         const inv = new Inventory(this.tags.size.value, this.tags.type.value);
-        inv.contents = this.tags.contents.value.map(Item.deserialize);
+        const con = this.tags.contents.value;
+        for (let i = 0; i < con.length; i++) {
+            inv.set(i, Item.deserialize(con[i]));
+        }
         return inv;
     };
 
     apply(inventory) {
         if (!(inventory instanceof Inventory)) {
-            if (inventory !== null && typeof inventory === "object") {
-                super.apply(inventory);
-            }
-            return this;
+            if (inventory !== null && typeof inventory === "object") return super.apply(inventory);
+            return false;
         }
+        this.tags.contents = new ListTag(inventory.getContents().map(i => i ? new ItemTag(i) : new NullTag()));
         super.apply({
             size: inventory.size,
             type: inventory.type
         });
-        this.tags.contents = new ListTag(inventory.contents.map(i => new ItemTag(i ?? new Item(Ids.AIR))));
-        return this;
+        return true;
     };
 
     static read(buffer, j, cls = InventoryTag) {

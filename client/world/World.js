@@ -1,7 +1,7 @@
 import {World} from "../common/world/World.js";
 import {isAnyUIOn} from "../ui/MainUI.js";
 import {Keyboard} from "../input/Keyboard.js";
-import {PLAYER_JUMP_ACCELERATION, PLAYER_SPEED} from "../common/metadata/Entities.js";
+import {PLAYER_SPEED} from "../common/metadata/Entities.js";
 import {getMouseRotation, Mouse} from "../input/Mouse.js";
 import {resetBlockBreaking} from "../Utils.js";
 import {Ids} from "../common/metadata/Ids.js";
@@ -18,7 +18,6 @@ let lastPlace = 0;
 let lastMiddle = 0;
 let lastConsume = 0;
 let lastDrop = 0;
-let jumpT = 0;
 let isPressingSpace = false;
 let lastSpace = 0;
 
@@ -29,6 +28,7 @@ export class C_World extends World {
     chunkEntities = {};
     /*** @type {Record<number, Set<Particle>>} */
     chunkParticles = {};
+    time = 0;
 
     /**
      * @param {number} x
@@ -45,6 +45,8 @@ export class C_World extends World {
         this.lastUpdate = Date.now();
         ClientSession.cleanPackets();
         const player = CServer.player;
+        this.time += adt;
+        //console.log(this.time)
         if (!CServer.isWelcome || !CServer.loadedChunks.has(player.x >> 4)) return;
         const isFlying = CServer.isFlying();
         const isSpectator = CServer.getGamemode() === 3;
@@ -71,10 +73,7 @@ export class C_World extends World {
                     if (Keyboard.d) player.move(dt * PLAYER_SPEED * speedBoost, 0);
                 }
                 if (!isFlying) {
-                    if ((Keyboard.w || Keyboard[" "]) && onGround && (jumpT -= adt) <= 0) {
-                        player.vy += PLAYER_JUMP_ACCELERATION;
-                        jumpT = 0.05;
-                    }
+                    if ((Keyboard.w || Keyboard[" "])) player.jump();
                 } else if (!Keyboard.w || !Keyboard.s) {
                     if (Keyboard.w) player.move(0, dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost);
                     if (Keyboard.s) player.move(0, -dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost);
@@ -207,6 +206,5 @@ export class C_World extends World {
             ClientSession.sendHandIndex();
             CServer.lastHandIndex = CServer.handIndex;
         }
-    }
-    ;
+    };
 }

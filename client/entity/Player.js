@@ -77,6 +77,10 @@ export class C_Player extends C_Entity {
         return CServer.getGamemode() % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
     };
 
+    getTouchReach() {
+        return CServer.getGamemode() % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
+    };
+
     render() {
         super.render();
         ctx.textAlign = "center";

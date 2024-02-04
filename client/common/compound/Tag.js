@@ -2,6 +2,7 @@ import {TagMatch} from "./TagManager.js";
 
 export const TagBytes = {
     BREAK: 255,
+    NULL: 0,
     OBJECT: 1,
     LIST: 2,
     TRUE: 3,
@@ -50,9 +51,17 @@ export class Tag {
         return buffer;
     };
 
-    /*** @param {any} any */
+    /**
+     * @param {any} any
+     * @return {boolean}
+     */
     apply(any) {
         this.value = any;
+        return true;
+    };
+
+    applyThis(any) {
+        this.apply(any);
         return this;
     };
 

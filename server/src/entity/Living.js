@@ -35,7 +35,7 @@ export class S_Living extends S_Entity {
         const newHealth = this.getHealth() - hp;
         this.setHealth(newHealth);
         this.world.playSound("assets/sounds/damage/hit" + randInt(1, 3) + ".ogg", this.x, this.y);
-        if (newHealth <= 0) this.remove(true);
+        if (newHealth <= 0) this.kill();
     };
 
     getDrops() {

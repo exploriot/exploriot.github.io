@@ -275,8 +275,8 @@ const SelectorComputer = {
     s(self) {
         return [self];
     },
-    e() {
-        return Server.getWorlds().map(i => Object.values(i.entityMap)).flat(1);
+    e(_, world) {
+        return world ? Object.values(world.entityMap) : Server.getWorlds().map(i => Object.values(i.entityMap)).flat(1);
     },
     c() {
         return [_ConsoleCommandSender];
@@ -286,12 +286,12 @@ const SelectorComputer = {
     }
 };
 
-function computeSelector(self, sel, selT) {
-    return applySelectorFilters(self, SelectorComputer[selT](self), sel);
+function computeSelector(self, sel, selT, world = null) {
+    return applySelectorFilters(self, SelectorComputer[selT](self, world), sel);
 }
 
-function testSelector(self, entity, sel, selT) {
-    return computeSelector(self, sel, selT).includes(entity);
+function testSelector(self, entity, sel, selT, world = null) {
+    return computeSelector(self, sel, selT, world).includes(entity, world = null);
 }
 
 const GamemodeMap = {
@@ -304,13 +304,13 @@ const GamemodeMap = {
 const GamemodeNames = ["survival", "creative", "adventure", "spectator"];
 
 const Pos = {
-    entity(ind, tokens, self) {
-        const res = this.entities(ind, tokens, self);
+    entity(ind, tokens, self, _, __, extra) {
+        const res = this.entities(ind, tokens, self, _, __, extra);
         if (typeof res === "string") return res;
         if (res[1].length !== 1) return "Expected exactly one entity.";
-        return res[0];
+        return [res[0], res[1][0]];
     },
-    entities(ind, tokens, self) {
+    entities(ind, tokens, self, _, __, extra) {
         const t = tokens[ind];
         if (t.type === "string" || (t.type === "word" && t.value[0] !== "@")) {
             const p = Server.getPlayerByName(t.value);
@@ -328,18 +328,19 @@ const Pos = {
             if (typeof res === "string") return res;
             ind++;
         }
-        const entities = computeSelector(self, sel, selT);
+        const entities = computeSelector(self, sel, selT, extra);
         if (entities.length === 0) return "Selector failed.";
+        if (entities.some(i => i === _ConsoleCommandSender)) return "Cannot use the console for an entity selector.";
         return [ind + 1, entities];
     },
-    player(ind, tokens, self) {
-        const res = this.players(ind, tokens, self);
+    player(ind, tokens, self, _, __, extra) {
+        const res = this.players(ind, tokens, self, _, __, extra);
         if (typeof res === "string") return res;
         if (res[1].length !== 1) return "Expected exactly one player.";
-        return res;
+        return [res[0], res[1][0]];
     },
-    players(ind, tokens, self) {
-        const res = this.entities(ind, tokens, self);
+    players(ind, tokens, self, _, __, extra) {
+        const res = this.entities(ind, tokens, self, _, __, extra);
         if (typeof res === "string") return res;
         res[1] = res[1].filter(i => i instanceof S_Player);
         return res;
@@ -475,9 +476,9 @@ const Pos = {
     },
     json(ind, tokens) {
         const t = tokens[ind];
-        if (t.type !== "parent" || t.value[0] !== "{") return "Invalid JSON.";
+        if (t.type !== "parent" || (t.value[0] !== "{" && t.value[0] !== "[")) return "Invalid JSON.";
         try {
-            return [ind + 1, parseObjectTokens(t.children)];
+            return [ind + 1, t.value[0] === "{" ? parseObjectTokens(t.children) : parseArrayTokens(t.children)];
         } catch (e) {
             return "JSONError: " + e.message;
         }
@@ -521,11 +522,21 @@ export function testArguments(self, sender, text, all) {
         for (let j = 0; j < p.pos.length; j++) {
             if (fail) break;
             if (tokInd >= tokens.length) {
-                if (p.pos[j][0].endsWith("?")) break;
+                if (p.pos[j][0] && p.pos[j][0].endsWith("?")) break;
                 fail = true;
                 break;
             }
             const posWhole = p.pos[j];
+            if (posWhole[0] === null) {
+                const tok = tokens[tokInd];
+                if (tok.type !== "word" || !posWhole[1].includes(tok.value)) {
+                    fail = true;
+                    break;
+                }
+                if (posWhole[2]) got.push(tok.value);
+                tokInd++;
+                continue;
+            }
             const pos = posWhole[1];
             let minorSuccess = false;
             let failReason = null;
@@ -537,7 +548,7 @@ export function testArguments(self, sender, text, all) {
                 }
                 const fn = Pos[p];
                 if (!fn) throw new Error("Invalid command argument: " + p);
-                const r = Pos[p](tokInd, tokens, self, sender, text);
+                const r = Pos[p](tokInd, tokens, self, sender, text, got[posWhole[2]]);
                 if (Array.isArray(r)) {
                     tokInd = r[0];
                     got.push(r[1]);

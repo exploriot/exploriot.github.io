@@ -27,15 +27,18 @@ export class AdvancedCommand extends Command {
                     i = i.substring(token.index + token.value.length);
                 }
             }
-            const spl = Array.from(i.matchAll(/<[^<>]+>/g));
+            const spl = Array.from(i.matchAll(/<[^<>]+>|\([^()]+\)/g));
             return {
                 sel, selT,
                 pos: spl.map(k => {
-                    const s = k[0].slice(1, -1).split(":");
-                    return [s[0], (s[1] ?? s[0]).replace("?", "").split(",")];
+                    if (k[0][0] === "(") return [null, k[0].slice(1, -1).replace(":", "").split("|"), k[0][1] === ":"];
+                    const st = k[0].slice(1, -1).split(";");
+                    const s = st[0].split(":");
+                    return [s[0], (s[1] ?? s[0]).replace("?", "").split(","), st[1]];
                 }), rule: spl.map(k => {
-                    const s = k[0].split(":");
-                    return s[0] + (s[1] ? `: ${s[1]}` : "");
+                    if (k[0][0] === "(") return k[0].slice(1, -1).replace(":", "");
+                    const s = k[0].slice(1, -1).split(";")[0].split(":");
+                    return "<" + s[0] + (s[1] ? `: ${s[1]}` : "") + ">";
                 }).join(" ")
             };
         });

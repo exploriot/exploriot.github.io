@@ -24,8 +24,7 @@ body {
 
 .game {
     cursor: crosshair;
-    background-color: #0093E9;
-    background-image: linear-gradient(160deg, #0093E9 0%, #80D0C7 100%);
+    background-color: rgba(0, 147, 233, 1);
 }
 
 img {
@@ -510,6 +509,51 @@ img {
 .chest-inventory > .item {
     width: calc(100% / 9);
     height: calc(100% / 3);
+}
+
+.double-chest-inventory {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 4%;
+    top: 8%;
+    width: 92%;
+    height: 24%;
+}
+
+.double-chest-inventory > .item {
+    width: calc(100% / 9);
+    height: calc(100% / 3);
+}
+
+.double-chest-player-inventory {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 4%;
+    bottom: 13%;
+    width: 92%;
+    height: 24%;
+}
+
+.double-chest-player-inventory > .item {
+    width: calc(100% / 9);
+    height: calc(100% / 3);
+}
+
+.double-chest-hotbar-inventory {
+    position: absolute;
+    display: flex;
+    flex-wrap: wrap;
+    left: 4%;
+    bottom: 4%;
+    width: 92%;
+    height: 7%;
+}
+
+.double-chest-hotbar-inventory > .item {
+    width: calc(100% / 9);
+    height: 100%;
 }
 
 .attributes {

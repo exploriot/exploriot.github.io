@@ -13,9 +13,12 @@ export class ContainerTile extends Tile {
     /*** @type {Set<S_Player>} */
     viewers = new Set;
 
+    getClientContainer() {
+        return this.container;
+    };
+
     init() {
         this.container = new Inventory(this.size, InventoryIds.EXTERNAL, {
-            // tile: this,
             containerId: this.containerId,
             x: this.x,
             y: this.y
@@ -25,7 +28,7 @@ export class ContainerTile extends Tile {
         const contents = this.nbt.tags.container.tags.contents.value.map(Item.deserialize);
         const len = Math.min(contents.length, this.size);
         for (let i = 0; i < len; i++) {
-            this.container.contents[i] = contents[i];
+            this.container.set(i, contents[i]);
         }
         return true;
     };
@@ -46,13 +49,11 @@ export class ContainerTile extends Tile {
     };
 
     cleanPackets() {
-        if (this.container.cleanDirty) {
-            return this.broadcastContainer();
-        }
-        for (const index of this.container.dirtyIndexes) {
-            this.broadcastContainerIndexes(Array.from(this.container.dirtyIndexes));
-            this.container.dirtyIndexes.clear();
-        }
+        const container = this.getClientContainer();
+        if (container.cleanDirty) return this.broadcastContainer();
+
+        this.broadcastContainerIndexes(Array.from(container.dirtyIndexes));
+        container.dirtyIndexes.clear();
     };
 
     broadcastState() {
@@ -61,10 +62,17 @@ export class ContainerTile extends Tile {
         }
     };
 
+    getCleanViewers() {
+        return [this.viewers];
+    };
+
     broadcastContainerIndexes(indexes) {
-        for (const player of this.viewers) {
-            if (player.externalInventory !== this.container) {
-                this.viewers.delete(player);
+        if (indexes.length === 0) return;
+        const container = this.getClientContainer();
+        const viewerParent = this.getCleanViewers();
+        for (const viewers of viewerParent) for (const player of viewers) {
+            if (player.externalInventory !== container) {
+                viewers.delete(player);
                 continue;
             }
             player.session.sendIndexPackets(InventoryIds.EXTERNAL, indexes);
@@ -73,12 +81,16 @@ export class ContainerTile extends Tile {
 
     broadcastContainer() {
         for (const player of this.viewers) {
-            player.session.sendInventory(this.container);
+            player.session.sendInventory(this.getClientContainer());
         }
     };
 
+    saveNBT() {
+        super.saveNBT();
+    };
+
     remove() {
-        for (const item of this.container.contents) this.world.dropItem(this.x, this.y, item);
+        for (const item of this.container.getContents()) this.world.dropItem(this.x, this.y, item);
         this.container.clear();
         super.remove();
     };

@@ -21,9 +21,9 @@ export class LegacyStringTag extends Tag {
     };
 
     apply(string) {
-        if (typeof string !== "string" || string.length > 65535) return this;
+        if (typeof string !== "string") return false;
         this.value = string.replaceAll("\x01", "");
-        return this;
+        return true;
     };
 
     clone() {

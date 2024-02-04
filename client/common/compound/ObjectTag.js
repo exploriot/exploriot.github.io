@@ -59,7 +59,7 @@ export class ObjectTag extends Tag {
         for (let i = 0; i < keys.length; i++) {
             const k = keys[i];
             buffer.fill(k, j, j += k.length);
-            buffer[j++] = 1;
+            buffer[j++] = 0;
             j = this.tags[k].write(buffer, j);
         }
         buffer[j++] = TagBytes.BREAK;
@@ -67,14 +67,14 @@ export class ObjectTag extends Tag {
     };
 
     apply(object) {
-        if (typeof object !== "object" || object === null) return this;
+        if (typeof object !== "object" || object === null) return false;
         const keys = Object.keys(this.tags);
         for (let i = 0; i < keys.length; i++) {
             const k = keys[i];
             if (!(k in object)) continue;
             this.tags[k].apply(object[k]);
         }
-        return this;
+        return true;
     };
 
     /**
@@ -121,7 +121,7 @@ export class ObjectTag extends Tag {
             if (j >= buffer.length) throw new Error("Unexpected end of object tag.");
             let key = "";
             while (true) {
-                if (buffer[j] === 1 || buffer[j] === TagBytes.BREAK) break;
+                if (buffer[j] === 0 || buffer[j] === TagBytes.BREAK) break;
                 if (j === buffer.length - 1) throw new Error("Unexpected end of object tag's key.");
                 key += String.fromCharCode(buffer[j]);
                 j++;

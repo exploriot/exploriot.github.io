@@ -9,9 +9,9 @@ import {Item} from "../common/item/Item.js";
 import {C_ItemEntity} from "../entity/ItemEntity.js";
 import {
     closeAllInventoryUIs,
-    closeDoubleChestUI,
     openChestUI,
     openCraftingTableUI,
+    openDoubleChestUI,
     openFurnaceUI
 } from "../ui/ContainerUI.js";
 import {C_TNTEntity} from "../entity/TNTEntity.js";
@@ -70,10 +70,8 @@ function packetToEntity(data) {
     const entity = CServer.world.entityMap[data.id] ?? EntityCreator[data.type](data);
     CServer.world.entityMap[entity.id] = entity;
     Object.assign(entity, data);
-    if (entity instanceof C_Player) {
-        entity.renderX = entity.x;
-        entity.renderY = entity.y;
-    }
+    entity.renderX = entity.x;
+    entity.renderY = entity.y;
     entity.handleMovement();
 }
 
@@ -199,7 +197,7 @@ export function C_handlePingPacket() {
 
 export function C_handleInventorySetIndexPacket(pk) {
     const inv = getInventory(pk.id);
-    if (inv) inv.contents[pk.index] = Item.deserialize(pk.item);
+    if (inv) inv.set(pk.index, Item.deserialize(pk.item));
 }
 
 export function C_handleInventoryUpdatePacket(pk) {
@@ -207,7 +205,9 @@ export function C_handleInventoryUpdatePacket(pk) {
         C_handleOpenContainerPacket()
     }
     const inv = getInventory(pk.id);
-    inv.contents = pk.contents.map(i => Item.deserialize(i));
+    for (let i = 0; i < pk.contents.length; i++) {
+        inv.set(i, Item.deserialize(pk.contents[i]));
+    }
 }
 
 export function C_handleHandItemPacket(pk) {
@@ -260,13 +260,9 @@ export function C_handleOpenContainerPacket(pk) {
             break;
         case ContainerIds.CHEST:
             closeAllInventoryUIs();
-            openChestUI();
-            size = 27;
-            break;
-        case ContainerIds.DOUBLE_CHEST:
-            closeAllInventoryUIs();
-            closeDoubleChestUI();
-            size = 54;
+            if (pk.data.isDouble) openDoubleChestUI();
+            else openChestUI();
+            size = pk.data.isDouble ? 54 : 27;
             break;
     }
     CServer.externalInventory = new Inventory(size, InventoryIds.EXTERNAL, pk.data);
@@ -284,7 +280,7 @@ export function C_handleCloseContainerPacket() {
 export function C_handlePlaySoundPacket(pk) {
     const dist = Math.max(1, CServer.player.distance(pk.x, pk.y));
     if (dist > 50) return;
-    const volume = pk.volume * Math.min(1, 1 / dist);
+    const volume = pk.volume * Math.min(1, 10 / dist);
     Sound.play(pk.file, volume);
 }
 
@@ -366,6 +362,10 @@ export function C_handleAddParticlePacket(pk) {
     CServer.world.getChunkParticles(pk.x >> 4).add(particle);
 }
 
+export function C_handleUpdateTimePacket(pk) {
+    CServer.world.time = pk.time;
+}
+
 const PacketMap = {
     [PacketIds.SERVER_WELCOME]: C_handleWelcomePacket,
     [PacketIds.BATCH]: C_handleBatchPacket,
@@ -395,7 +395,8 @@ const PacketMap = {
     [PacketIds.SERVER_ENTITY_ANIMATION]: C_handleEntityAnimationPacket,
     [PacketIds.SERVER_APPLY_VELOCITY]: C_handleApplyVelocityPacket,
     [PacketIds.SERVER_ENTITY_VELOCITY]: C_handleEntityVelocityPacket,
-    [PacketIds.SERVER_ADD_PARTICLE]: C_handleAddParticlePacket
+    [PacketIds.SERVER_ADD_PARTICLE]: C_handleAddParticlePacket,
+    [PacketIds.SERVER_UPDATE_TIME]: C_handleUpdateTimePacket
 };
 
 export function C_handlePacket(pk) {

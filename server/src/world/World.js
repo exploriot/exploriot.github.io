@@ -129,6 +129,30 @@ const BlockUpdater = {
             const up = world.getBlock(X, Y + 1);
             if (up[0] !== self[0]) world.setBlock(X, Y, Ids.AIR);
         }
+    },
+    [Ids.CHEST](world, x, y, self) {
+        const left = world.getBlock(x - 1, y);
+        const right = world.getBlock(x + 1, y);
+        const opt = {updateSelf: false, updateAround: false};
+        if (self[1] === 0) {
+            if (left[0] === Ids.CHEST && left[1] === 0) {
+                world.setBlock(x, y, Ids.CHEST, 2, opt);
+                world.setBlock(x - 1, y, Ids.CHEST, 1, opt);
+                return;
+            }
+            if (right[0] === Ids.CHEST && right[1] === 0) {
+                world.setBlock(x, y, Ids.CHEST, 1, opt);
+                world.setBlock(x + 1, y, Ids.CHEST, 2, opt);
+            }
+        } else if (self[1] === 1) {
+            if (right[0] !== Ids.CHEST || right[1] !== 2) {
+                world.setBlock(x, y, Ids.CHEST, 0, opt);
+            }
+        } else if (self[1] === 2) {
+            if (left[0] !== Ids.CHEST || left[1] !== 1) {
+                world.setBlock(x, y, Ids.CHEST, 0, opt);
+            }
+        }
     }
 };
 
@@ -145,12 +169,13 @@ const BlockInteractMap = {
         }));
         return INTERACTION_RESPONSE.SUCCESS;
     },
-    [Ids.FURNACE](world, x, y, entity) {
+    [Ids.FURNACE](world, x, y, entity, _, block) {
         if (!entity || !(entity instanceof S_Player) || entity.externalInventory) return INTERACTION_RESPONSE.FAIL;
         world.checkTile(x, y);
         const tile = world.getTile(x, y);
         if (!tile) return INTERACTION_RESPONSE.FAIL;
-        entity.externalInventory = tile.container;
+        if (block[0] === Ids.CHEST) tile.updateDouble(block[1]);
+        entity.externalInventory = tile.getClientContainer();
         tile.viewers.add(entity);
 
         const network = entity.session;
@@ -170,7 +195,7 @@ const BlockInteractMap = {
         world.addEntity(tnt);
         return INTERACTION_RESPONSE.DAMAGE;
     },
-    [Ids.ENTITY_SPAWNER](world, x, y, entity, item) {
+    [Ids.ENTITY_SPAWNER](world, x, y, entity, item, self) {
         if (!item || item.id !== Ids.SPAWN_EGG) return INTERACTION_RESPONSE.FAIL;
         const ch = world.getTile(x, y);
         if (ch) return INTERACTION_RESPONSE.FAIL;
@@ -181,7 +206,7 @@ const BlockInteractMap = {
             entityType: new Int8Tag(item.nbt.entityType),
             entityNBT: new StringTag(JSON.stringify(item.nbt.entityNBT))
         }));
-        if (tile.init()) tile.add();
+        if (tile.init(self)) world.setTile(x, y, tile);
         return INTERACTION_RESPONSE.DECREASE;
     }
 };
@@ -218,6 +243,7 @@ export function generateSeed() {
  * @property {string} generatorOptions
  * @property {number} seed
  * @property {Record<number, boolean>} gameRules
+ * @property {number} time
  */
 export class S_World extends World {
     static NBT_STRUCTURE = new ObjectTag({
@@ -230,7 +256,8 @@ export class S_World extends World {
             [GameRules.NATURAL_REGENERATION]: new BoolTag(true),
             [GameRules.STARVE_DAMAGE]: new BoolTag(true),
             [GameRules.DROWNING_DAMAGE]: new BoolTag(true)
-        })
+        }),
+        time: new Float32Tag(0)
     });
 
     dirtyChunks = new Set;
@@ -238,7 +265,7 @@ export class S_World extends World {
     dirtyUpdateBlocks = {};
 
     // worldX, worldY
-    /*** @type {Record<number, S_Entity[]>} */
+    /*** @type {Record<number, Set<S_Entity>>} */
     chunkEntities = {};
 
     // worldX, worldY
@@ -246,7 +273,7 @@ export class S_World extends World {
     tiles = {};
 
     // chunkX
-    /*** @type {Record<number, Tile[]>} */
+    /*** @type {Record<number, Set<Tile>>} */
     chunkTiles = {};
 
     /**
@@ -268,12 +295,24 @@ export class S_World extends World {
         this.generator = new (Generators[this.generatorName])(this, this.generatorOptions);
     };
 
+    setTime(v) {
+        super.setTime(v);
+        this.broadcastTime();
+    };
+
+    broadcastTime() {
+        for (const player of Server.getPlayers()) {
+            if (player.world !== this) continue;
+            player.session.sendTime();
+        }
+    };
+
     /**
      * @param {number} chunkX
-     * @return {Tile[]}
+     * @return {Set<Tile>}
      */
     getChunkTiles(chunkX) {
-        return this.chunkTiles[chunkX] ?? [];
+        return this.chunkTiles[chunkX] ??= new Set;
     };
 
     validatePath() {
@@ -325,7 +364,7 @@ export class S_World extends World {
             const sound = getBlockDigSound(id);
             if (sound) this.playSound(sound, x, y);
         }
-        if (damageItem && inventory && Metadata.hardness[block[0]] !== 0) {
+        if (damageItem && inventory && (item.id in Metadata.toolLevelItems) && Metadata.hardness[block[0]] !== 0) {
             inventory.damageItemAt(index, 1, entity && this, entity && entity.x, entity && entity.y);
         }
         if (particle) {
@@ -395,7 +434,7 @@ export class S_World extends World {
         const block = this.getBlock(x, y);
         const interaction = BlockInteractMap[block[0]] ?? ItemInteractMap[item.id];
         if (!interaction) return false;
-        const response = interaction(this, x, y, entity, item, inventory, index);
+        const response = interaction(this, x, y, entity, item, block);
         if (response === INTERACTION_RESPONSE.FAIL) return false;
 
         if (affectItem && inventory) {
@@ -410,6 +449,9 @@ export class S_World extends World {
     summonBlockDrops(x, y, breakItem = null) {
         const block = this.getBlock(x, y);
         const drops = getBlockDrops(block[0], block[1], breakItem);
+        if (block[0] === Ids.CHEST && block[1] === 2) {
+
+        }
         for (const item of drops) {
             this.dropItem(x, y, item);
         }
@@ -444,7 +486,13 @@ export class S_World extends World {
             /*** @type {ListTag} */
             const tilesNbt = chunkNbt.getTag("tiles");
             for (const nbt of entitiesNbt.tags) {
-                this.summonEntity(nbt.getTagValue("type"), 0, 0, nbt);
+                this.summonEntity(nbt.getTagValue("type"), nbt.tags.x.value, nbt.tags.y.value, nbt);
+            }
+            const subChunks = subChunksNbt.tags;
+            const chunk = this.chunks[x] = {};
+            for (const y in subChunks) {
+                const subChunk = chunk[y] = makeSubChunk();
+                subChunk.set(subChunks[y].value.split("").map(i => i.charCodeAt(0)), 0);
             }
             for (const nbt of tilesNbt.tags) {
                 const clas = {
@@ -454,29 +502,36 @@ export class S_World extends World {
                 }[nbt.getTagValue("type")];
                 if (!clas) continue;
                 const tile = new clas(this, nbt);
-                if (tile.init()) tile.add();
-            }
-            const subChunks = subChunksNbt.tags;
-            const chunk = this.chunks[x] = {};
-            for (const y in subChunks) {
-                const subChunk = chunk[y] = makeSubChunk();
-                subChunk.set(subChunks[y].value.split("").map(i => i.charCodeAt(0)), 0);
+                if (tile.init(super.getBlock(tile.x, tile.y))) {
+                    this.setTile(tile.x, tile.y, tile);
+                }
             }
             return chunk;
         }
         return super.getChunk(x);
     };
 
-    setBlock(worldX, worldY, id, meta = 0, updateAround = true, broadcast = true, except = null) {
+    setBlock(worldX, worldY, id, meta = 0, {
+        updateSelf = true,
+        updateAround = true,
+        broadcast = true,
+        except = null
+    } = {}) {
         this.dirtyChunks.add(worldX >> 4);
+        super.setBlock(worldX, worldY, id, meta);
         if (updateAround) {
             this.updateBlocksAround(worldX, worldY);
-            this.scheduleBlockUpdateAt(worldX, worldY);
+        }
+        if (updateSelf) {
+            if (this.scheduleBlockUpdateAt(worldX, worldY)) {
+                const b = this.getBlock(worldX, worldY);
+                id = b[0];
+                meta = b[1];
+            }
         }
         if (broadcast) {
             this.broadcastBlockUpdate(worldX, worldY, id, meta, except);
         }
-        return super.setBlock(worldX, worldY, id, meta);
     };
 
     updateBlocksAround(x, y) {
@@ -489,7 +544,12 @@ export class S_World extends World {
 
     scheduleBlockUpdateAt(x, y) {
         const block = this.getBlock(x, y);
+        if (block[0] === Ids.CHEST) {
+            this.onBlockUpdate(x, y);
+            return true;
+        }
         this.dirtyUpdateBlocks[x + " " + y] = BlockUpdaterTime[block[0]] ?? 0;
+        return false;
     };
 
     onBlockUpdate(x, y) {
@@ -524,33 +584,68 @@ export class S_World extends World {
         return (this.tiles[worldX] ?? {})[worldY];
     };
 
+    removeTile(worldX, worldY) {
+        const old = this.getTile(worldX, worldY);
+        if (old) old.remove();
+    };
+
     setTile(worldX, worldY, tile) {
         const old = this.getTile(worldX, worldY);
         if (old) old.remove();
-        if (tile) tile.add();
+
+        const holder = this.tiles[worldX] ??= {};
+        if (tile) {
+            holder[worldY] = tile;
+            this.getChunkTiles(worldX >> 4).add(tile);
+        } else delete holder[worldY];
     };
 
     checkTile(worldX, worldY, nbt = {}) {
-        const id = this.getBlock(worldX, worldY)[0];
+        const block = this.getBlock(worldX, worldY);
         const old = this.getTile(worldX, worldY);
-        if (!(id in TileBlockIdMap)) {
+        if (!(block[0] in TileBlockIdMap)) {
             if (old) old.remove();
             return;
         }
-        const tileType = TileBlockIdMap[id];
-        console.log(id)
+        const tileType = TileBlockIdMap[block[0]];
         const clas = {
             [TileIds.FURNACE]: FurnaceTile,
             [TileIds.CHEST]: ChestTile,
             [TileIds.SPAWNER]: SpawnerTile
         }[tileType];
-        if (old && old.type === tileType) return;
-        const tile = new clas(this, new ObjectTag({
-            x: new Float32Tag(worldX),
-            y: new Float32Tag(worldY)
-        }).combine(clas.NBT_STRUCTURE).apply(nbt));
-        if (!tile.init()) return;
-        this.setTile(worldX, worldY, tile);
+        if (old && old.type === tileType) {
+            /*if (clas === ChestTile) {
+                if (block[1] === 2) {
+                    console.log(2)
+                    this.checkTile(worldX - 1, worldY);
+                } else if (old.isDouble && block[1] === 0) {
+                    console.log(5)
+                    for (let i = 27; i < 54; i++) {
+                        this.dropItem(worldX, worldY, old.container.contents[i]);
+                        old.container.contents[i] = null;
+                    }
+                    old.container.size = 27;
+                    old.container.contents.length = 27;
+                } else if (!old.isDouble && block[1] === 1) {
+                    console.log(6)
+                    const right = this.getTile(worldX + 1, worldY);
+                    old.isDouble = true;
+                    old.container.size = 54;
+                    old.container.contents.length = 54;
+                    if (right) {
+                        for (let i = 27; i < 54; i++) {
+                            old.container.get(i) = right.container.get(i - 27);
+                        }
+                        right.container.clear();
+                        right.remove();
+                    }
+                }
+            }*/
+            return;
+        }
+        //if (clas === ChestTile && block[1] === 2) return;
+        const tile = new clas(this, clas.NBT_STRUCTURE.clone().applyThis(nbt).applyThis({x: worldX, y: worldY}));
+        if (tile.init(block)) this.setTile(worldX, worldY, tile);
     };
 
     /**
@@ -631,7 +726,7 @@ export class S_World extends World {
     summonEntity(id, x, y, nbt = {}) {
         const clas = ENTITY_MAP[id];
         if (!clas) return null;
-        const entity = new clas(this, nbt instanceof ObjectTag ? nbt : clas.NBT_PRIVATE_STRUCTURE.clone().apply(nbt));
+        const entity = new clas(this, nbt instanceof ObjectTag ? nbt : clas.NBT_PRIVATE_STRUCTURE.clone().applyThis(nbt));
         entity.x = x;
         entity.y = y;
         this.addEntity(entity);
@@ -690,6 +785,7 @@ export class S_World extends World {
     };
 
     update(dt) {
+        this.time += dt;
         const keys = Object.keys(this.dirtyUpdateBlocks);
         for (let i = 0; i < keys.length; i++) {
             const k = keys[i];

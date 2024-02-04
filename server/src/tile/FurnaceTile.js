@@ -26,22 +26,22 @@ export class FurnaceTile extends ContainerTile {
     updatePeriod = 0.1;
 
     canSmeltItem() {
-        const item = this.container.contents[0];
+        const item = this.container.get(0);
         if (!item) return false;
         const result = Metadata.smeltsTo[item.id]?.evaluate();
         if (!result) return false;
-        const currentResult = this.container.contents[2];
+        const currentResult = this.container.get(2);
         return !currentResult || (result.equals(currentResult, false, true) && currentResult.count < currentResult.maxStack);
     };
 
     smeltItem() {
-        const item = this.container.contents[0];
+        const item = this.container.get(0);
         this.container.decreaseItemAt(0);
         const result = Metadata.smeltsTo[item.id]?.evaluate();
         this.holdingXP += Metadata.smeltXP[item.id] ?? 0;
-        const currentResult = this.container.contents[2];
+        const currentResult = this.container.get(2);
         if (!currentResult) {
-            this.container.setIndex(2, result);
+            this.container.set(2, result);
         } else if (result.equals(currentResult, false, true)) {
             currentResult.count++;
             this.container.updateIndex(2);
@@ -64,7 +64,7 @@ export class FurnaceTile extends ContainerTile {
             if (this.fuel <= 0) {
                 this.fuel = 0;
                 this.maxFuel = 0;
-                this.world.setBlock(this.x, this.y, Ids.FURNACE, 0);
+                this.world.setBlock(this.x, this.y, Ids.FURNACE, 0, {updateSelf: false});
                 this.broadcastState();
             } else {
                 if (this.canSmeltItem()) {
@@ -84,11 +84,11 @@ export class FurnaceTile extends ContainerTile {
                 }
             }
         } else {
-            const fuelItem = this.container.contents[1];
+            const fuelItem = this.container.get(1);
             if (fuelItem && this.canSmeltItem()) {
                 this.container.decreaseItemAt(1);
                 this.fuel = this.maxFuel = (Metadata.fuel[fuelItem.id] ?? 0) * 10;
-                this.world.setBlock(this.x, this.y, Ids.FURNACE, 1);
+                this.world.setBlock(this.x, this.y, Ids.FURNACE, 1, {updateSelf: false});
                 this.broadcastState();
             }
         }

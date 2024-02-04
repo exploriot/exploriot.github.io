@@ -18,6 +18,8 @@ import {GameRuleCommand} from "./list/GameRuleCommand.js";
 import {StatusCommand} from "./list/StatusCommand.js";
 import {SummonCommand} from "./list/SummonCommand.js";
 import {SpawnPointCommand} from "./list/SpawnPointCommand.js";
+import {TimeCommand} from "./list/TimeCommand.js";
+import {DataCommand} from "./list/DataCommand.js";
 
 export const CommandLabels = {};
 export const Commands = new Set;
@@ -60,6 +62,8 @@ export function initCommands() {
         new GameRuleCommand,
         new StatusCommand,
         new SummonCommand,
-        new SpawnPointCommand
+        new SpawnPointCommand,
+        new TimeCommand,
+        new DataCommand
     );
 }
