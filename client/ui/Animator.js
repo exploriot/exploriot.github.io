@@ -14,7 +14,7 @@ import {
 } from "./MainUI.js";
 import {renderContainerStates, renderHotbarPosition, renderInventories} from "./ContainerUI.js";
 import "./ContainerUI.js";
-import {C_OPTIONS, canvas, CServer, ctx} from "../main/Game.js";
+import {C_OPTIONS, CServer, ctx} from "../main/Game.js";
 import {getItemName} from "../common/metadata/Items.js";
 import {Metadata} from "../common/metadata/Metadata.js";
 import {Keyboard} from "../input/Keyboard.js";
@@ -73,7 +73,7 @@ export function animate() {
     const widthHalf = Math.ceil((innerWidth / BASE_BLOCK_SIZE - 1) / 2);
     const heightHalf = Math.ceil((innerHeight / BASE_BLOCK_SIZE - 1) / 2);
 
-    canvas.style.background = "rgba(0, 147, 233, " + (CServer.world.getTime() / 1200) + ")"
+    //canvas.style.background = "rgba(0, 147, 233, " + (CServer.world.getTime() / 1200) + ")"
 
     for (let x = -widthHalf; x < widthHalf + 2; x++) {
         for (let y = -heightHalf + 1; y < heightHalf + 3; y++) {
