@@ -17,9 +17,9 @@ export class BoolTag extends Tag {
     };
 
     apply(bool) {
-        if (typeof bool !== "boolean") return this;
+        if (typeof bool !== "boolean") return false;
         this.value = bool;
-        return this;
+        return true;
     };
 
     clone() {

@@ -8,6 +8,7 @@ import {BoolTag} from "../../../client/common/compound/BoolTag.js";
 import {ItemTag} from "../../../client/common/compound/ItemTag.js";
 import {Item} from "../../../client/common/item/Item.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
+import {getItemName} from "../../../client/common/metadata/Items.js";
 
 /**
  * @property {Item} item
@@ -31,6 +32,10 @@ export class S_ItemEntity extends S_Entity {
     static NBT_PUBLIC_STRUCTURE = new ObjectTag({
         item: new ItemTag(new Item(Ids.AIR))
     }).combine(S_Entity.NBT_PUBLIC_STRUCTURE);
+
+    getName() {
+        return getItemName(this.item.id, this.item.meta, this.item.nbt);
+    };
 
     wasOnGround = false;
 

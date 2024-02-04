@@ -110,11 +110,11 @@ export function initContainers() {
             function onClick() {
                 const inv1 = getInventoryByName(h.type);
                 const index1 = h.index[0] + i;
-                const targetItem = inv1.contents[index1];
+                const targetItem = inv1.get(index1);
 
                 const inv2 = CServer.cursorInventory;
                 const index2 = 0;
-                const cursorItem = inv2.contents[index2];
+                const cursorItem = inv2.get(index2);
 
                 if (!targetItem && !cursorItem) return;
 
@@ -181,7 +181,7 @@ export function initContainers() {
             function onShiftClick() {
                 const inv1 = getInventoryByName(h.type);
                 const index = h.index[0] + i;
-                const item = inv1.contents[index];
+                const item = inv1.get(index);
 
                 if (!item) return;
                 let inv2;
@@ -201,7 +201,7 @@ export function initContainers() {
                 if (Keyboard["shift"]) return onShiftClick();
                 const inv1 = getInventoryByName(h.type);
                 const index1 = h.index[0] + i;
-                const targetItem = inv1.contents[index1];
+                const targetItem = inv1.get(index1);
                 if (
                     (inv1.type === InventoryIds.CRAFT && index1 === 4)
                     || (
@@ -218,7 +218,7 @@ export function initContainers() {
 
                 const inv2 = CServer.cursorInventory;
                 const index2 = 0;
-                const cursorItem = inv2.contents[index2];
+                const cursorItem = inv2.get(index2);
 
                 if (cursorItem) {
                     const maxStack = cursorItem.maxStack;
@@ -259,10 +259,10 @@ export function initContainers() {
 
 function onAnyClick(ev) {
     if (isEscMenuOn() || !isAnyContainerOn()) return;
-    if (ev.target.classList.contains("inventory-ui") && CServer.cursorInventory.contents[0]) {
+    if (ev.target.classList.contains("inventory-ui") && CServer.cursorInventory.get(0)) {
         switch (ev.button) {
             case 0:
-                ClientSession.sendDropItemPacket(InventoryIds.CURSOR, 0, CServer.cursorInventory.contents[0].count);
+                ClientSession.sendDropItemPacket(InventoryIds.CURSOR, 0, CServer.cursorInventory.get(0).count);
                 break;
             case 2:
                 ClientSession.sendDropItemPacket(InventoryIds.CURSOR, 0, 1);
@@ -311,7 +311,7 @@ export function renderInventories() {
         if (!inv) continue;
         for (let i = 0; i < h.index[1] - h.index[0] + 1; i++) {
             const o = h.divs[i];
-            const item = inv.contents[h.index[0] + i];
+            const item = inv.get(h.index[0] + i);
             const hasItemChanged = (o.last && !item) || (o.last && !item.equals(o.last)) || (!o.last && item);
             if (!hasItemChanged) continue;
             o.last = item ? item.serialize() : null;
@@ -457,9 +457,9 @@ export function initContainerUI() {
         const inv = getInventoryByName(invName);
         MouseContainerPosition = {inv, index};
 
-        const item = inv.contents[index];
+        const item = inv.get(index);
 
-        if (item && !CServer.cursorInventory.contents[0]) {
+        if (item && !CServer.cursorInventory.get(0)) {
             invInfoText.innerText = getItemName(item.id, item.meta, item.nbt);
             invInfoText.style.opacity = "1";
         } else invInfoText.style.opacity = "0";

@@ -91,14 +91,15 @@ export class S_Player extends S_Living {
         super(null, initNBT);
         this.ws = ws;
         this.session = new NetworkSession(this, ws);
-        const world = Server.worlds.find(i => i.name === this.worldName);
+        const worldName = this.worldName;
+        const world = Server.worlds.find(i => i.name === worldName);
         delete this.worldName;
         this.username = ws.username;
         this.world = world ?? Server.getDefaultWorld();
         this.skinData = ws.skinData || DefaultSkin;
 
         if (!world) {
-            Terminal.warn(this.username + "'s world couldn't be found. Using the default.");
+            if (worldName !== "") Terminal.warn(this.username + "'s world couldn't be found. Using the default.");
             const loc = this.getSpawnPoint();
             this.x = loc.x;
             this.y = loc.y;
@@ -247,7 +248,7 @@ export class S_Player extends S_Living {
 
     dropAllInventories() {
         for (const inv of this.getInventories()) {
-            for (const item of inv.contents) {
+            for (const item of inv.getContents()) {
                 this.world.dropItem(this.x, this.y, item);
             }
             inv.clear();
@@ -255,7 +256,7 @@ export class S_Player extends S_Living {
     };
 
     getHandItem() {
-        return this.playerInventory.contents[this.handIndex];
+        return this.playerInventory.get(this.handIndex);
     };
 
     getHandItemId() {
@@ -268,7 +269,15 @@ export class S_Player extends S_Living {
         return item ? item.meta : 0;
     };
 
+    getName() {
+        return this.username;
+    };
+
     getBlockReach() {
+        return this.getGamemode() % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
+    };
+
+    getTouchReach() {
         return this.getGamemode() % 2 ? CREATIVE_REACH : SURVIVAL_REACH;
     };
 
@@ -325,7 +334,7 @@ export class S_Player extends S_Living {
         const health = this.getHealth();
 
         if (health <= 0) {
-            this.remove(true);
+            this.kill();
             return false;
         }
 
@@ -407,14 +416,14 @@ export class S_Player extends S_Living {
         if (kill && this.getGamemode() % 2 === 1) return;
         const ext = this.externalInventory;
         if (ext && [ContainerIds.CRAFTING_TABLE].includes(ext.extra.containerId)) {
-            for (let i = 0; i < ext.size - 1; i++) this.holdOrDrop(ext.contents[i]);
+            for (let i = 0; i < ext.size - 1; i++) this.holdOrDrop(ext.get(i));
             ext.clear();
         }
-        this.holdOrDrop(this.cursorInventory.contents[0]);
+        this.holdOrDrop(this.cursorInventory.get(0));
         this.cursorInventory.clear();
-        for (const item of this.craftInventory.contents) this.holdOrDrop(item);
+        for (const item of this.craftInventory.getContents()) this.holdOrDrop(item);
         this.craftInventory.clear();
-        for (const item of this.cursorInventory.contents) this.holdOrDrop(item);
+        for (const item of this.cursorInventory.getContents()) this.holdOrDrop(item);
         this.cursorInventory.clear();
         if (kill) {
             const xp = this.getXP();

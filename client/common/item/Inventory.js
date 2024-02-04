@@ -14,7 +14,6 @@ export const ContainerIds = {
     CRAFTING_TABLE: 0,
     FURNACE: 1,
     CHEST: 2,
-    DOUBLE_CHEST: 3,
     __LEN: 4
 };
 
@@ -32,9 +31,35 @@ export class Inventory {
     constructor(size, type, extra = null) {
         this.size = size;
         this.type = type;
-        /*** @type {(Item | null)[]} */
-        this.contents = new Array(size).fill(null);
         this.extra = extra;
+        this.init();
+    };
+
+    init() {
+        /**
+         * @type {(Item | null)[]}
+         * @private
+         */
+        this.contents = new Array(this.size).fill(null);
+    };
+
+    getContents() {
+        return this.contents;
+    };
+
+    get(index) {
+        return this.contents[index];
+    };
+
+    set(index, item, update = true) {
+        this.contents[index] = item;
+        if (update) this.dirtyIndexes.add(index);
+    };
+
+    clear() {
+        this.cleanDirty = true;
+        this.dirtyIndexes.clear();
+        this.contents.fill(null);
     };
 
     /*** @param {Item} item */
@@ -90,13 +115,12 @@ export class Inventory {
      */
     addAt(index, item) {
         if (!item) return;
-        const it = this.contents[index];
+        const it = this.get(index);
         const maxStack = item.maxStack;
         if (!it) {
             const putting = Math.min(maxStack, item.count);
             item.count -= putting;
-            this.contents[index] = item.clone(putting);
-            this.dirtyIndexes.add(index);
+            this.set(index, item.clone(putting));
             return;
         }
         if (it.equals(item, false, true) && it.count < maxStack) {
@@ -114,12 +138,11 @@ export class Inventory {
      */
     removeAt(index, item) {
         if (!item) return;
-        const it = this.contents[index];
+        const it = this.get(index);
         if (!it || !it.equals(item, false, true)) return;
         if (it.count <= item.count) {
-            this.contents[index] = null;
+            this.removeIndex(index);
             item.count -= it.count;
-            this.dirtyIndexes.add(index);
             return;
         }
         it.count -= item.count;
@@ -135,11 +158,10 @@ export class Inventory {
      */
     removeDescAt(index, desc, count) {
         if (!desc) return;
-        const it = this.contents[index];
+        const it = this.get(index);
         if (!it || !desc.equalsItem(it)) return count;
         if (it.count <= count) {
-            this.contents[index] = null;
-            this.dirtyIndexes.add(index);
+            this.removeIndex(index);
             return count - it.count;
         }
         it.count -= count;
@@ -148,25 +170,13 @@ export class Inventory {
     };
 
     removeIndex(index) {
-        this.contents[index] = null;
-        this.dirtyIndexes.add(index);
-    };
-
-    setIndex(index, item) {
-        this.contents[index] = item;
-        this.dirtyIndexes.add(index);
+        this.set(index, null);
     };
 
     updateIndex(index) {
-        const item = this.contents[index];
-        if (item && item.count <= 0) this.contents[index] = null;
-        this.dirtyIndexes.add(index);
-    };
-
-    clear() {
-        this.cleanDirty = true;
-        this.dirtyIndexes.clear();
-        this.contents.fill(null);
+        const item = this.get(index);
+        if (item && item.count <= 0) this.removeIndex(index);
+        else this.dirtyIndexes.add(index);
     };
 
     /**
@@ -178,7 +188,7 @@ export class Inventory {
      * @return {boolean}
      */
     damageItemAt(index, amount = 1, world = null, x = 0, y = 0) {
-        const item = this.contents[index];
+        const item = this.get(index);
         if (item && item.id in Metadata.durabilities) {
             const durability = Metadata.durabilities[item.id];
             item.nbt.damage ??= 0;
@@ -192,7 +202,7 @@ export class Inventory {
     };
 
     decreaseItemAt(index, amount = 1) {
-        const item = this.contents[index];
+        const item = this.get(index);
         if (item) {
             item.count -= amount;
             this.updateIndex(index);
@@ -200,6 +210,6 @@ export class Inventory {
     };
 
     serialize() {
-        return this.contents.map(i => i ? i.serialize() : 0);
+        return this.getContents().map(i => i ? i.serialize() : 0);
     };
 }

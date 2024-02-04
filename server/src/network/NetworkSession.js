@@ -35,6 +35,7 @@ import {Item} from "../../../client/common/item/Item.js";
 import {FurnaceTile} from "../tile/FurnaceTile.js";
 import {S_Living} from "../entity/Living.js";
 import {S_Player} from "../entity/Player.js";
+import {UpdateTimePacket} from "../packet/UpdateTimePacket.js";
 
 const PacketMap = {
     [PacketIds.BATCH]: "handleBatchPacket",
@@ -173,24 +174,28 @@ export class NetworkSession {
         return item && item.count > 0 ? item.serialize() : null;
     };
 
-    getIndexPackets(id, indices) {
-        if (indices.length === 0) return;
+    getIndexPackets(id, indexes) {
+        if (indexes.length === 0) return;
         const packets = [];
-        for (const i of indices) {
+        for (const i of indexes) {
             packets.push(InventorySetIndexPacket(
-                id, i, this.serializeItem(this.player.getInventory(id).contents[i])
+                id, i, this.serializeItem(this.player.getInventory(id).get(i))
             ));
         }
         return packets;
     };
 
-    sendIndexPackets(id, indices) {
-        if (indices.length === 0) return;
-        this.sendPackets(this.getIndexPackets(id, indices));
+    sendIndexPackets(id, indexes) {
+        if (indexes.length === 0) return;
+        this.sendPackets(this.getIndexPackets(id, indexes));
     };
 
     sendMessagePacket(message) {
         this.sendPacket(SendMessagePacket(message));
+    };
+
+    sendTime() {
+        this.sendPacket(UpdateTimePacket(this.player.world.time));
     };
 
     forceCloseContainer() {
@@ -358,10 +363,10 @@ export class NetworkSession {
     handleCraftInventory() {
         const inv = this.player.craftInventory;
         const crafting = findCrafting([
-            [inv.contents[0], inv.contents[1]],
-            [inv.contents[2], inv.contents[3]]
+            [inv.get(0), inv.get(1)],
+            [inv.get(2), inv.get(3)]
         ]);
-        if (crafting) inv.setIndex(4, crafting.result.evaluate());
+        if (crafting) inv.set(4, crafting.result.evaluate());
         else inv.removeIndex(4);
     };
 
@@ -371,11 +376,11 @@ export class NetworkSession {
             !ext || ext.extra.containerId !== ContainerIds.CRAFTING_TABLE
         ) return;
         const crafting = findCrafting([
-            [ext.contents[0], ext.contents[1], ext.contents[2]],
-            [ext.contents[3], ext.contents[4], ext.contents[5]],
-            [ext.contents[6], ext.contents[7], ext.contents[8]]
+            [ext.get(0), ext.get(1), ext.get(2)],
+            [ext.get(3), ext.get(4), ext.get(5)],
+            [ext.get(6), ext.get(7), ext.get(8)]
         ]);
-        if (crafting) ext.setIndex(9, crafting.result.evaluate());
+        if (crafting) ext.set(9, crafting.result.evaluate());
         else ext.removeIndex(9);
     };
 
@@ -392,7 +397,7 @@ export class NetworkSession {
         if (item2) {
             item2.count += putting;
         } else {
-            inv2.setIndex(index2, item1.clone(putting));
+            inv2.set(index2, item1.clone(putting));
         }
         if (item1.count <= 0) inv1.removeIndex(index1);
         else inv1.updateIndex(index1);
@@ -428,12 +433,12 @@ export class NetworkSession {
 
         let crafting = null;
         if (isNormalCraft) crafting = findCrafting([
-            [inv.contents[0], inv.contents[1]],
-            [inv.contents[2], inv.contents[3]]
+            [inv.get(0), inv.get(1)],
+            [inv.get(2), inv.get(3)]
         ]); else if (isCraftingTable) crafting = findCrafting([
-            [inv.contents[0], inv.contents[1], inv.contents[2]],
-            [inv.contents[3], inv.contents[4], inv.contents[5]],
-            [inv.contents[6], inv.contents[7], inv.contents[8]]
+            [inv.get(0), inv.get(1), inv.get(2)],
+            [inv.get(3), inv.get(4), inv.get(5)],
+            [inv.get(6), inv.get(7), inv.get(8)]
         ]);
         return crafting;
     };
@@ -478,8 +483,8 @@ export class NetworkSession {
 
         if (!inv1 || !inv2 || index1 >= inv1.size || index2 >= inv2.size) return cancel();
 
-        const item1 = inv1.contents[index1];
-        const item2 = inv2.contents[index2];
+        const item1 = inv1.get(index1);
+        const item2 = inv2.get(index2);
 
         if (!item1 || count > item1.count) return cancel();
 
@@ -523,8 +528,8 @@ export class NetworkSession {
             this.computeCombine(inv1, inv2, index1, index2, item1, item2, count);
         } else if (!item1.equals(item2, false, true)) { // if the items are different, swap
             if (noSwap) return cancel();
-            inv1.setIndex(index1, item2);
-            inv2.setIndex(index2, item1);
+            inv1.set(index1, item2);
+            inv2.set(index2, item1);
         } else {
             // at this point, because of the if statements, both items are non-null
             // furthermore; both items have the same id, meta and nbt
@@ -562,7 +567,7 @@ export class NetworkSession {
     };
 
     computeInventoryTransactionAt(id1, id2, inv1, index1, index2, targetCount) {
-        const it = inv1.contents[index1];
+        const it = inv1.get(index1);
         if (!it || it.count <= targetCount) return false;
         return this.computeItemTransaction(id1, id2, index1, index2, it.count - targetCount, true);
 
@@ -581,7 +586,7 @@ export class NetworkSession {
             || ((id1 === InventoryIds.EXTERNAL || id2 === InventoryIds.EXTERNAL) && !this.player.externalInventory)
         ) return cancel();
 
-        const oItem = inv1.contents[index1];
+        const oItem = inv1.get(index1);
 
         if (!oItem || oItem.count < count) return cancel();
 
@@ -642,7 +647,7 @@ export class NetworkSession {
             || (inv.type === InventoryIds.EXTERNAL && ext.extra.containerId === ContainerIds.CRAFTING_TABLE && index === 9)
         ) return;
 
-        const item = inv.contents[index];
+        const item = inv.get(index);
 
         if (!item || item.count < count) return;
 
@@ -667,7 +672,7 @@ export class NetworkSession {
     handleCloseContainerPacket() {
         let ext = this.player.externalInventory;
         if (ext && [ContainerIds.CRAFTING_TABLE].includes(ext.extra.containerId)) {
-            for (let i = 0; i < ext.size - 1; i++) this.player.holdOrDrop(ext.contents[i]);
+            for (let i = 0; i < ext.size - 1; i++) this.player.holdOrDrop(ext.get(i));
             ext.clear();
         }
         this.player.externalInventory = null;
@@ -698,6 +703,8 @@ export class NetworkSession {
 
         if (this.player.getGamemode() !== 1 || pk.item.id === Ids.AIR) return;
 
+        if (pk.item.id === Ids.CHEST) pk.item.meta = 0;
+
         const item = new Item(
             pk.item.id,
             pk.item.meta % getBlockMetaMod(pk.item.id),
@@ -707,7 +714,7 @@ export class NetworkSession {
 
         const handItem = this.player.getHandItem();
 
-        this.player.playerInventory.setIndex(this.player.handIndex, item);
+        this.player.playerInventory.set(this.player.handIndex, item);
 
         this.player.playerInventory.add(handItem); // add it back
     };
@@ -748,15 +755,14 @@ export class NetworkSession {
         );
 
         const entity = this.player.world.entityMap[pk.entityId];
-        if (!entity || entity === this.player || ![0, 2].includes(pk.button) || this.player.canTouchEntity(entity)) return;
+        if (!entity || entity === this.player || ![0, 2].includes(pk.button) || !this.player.canTouchEntity(entity)) return;
 
         if (pk.button === 0) {
             if (!(entity instanceof S_Living)) return;
             entity.knockFrom(this.player.x);
             entity.damage(!this.player.isFlying() && !this.player.isOnGround() && this.player.y < this.player.fallY ? 2 : 1);
-            return;
         } else {
-            // player decided to right-click an entity for some reason, doing nothing (for now)
+            entity.onInteract(this.player);
         }
     };
 

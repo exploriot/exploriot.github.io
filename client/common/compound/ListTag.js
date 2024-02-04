@@ -38,12 +38,12 @@ export class ListTag extends Tag {
     };
 
     apply(list) {
-        if (!Array.isArray(list)) return this;
+        if (!Array.isArray(list)) return false;
         const len = Math.min(this.tags.length, list.length);
         for (let i = 0; i < len; i++) {
             this.tags[i].apply(list[i]);
         }
-        return this;
+        return true;
     };
 
     clone() {

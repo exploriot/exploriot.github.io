@@ -500,7 +500,7 @@ export function initBlocks() {
     });
     registerBlock(Ids.CHEST, {
         ...blockOpts, hardness: 2.5, step: STEPS.WOOD, dig: DIGS.WOOD, toolType: TOOL_TYPES.AXE,
-        fuel: 1.5, interactable: true,
+        fuel: 1.5, interactable: true, isTransparent: true,
         texture: [
             "assets/blocks/chest.png",
             "assets/blocks/chest_left.png",

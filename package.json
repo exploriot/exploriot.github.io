@@ -2,6 +2,7 @@
   "name": "exploriot",
   "version": "1.0.0",
   "scripts": {
+    "install": "cd client && npm install && cd ../server && npm install",
     "client-dev": "cd client && npm run dev",
     "client": "cd client && npm start",
     "server": "cd server && npm start"

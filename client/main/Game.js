@@ -63,7 +63,7 @@ export function initGame() {
         world: null,
         attributes: {},
         getHandItem() {
-            return this.playerInventory.contents[this.handIndex];
+            return this.playerInventory.get(this.handIndex);
         },
         getAttribute(name) {
             return this.attributes[name] ?? null;

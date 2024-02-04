@@ -30,15 +30,14 @@ export class ItemTag extends ObjectTag {
     apply(item) {
         if (!(item instanceof Item)) {
             if (item !== null && typeof item === "object") return super.apply(item);
-            return this;
+            return false;
         }
-        super.apply({
+        return super.apply({
             id: item.id,
             meta: item.meta,
             count: item.count,
             nbt: JSON.stringify(item.nbt)
         });
-        return this;
     };
 
     static read(buffer, j, cls = ItemTag) {

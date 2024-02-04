@@ -2,6 +2,8 @@ import {BoundingBox} from "./BoundingBox.js";
 import {getEntityName, GRAVITY_FORCE} from "../metadata/Entities.js";
 import {Ids} from "../metadata/Ids.js";
 
+export const ENTITY_DOWN_Y = 0.0005;
+
 export class Entity {
     /*** @type {number | null} */
     lastChunkX = null;
@@ -10,6 +12,8 @@ export class Entity {
     vx = 0;
     vy = 0;
     eyeHeight = 0;
+    jumpT = 0;
+    jumpAcceleration = 6;
 
     /**
      * @param {number} id
@@ -24,6 +28,16 @@ export class Entity {
         this.baseBB = bb;
         this.bb = bb?.clone();
         this.downBB = bb?.clone();
+    };
+
+    jump() {
+        if (this.jumpT < Date.now() && this.isOnGround()) {
+            this.applyVelocity(this.vx, this.jumpAcceleration);
+            this.jumpT = Date.now() + 0.08;
+        }
+    };
+
+    onInteract(entity) {
     };
 
     getHandItem() {
@@ -133,9 +147,9 @@ export class Entity {
         this.bb.y2 = this.y + this.baseBB.y2;
 
         this.downBB.x1 = this.bb.x1;
-        this.downBB.y1 = this.bb.y1 - 0.01 - 0.01;
+        this.downBB.y1 = this.bb.y1 - ENTITY_DOWN_Y - ENTITY_DOWN_Y;
         this.downBB.x2 = this.bb.x2;
-        this.downBB.y2 = this.bb.y1 - 0.01;
+        this.downBB.y2 = this.bb.y1 - ENTITY_DOWN_Y;
     };
 
     forceMove(dx, dy) {
@@ -256,6 +270,10 @@ export class Entity {
             this.world.getChunkEntities(this.lastChunkX).delete(this);
         }
         delete this.world.entityMap[this.id];
+    };
+
+    kill() {
+        this.remove(true);
     };
 
     applyGravity(dt) {

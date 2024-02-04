@@ -33,6 +33,7 @@ export const PacketIds = {
     SERVER_ADD_PARTICLE: s(),
     SERVER_APPLY_VELOCITY: s(),
     SERVER_ENTITY_VELOCITY: s(),
+    SERVER_UPDATE_TIME: s(),
 
     CLIENT_AUTH: c(),
     CLIENT_PING: c(),

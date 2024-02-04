@@ -41,6 +41,19 @@ export class World {
         this.id = id;
     };
 
+    getTime() {
+        return this.time % 600;
+    };
+
+    setTime(v) {
+        v = (v + 600) % 600;
+        this.time = this.time - this.getTime() + v;
+    };
+
+    getDay() {
+        return this.time / 600;
+    };
+
     /**
      * @param {number} chunkX
      * @return {Set<Entity | C_Entity | S_Entity>}

@@ -2,6 +2,7 @@ import {EntityIds, ZOMBIE_BB} from "../../../client/common/metadata/Entities.js"
 import {S_Living} from "./Living.js";
 import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
 import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
+import {Metadata} from "../../../client/common/metadata/Metadata.js";
 
 /**
  * @property {number} health
@@ -18,6 +19,17 @@ export class S_ZombieEntity extends S_Living {
     targetChange = 3;
     hitTimer = 0;
     eyeHeight = 1.5;
+    jumpAcceleration = 6;
+
+    broadcastVelocity(force = false) {
+        if (!force) return;
+        return super.broadcastVelocity();
+    };
+
+    handleMovement() {
+        super.handleMovement();
+        this.broadcastMovement();
+    };
 
     update(dt) {
         if (this.y < -64 || this.currentViewers.size === 0) {
@@ -31,13 +43,18 @@ export class S_ZombieEntity extends S_Living {
         }
         const target = this.targetPlayer;
         if (target) {
-            this.move(target.x < this.x ? -0.02 : 0.02, 0);
+            this.move(target.x < this.x ? -0.01 : 0.01, 0);
+            const frontX = this.x + (target.x < this.x ? -0.5 : 0.5);
+            const frontBlock = this.world.getBlock(frontX, this.y);
+            const frontUpBlock = this.world.getBlock(frontX, this.y + 1);
+            if (!Metadata.phaseable.includes(frontBlock[0]) && Metadata.phaseable.includes(frontUpBlock[0])) {
+                this.jump();
+            }
             if (this.distance(target.x, target.y) < 1.5 && (this.hitTimer -= dt) <= 0) {
                 this.hitTimer = 1;
                 target.damage(3);
                 target.knockFrom(this.x);
             }
-            this.broadcastMovement();
         }
         return super.update(dt);
     };

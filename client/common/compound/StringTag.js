@@ -22,9 +22,9 @@ export class StringTag extends Tag {
     };
 
     apply(string) {
-        if (typeof string !== "string" || string.length > 65535) return this;
+        if (typeof string !== "string" || string.length > 65535) return false;
         this.value = string;
-        return this;
+        return true;
     };
 
     clone() {
