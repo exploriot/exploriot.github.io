@@ -46,7 +46,7 @@ export class C_World extends World {
         ClientSession.cleanPackets();
         const player = CServer.player;
         this.time += adt;
-        //console.log(this.time)
+        //console.log(this.time) todo: finish time
         if (!CServer.isWelcome || !CServer.loadedChunks.has(player.x >> 4)) return;
         const isFlying = CServer.isFlying();
         const isSpectator = CServer.getGamemode() === 3;

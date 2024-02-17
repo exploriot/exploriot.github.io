@@ -16,7 +16,6 @@ import {ObjectTag} from "../../../client/common/compound/ObjectTag.js";
 import {Int8Tag} from "../../../client/common/compound/int/Int8Tag.js";
 import {Float32Tag} from "../../../client/common/compound/int/Float32Tag.js";
 import {BoolTag} from "../../../client/common/compound/BoolTag.js";
-import {Terminal} from "../terminal/Terminal.js";
 import {InventoryTag} from "../../../client/common/compound/InventoryTag.js";
 import {StringTag} from "../../../client/common/compound/StringTag.js";
 import DefaultSkin from "../../../client/main/DefaultSkin.js";
@@ -24,6 +23,7 @@ import {Item} from "../../../client/common/item/Item.js";
 import {ItemTag} from "../../../client/common/compound/ItemTag.js";
 import {Ids} from "../../../client/common/metadata/Ids.js";
 import {CommandSender} from "../command/CommandSender.js";
+import {Terminal} from "../../../client/common/Utils.js";
 
 /**
  * @extends CommandSender

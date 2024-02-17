@@ -1,6 +1,6 @@
 import {existsSync, readFileSync, writeFileSync} from "fs";
 import {S_World} from "./world/World.js";
-import {startCommandReader, Terminal} from "./terminal/Terminal.js";
+import {startCommandReader} from "./terminal/Terminal.js";
 import {ConsoleCommandSender} from "./command/ConsoleCommandSender.js";
 import {SERVER_BEGIN_TIME} from "./Main.js";
 import {S_Player} from "./entity/Player.js";
@@ -10,8 +10,10 @@ import {initCrafts} from "../../client/common/metadata/Crafts.js";
 import {initItems} from "../../client/common/metadata/Items.js";
 import {ObjectTag} from "../../client/common/compound/ObjectTag.js";
 import {StringTag} from "../../client/common/compound/StringTag.js";
+import {getCurrentIP, Terminal} from "../../client/common/Utils.js";
 
 export const S_Server = {
+    port: 1881,
     /*** @type {Set<S_Player>} */
     players: new Set,
     /*** @type {Set<string>} */
@@ -39,8 +41,9 @@ export const S_Server = {
         for (let x = -this.chunkDistance - 1; x <= this.chunkDistance + 1; x++) {
             overworld.loadChunk(x);
         }
-
         Terminal.info("Server has been loaded in " + (Date.now() - SERVER_BEGIN_TIME) / 1000 + "s. Type 'help' to see the command list.");
+        Terminal.info("Server IP: " + getCurrentIP(process, this.port));
+        Terminal.info("Server Port: " + this.port);
         startCommandReader();
     },
     getDefaultWorld() {

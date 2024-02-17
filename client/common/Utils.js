@@ -134,3 +134,53 @@ export function getLevelFromXP(xp) {
 export function getXPFromLevel(level) {
     return level ** 2 + 6 * level;
 }
+
+function _pad(s) {
+    return s.toString().padStart(2, "0");
+}
+
+export const Terminal = {
+    send(text, prefix, fn = "log") {
+        if (text instanceof Error) text = text.stack.replaceAll("", "");
+        if (typeof text !== "string") text = text.toString();
+        const d = new Date;
+        for (const line of text.split("\n").map(
+            i => `§b[${_pad(d.getHours())}:${_pad(d.getMinutes())}:${_pad(d.getSeconds())}]§f ${prefix}${i}`
+        )) console[fn](colorizeTextTerminal(line));
+    },
+    debug(text) {
+        this.send(text, "§9[DEBUG] §7", "debug");
+    },
+    info(text) {
+        this.send(text, "§7[INFO] §f", "info");
+    },
+    error(text) {
+        this.send(text, "§c[ERROR] §c", "error");
+    },
+    warn(text) {
+        this.send(text, "§6[WARN] §e", "warn");
+    }
+};
+
+export function getCurrentProtocol(process) {
+    const env = process.env;
+    return "REPL_ID" in env && "REPLIT_CLUSTER" in env;
+}
+
+export function getCurrentIP(process) {
+    const env = process.env;
+    if ("REPL_ID" in env && "REPLIT_CLUSTER" in env) return env.REPL_ID + "." + env.REPLIT_CLUSTER + ".replit.dev";
+    return "127.0.0.1";
+}
+
+export function getCurrentPort(process, port) {
+    const env = process.env;
+    if ("REPL_ID" in env && "REPLIT_CLUSTER" in env) return 80;
+    return port;
+}
+
+export function getCurrentURL(process, port) {
+    return "http" + (getCurrentProtocol(process) ? "s" : "") + "://"
+        + getCurrentIP(process)
+        + (getCurrentPort(process, port) === 80 ? "" : ":" + port);
+}
