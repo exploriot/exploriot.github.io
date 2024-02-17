@@ -1,14 +1,13 @@
 import http from "http";
 import {WebSocketServer} from "ws";
 import express from "express";
-import {Terminal} from "./terminal/Terminal.js";
 import {S_Player} from "./entity/Player.js";
 import "./Server.js";
 import "../../client/common/metadata/Blocks.js";
 import "../../client/common/metadata/Items.js";
 import {appendFileSync, existsSync, mkdirSync, readFileSync} from "fs";
 import {PacketIds} from "../../client/common/metadata/PacketIds.js";
-import {_TA} from "../../client/common/Utils.js";
+import {_TA, Terminal} from "../../client/common/Utils.js";
 import {DisconnectPacket} from "./packet/DisconnectPacket.js";
 import {Tag} from "../../client/common/compound/Tag.js";
 
@@ -206,6 +205,6 @@ function update() {
 
 update();
 
-server.listen(1881);
+server.listen(Server.port);
 
 Server.init();

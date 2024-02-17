@@ -1,6 +1,9 @@
 import express from "express";
 import path from "path";
 import url from "url";
+import {getCurrentIP, getCurrentPort, getCurrentURL, Terminal} from "./common/Utils.js";
+
+const T = Date.now();
 
 const PORT = 1923;
 
@@ -16,5 +19,11 @@ app.use(express.static(root));
 //  the one when T is not pressed will only have messages that disappear after 2 seconds
 
 app.listen(PORT, () => {
-    console.info("Client is being hosted at http://127.0.0.1:" + PORT);
+    const url = getCurrentURL(process, PORT);
+    if (!("_MIDDLE_" in global)) Terminal.info("Client has been loaded in " + (Date.now() - T) / 1000 + "s.");
+    Terminal.info("Client URL: " + url);
+    if ("_MIDDLE_" in global) Terminal.info(
+        "You can join the current host at: " + url + "/game.html#"
+        + getCurrentIP(process) + ":" + getCurrentPort(process, Server.port)
+    );
 });

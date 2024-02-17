@@ -1,7 +1,6 @@
 import {CommandLabels} from "./CommandManager.js";
 import {Command} from "./Command.js";
-import {clearColors} from "../../../client/common/Utils.js";
-import {Terminal} from "../terminal/Terminal.js";
+import {clearColors, Terminal} from "../../../client/common/Utils.js";
 
 const CmdResultProcessor = {
     [Command.ERR_USAGE](command) {
