@@ -168,8 +168,6 @@ export function getCurrentProtocol(process) {
 }
 
 export function getCurrentIP(process) {
-    const env = process.env;
-    if ("REPL_ID" in env && "REPLIT_CLUSTER" in env) return env.REPL_ID + "." + env.REPLIT_CLUSTER + ".replit.dev";
     return "127.0.0.1";
 }
 
