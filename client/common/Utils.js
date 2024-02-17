@@ -164,7 +164,7 @@ export const Terminal = {
 
 export function getCurrentProtocol(process) {
     const env = process.env;
-    return "REPL_ID" in env && "REPLIT_CLUSTER" in env;
+    return "REPL_ID" in env;
 }
 
 export function getCurrentIP(process) {
