@@ -175,8 +175,22 @@
 <div class="esc-menu gone">
     <div class="container">
         <div class="btn" id="back-btn">Back</div>
+        <div class="btn" id="options-btn">Options</div>
         <div class="btn" id="reconnect-btn">Reconnect</div>
         <div class="btn" id="disconnect-btn">Disconnect</div>
+    </div>
+</div>
+<div class="options-menu gone">
+    <div class="container">
+        <div>
+            Resolution: <select data-opt="resolution">
+            <option value="0">Very Low</option>
+            <option value="1">Low</option>
+            <option selected value="2">Normal</option>
+            <option value="3">High</option>
+        </select>
+        </div>
+        <div class="btn" id="back-esc-btn">Back</div>
     </div>
 </div>
 <div class="connection-menu">

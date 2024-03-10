@@ -33,7 +33,6 @@ import {Terminal} from "../../../client/common/Utils.js";
  * @property {Inventory} cursorInventory
  * @property {Inventory} craftInventory
  * @property {Inventory} armorInventory
- * @property {number} fallY
  * @property {number} naturalRegenTimer
  * @property {number} starveTimer
  * @property {number} rotation
@@ -63,7 +62,6 @@ export class S_Player extends S_Living {
         cursorInventory: new InventoryTag(new Inventory(1, InventoryIds.CURSOR)),
         craftInventory: new InventoryTag(new Inventory(5, InventoryIds.CRAFT)),
         armorInventory: new InventoryTag(new Inventory(4, InventoryIds.ARMOR)),
-        fallY: new Float32Tag(0),
         naturalRegenTimer: new Float32Tag(0),
         starveTimer: new Float32Tag(0),
         spawnPoints: new ObjectTag
@@ -315,22 +313,10 @@ export class S_Player extends S_Living {
 
     teleport(x, y) {
         super.teleport(x, y);
-        this.fallY = y;
         this.session.sendPosition();
     };
 
     update(dt) {
-        const isOnGround = this.isOnGround();
-        const isFlying = this.isFlying();
-        if (isOnGround) {
-            this.onFall(this.fallY - this.y);
-            this.fallY = this.y;
-        } else if (isFlying) {
-            this.fallY = this.y;
-        } else {
-            if (this.y > this.fallY) this.fallY = this.y;
-        }
-
         const health = this.getHealth();
 
         if (health <= 0) {
@@ -370,12 +356,6 @@ export class S_Player extends S_Living {
     damage(hp) {
         if (this.getGamemode() % 2 === 1) return;
         super.damage(hp);
-    };
-
-    onFall(fallDistance) {
-        if (fallDistance < 3.5 || !this.world.getGameRule(GameRules.FALL_DAMAGE)) return;
-        this.damage(fallDistance - 3);
-        this.world.playSound("assets/sounds/damage/fall" + (fallDistance > 8 ? "big" : "small") + ".ogg", this.x, this.y);
     };
 
     save() {

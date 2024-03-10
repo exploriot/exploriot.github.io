@@ -7,21 +7,24 @@ import {ColorsHex, EMOTE_LIST, EMOTE_REGEX, splitColors} from "./common/Utils.js
 import {getItemTexture} from "./common/metadata/Items.js";
 import {PLAYER_BB} from "./common/metadata/Entities.js";
 
-export function getDominantSize() {
-    return Math.max(innerWidth, innerHeight);
+export function getBaseBlockSize() {
+    return Math.ceil(Math.max(canvas.width, canvas.height) / C_OPTIONS.renderDistance);
 }
 
-export function getBaseBlockSize() {
-    return Math.ceil(getDominantSize() / C_OPTIONS.renderDistance);
+export function getWindowBaseBlockSize() {
+    return Math.ceil(Math.max(innerWidth, innerHeight) / C_OPTIONS.renderDistance);
 }
 
 export let BASE_BLOCK_SIZE = 0;
+export let WINDOW_BASE_BLOCK_SIZE = 0;
 
 export function onResize() {
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
+    const m = [0.1, 0.5, 1, 2][C_OPTIONS.resolution];
+    canvas.width = innerWidth * m;
+    canvas.height = innerHeight * m;
     ctx.imageSmoothingEnabled = false;
     BASE_BLOCK_SIZE = getBaseBlockSize();
+    WINDOW_BASE_BLOCK_SIZE = getWindowBaseBlockSize();
 }
 
 export function resetBlockBreaking() {
@@ -35,8 +38,8 @@ export function resetBlockBreaking() {
 
 export function getCanvasPosition(x, y) {
     return {
-        x: innerWidth / 2 + (x - CServer.player.x) * BASE_BLOCK_SIZE,
-        y: innerHeight / 2 + (-y + CServer.player.y + CServer.player.baseBB.y2 - CServer.player.baseBB.y1 - 0.5) * BASE_BLOCK_SIZE
+        x: canvas.width / 2 + (x - CServer.player.x) * BASE_BLOCK_SIZE,
+        y: canvas.height / 2 + (-y + CServer.player.y + CServer.player.baseBB.y2 - CServer.player.baseBB.y1 - 0.5) * BASE_BLOCK_SIZE
     };
 }
 
@@ -89,7 +92,7 @@ export function colorizeTextHTML(text) { // []
 }
 
 export function clearDiv(div) {
-    for (const c of div.childNodes) c.remove();
+    for (const c of Array.from(div.childNodes)) c.remove();
 }
 
 export function renderPlayerModel(

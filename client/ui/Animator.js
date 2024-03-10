@@ -14,7 +14,7 @@ import {
 } from "./MainUI.js";
 import {renderContainerStates, renderHotbarPosition, renderInventories} from "./ContainerUI.js";
 import "./ContainerUI.js";
-import {C_OPTIONS, CServer, ctx} from "../main/Game.js";
+import {C_OPTIONS, canvas, CServer, ctx} from "../main/Game.js";
 import {getItemName} from "../common/metadata/Items.js";
 import {Metadata} from "../common/metadata/Metadata.js";
 import {Keyboard} from "../input/Keyboard.js";
@@ -65,13 +65,13 @@ export function animate() {
 
     if (CServer.canUpdateMouse) recalculateMouse();
 
-    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
 
     const fx = Math.floor(CServer.player.x);
     const fy = Math.floor(CServer.player.y);
 
-    const widthHalf = Math.ceil((innerWidth / BASE_BLOCK_SIZE - 1) / 2);
-    const heightHalf = Math.ceil((innerHeight / BASE_BLOCK_SIZE - 1) / 2);
+    const widthHalf = Math.ceil((canvas.width / BASE_BLOCK_SIZE - 1) / 2);
+    const heightHalf = Math.ceil((canvas.height / BASE_BLOCK_SIZE - 1) / 2);
 
     //canvas.style.background = "rgba(0, 147, 233, " + (CServer.world.getTime() / 1200) + ")"
 

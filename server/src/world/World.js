@@ -364,7 +364,7 @@ export class S_World extends World {
             const sound = getBlockDigSound(id);
             if (sound) this.playSound(sound, x, y);
         }
-        if (damageItem && inventory && (item.id in Metadata.toolLevelItems) && Metadata.hardness[block[0]] !== 0) {
+        if (damageItem && inventory && item && (item.id in Metadata.toolLevelItems) && Metadata.hardness[block[0]] !== 0) {
             inventory.damageItemAt(index, 1, entity && this, entity && entity.x, entity && entity.y);
         }
         if (particle) {

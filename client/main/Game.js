@@ -35,7 +35,8 @@ export function initGame() {
         showCoveredBlocks: false,
         showBoundingBoxes: false,
         showHitBoxes: false,
-        isDebugMode: false
+        isDebugMode: false,
+        resolution: 1
     };
 
     CServer = {
@@ -124,13 +125,32 @@ export function initGame() {
     initItems();
     initBlocks();
     initCrafts();
-    onResize();
     initTextures();
 
     addEventListener("resize", onResize);
 
+    for (const opt of document.querySelectorAll("[data-opt]")) {
+        const name = opt.getAttribute("data-opt");
+        const type = opt.getAttribute("data-t") ?? "number";
+
+        const existing = localStorage.getItem(`settings.${name}`);
+        if (existing) {
+            opt.value = existing;
+            C_OPTIONS[name] = type === "number" ? opt.value * 1 : opt.value;
+        }
+
+        opt.addEventListener("input", () => {
+            localStorage.setItem(`settings.${name}`, opt.value);
+            C_OPTIONS[name] = type === "number" ? opt.value * 1 : opt.value;
+
+            if (name === "resolution") onResize();
+        });
+    }
+
     clearDiv(connectionText);
-    connectionText.appendChild(colorizeTextHTML("§aConnecting..."));
+    connectionText.appendChild(colorizeTextHTML("§aConnecting..."))
+
+    onResize();
 }
 
 if (["game", "game.html"].includes(location.pathname.split("/").at(-1))) initGame();
