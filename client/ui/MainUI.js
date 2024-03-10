@@ -19,6 +19,7 @@ import {clearDiv, colorizeTextHTML} from "../Utils.js";
 import {Mouse} from "../input/Mouse.js";
 
 const escMenu = document.querySelector(".esc-menu");
+const optionsMenu = document.querySelector(".options-menu");
 const pauseBtn = document.querySelector(".pause");
 const chatInput = document.querySelector(".chat > input");
 const healthDiv = document.querySelector(".health-attribute");
@@ -32,11 +33,18 @@ const actionbar = document.querySelector(".actionbar");
 
 export function openEscMenu() {
     escMenu.classList.remove("gone");
+    optionsMenu.classList.add("gone");
     pauseBtn.classList.add("gone");
+}
+
+export function openOptionsMenu() {
+    escMenu.classList.add("gone");
+    optionsMenu.classList.remove("gone");
 }
 
 export function closeEscMenu() {
     escMenu.classList.add("gone");
+    optionsMenu.classList.add("gone");
     pauseBtn.classList.remove("gone");
 }
 
@@ -46,7 +54,7 @@ function toggleEscMenu() {
 }
 
 export function isEscMenuOn() {
-    return !escMenu.classList.contains("gone");
+    return !escMenu.classList.contains("gone") || !optionsMenu.classList.contains("gone");
 }
 
 export function isTypingToInput() {
@@ -309,6 +317,8 @@ export function initMainUI() {
     });
 
     document.getElementById("back-btn").addEventListener("click", closeEscMenu);
+    document.getElementById("back-esc-btn").addEventListener("click", openEscMenu);
+    document.getElementById("options-btn").addEventListener("click", openOptionsMenu);
 
     document.getElementById("disconnect-btn").addEventListener("click", () => {
         location.href = "./";

@@ -26,7 +26,7 @@ let lastSearch = "";
 let lastUsername = localStorage.getItem("__block__game__username__") || "Steve";
 let lastSkinData = localStorage.getItem("__block__game__skin__") || DefaultSkin;
 let skinTexture = Texture.get(lastSkinData);
-let editingServer = null;
+let editingServerUUID = null;
 const canvas = document.querySelector("canvas");
 const ctx = canvas.getContext("2d");
 const playerDiv = document.querySelector(".player");
@@ -34,7 +34,7 @@ let mouseX = 0;
 let mouseY = 0;
 
 function closeUI() {
-    editingServer = null;
+    editingServerUUID = null;
     serversMenu.classList.add("gone");
     serverAddMenu.classList.add("gone");
     optionsMenu.classList.add("gone");
@@ -48,16 +48,36 @@ function checkServerProps(name, ip, port) {
     if (!name) return "The name of the server cannot be empty.";
     if (!ip) return "The IP of the server cannot be empty.";
     if (!port) return "The port of the server cannot be empty.";
-    if (!/^[\da-zA-Z.\-]+$/.test(ip)) return "Invalid IP address.";
     const portN = Number(port);
     if (!port || isNaN(portN) || portN < 0 || portN > 65535 || portN !== Math.floor(portN)) return "Invalid port.";
+    if (ip !== "localhost") {
+        if (/^\d+\.\d+\.\d+\.\d+$/) {
+            const spl = ip.split(".").map(Number);
+            if (spl.some(i => i < 0 || i > 255)) return "Invalid IP address.";
+        } else if (!/^([a-zA-Z][\da-zA-Z\-]+\.)+[a-zA-Z][\da-zA-Z\-]+$/) return "Invalid IP address.";
+    }
 }
 
-const servers = JSON.parse(localStorage.getItem("server-list") ?? "[]").sort((a, b) => b.joinedTimestamp - a.joinedTimestamp);
+let _packed = JSON.parse(localStorage.getItem("server-list") ?? "[]");
+if (!Array.isArray(_packed)) _packed = [];
+const servers = {};
+for (const server of _packed) servers[server.uuid] = server;
+
+function saveServerList() {
+    localStorage.setItem("server-list", JSON.stringify(Object.values(servers)));
+}
 
 function renderServers() {
     clearDiv(serversD);
-    for (const server of servers.filter(i => !lastSearch || i.name.toLowerCase().split(" ").some(i => lastSearch.toLowerCase().split(" ").some(j => i.includes(j))))) {
+    const serverList = Object.values(servers)
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .filter(i => {
+            if (!lastSearch) return true;
+            const spl = i.name.toLowerCase().split(" ");
+            const searchSpl = lastSearch.toLowerCase().split(" ");
+            return spl.some(i => searchSpl.some(j => i.includes(j)));
+        });
+    for (const server of serverList) {
         const div = document.createElement("div");
         div.classList.add("server");
         const nameD = document.createElement("div");
@@ -77,12 +97,12 @@ function renderServers() {
         div.appendChild(removeD);
         div.appendChild(editD);
         removeD.addEventListener("click", () => {
-            servers.splice(servers.indexOf(server), 1);
+            delete servers[server.uuid];
             renderServers();
-            localStorage.setItem("server-list", JSON.stringify(servers));
+            saveServerList();
         });
         editD.addEventListener("click", () => {
-            editingServer = server;
+            editingServerUUID = server.uuid;
             serversMenu.classList.add("gone");
             serverEditMenu.classList.remove("gone");
             document.getElementById("edit-name").value = server.name;
@@ -185,8 +205,6 @@ export function initIndex() {
         optionsMenu.classList.remove("gone");
     });
 
-    window.closeUI = closeUI;
-
     addEventListener("keydown", e => {
         if (e.key === "Escape") closeUI();
     });
@@ -200,38 +218,38 @@ export function initIndex() {
     });
 
     editServerBtn.addEventListener("click", () => {
-        if (!editingServer) return closeUI();
+        if (!editingServerUUID) return closeUI();
         const name = document.getElementById("edit-name").value;
         const ip = document.getElementById("edit-ip").value;
         const port = document.getElementById("edit-port").value;
         const res = checkServerProps(name, ip, port);
         if (res) return document.querySelector("#edit-error").innerText = res;
-        editingServer.name = name;
-        editingServer.ip = ip;
-        editingServer.port = port;
-        renderServers();
+        const server = servers[editingServerUUID];
+        server.name = name;
+        server.ip = ip;
+        server.port = port;
+        server.timestamp = Date.now();
         serversMenu.classList.remove("gone");
         serverEditMenu.classList.add("gone");
-        localStorage.setItem("server-list", JSON.stringify(servers));
+        renderServers();
+        saveServerList();
     });
 
     addServerBtn.addEventListener("click", () => {
         const name = document.getElementById("create-name").value;
-        const ip = document.getElementById("create-ip").value;
-        const port = document.getElementById("create-port").value;
+        let ip = document.getElementById("create-ip").value;
+        ip = ip.split("//");
+        ip = ip[1] ?? ip[0];
+        ip = ip.split("/")[0];
+        const port = document.getElementById("create-port").value * 1;
         const res = checkServerProps(name, ip, port);
         if (res) return document.querySelector("#add-error").innerText = res;
-        servers.splice(0, 0, {
-            name: name,
-            ip: ip,
-            port: port * 1,
-            createdTimestamp: Date.now(),
-            joinedTimestamp: Date.now()
-        });
-        renderServers();
+        const uuid = crypto.randomUUID();
+        servers[uuid] = {uuid, name, ip, port, timestamp: Date.now()};
         serversMenu.classList.remove("gone");
         serverAddMenu.classList.add("gone");
-        localStorage.setItem("server-list", JSON.stringify(servers));
+        renderServers();
+        saveServerList();
     });
 
     uploadSkinBtn.addEventListener("click", async () => {

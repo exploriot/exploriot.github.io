@@ -55,7 +55,8 @@ export class C_World extends World {
             player.y = Math.floor(player.y * 2) / 2 + 0.000000001;
         }
         if (!isAnyUIOn()) {
-            const speedBoost = isFlying ? 2 : 1;
+            const isTouchingWater = CServer.player.isTouchingWater();
+            const speedBoost = isFlying ? 2 : (isTouchingWater ? 0.7 : 1);
             if (isSpectator) {
                 if (!Keyboard.d || !Keyboard.a) {
                     if (Keyboard.a) player.forceMove(-dt * PLAYER_SPEED * speedBoost, 0);
@@ -73,7 +74,11 @@ export class C_World extends World {
                     if (Keyboard.d) player.move(dt * PLAYER_SPEED * speedBoost, 0);
                 }
                 if (!isFlying) {
-                    if ((Keyboard.w || Keyboard[" "])) player.jump();
+                    if ((Keyboard.w || Keyboard[" "])) {
+                        if (isTouchingWater) {
+                            player.vy = player.world.getBlock(player.x, player.y - 0.2)[0] === Ids.WATER ? 2 : 5;
+                        } else player.jump();
+                    }
                 } else if (!Keyboard.w || !Keyboard.s) {
                     if (Keyboard.w) player.move(0, dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost);
                     if (Keyboard.s) player.move(0, -dt * PLAYER_SPEED * (onGround ? 1 : 0.9) * speedBoost);

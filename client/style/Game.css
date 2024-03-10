@@ -25,6 +25,8 @@ body {
 .game {
     cursor: crosshair;
     background-color: rgba(0, 147, 233, 1);
+    width: 100%;
+    height: 100%;
 }
 
 img {
@@ -721,4 +723,22 @@ img {
     top: 5%;
     width: 30%;
     aspect-ratio: 3 / 4;
+}
+
+.options-menu {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    transition: opacity 0.1s;
+}
+
+select {
+    border: none;
+    outline: none;
+    border-radius: 5px;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.5);
 }

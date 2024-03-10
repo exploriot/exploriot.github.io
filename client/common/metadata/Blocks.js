@@ -466,7 +466,8 @@ export function initBlocks() {
     FlowerIds.forEach(f => registerBlock(f, FlowerOpts));
 
     const LiquidOpts = {
-        isTransparent: true, canStayOnPhaseables: true, isReplaceable: true, drops: [], isPhaseable: true, liquid: true
+        isTransparent: true, canStayOnPhaseables: true, isReplaceable: true, drops: [], isPhaseable: true, liquid: true,
+        neverBreakable: true
     };
     registerBlock(Ids.WATER, {
         ...LiquidOpts,
@@ -480,8 +481,7 @@ export function initBlocks() {
             "assets/blocks/water_2.png",
             "assets/blocks/water_1.png",
             "assets/blocks/water_8.png"
-        ],
-        neverBreakable: true
+        ]
     });
     registerBlock(Ids.LAVA, {
         ...LiquidOpts,
@@ -491,8 +491,7 @@ export function initBlocks() {
             "assets/blocks/lava_2.png",
             "assets/blocks/lava_1.png",
             "assets/blocks/lava_4.png"
-        ],
-        neverBreakable: true
+        ]
     });
     registerBlock(Ids.CRAFTING_TABLE, {
         ...blockOpts, hardness: 2.5, step: STEPS.WOOD, dig: DIGS.WOOD, toolType: TOOL_TYPES.AXE,

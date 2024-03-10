@@ -278,6 +278,9 @@ export class Entity {
 
     applyGravity(dt) {
         this.vy -= dt * GRAVITY_FORCE;
+        if (this.vy < 0 && this.isTouchingWater()) {
+            this.vy *= 0.95;
+        }
     };
 
     distance(x, y) {
